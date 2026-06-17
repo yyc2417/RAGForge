@@ -1,0 +1,107 @@
+[
+  {
+    "query": "Python 的装饰器怎么用？",
+    "expected_answer_keywords": ["装饰器", "@", "函数"],
+    "expected_source": "python_basics.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "什么是生成器？yield 怎么用？",
+    "expected_answer_keywords": ["生成器", "yield"],
+    "expected_source": "python_basics.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "Python 的 GIL 是什么？",
+    "expected_answer_keywords": ["GIL", "线程", "锁"],
+    "expected_source": "python_basics.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "Python 列表推导式的写法是什么？",
+    "expected_answer_keywords": ["列表推导", "for"],
+    "expected_source": "python_basics.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "什么是过拟合？怎么解决？",
+    "expected_answer_keywords": ["过拟合", "训练", "正则化"],
+    "expected_source": "machine_learning_faq.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "梯度下降是什么？",
+    "expected_answer_keywords": ["梯度", "学习率", "损失"],
+    "expected_source": "machine_learning_faq.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "Embedding 在 RAG 系统中起什么作用？",
+    "expected_answer_keywords": ["Embedding", "向量", "检索"],
+    "expected_source": "machine_learning_faq.md",
+    "query_type": "reasoning",
+    "needs_retrieval": true
+  },
+  {
+    "query": "为什么 Transformer 比传统 RNN 更适合处理长序列？",
+    "expected_answer_keywords": ["Transformer", "注意力", "并行"],
+    "expected_source": "machine_learning_faq.md",
+    "query_type": "reasoning",
+    "needs_retrieval": true
+  },
+  {
+    "query": "精确率和召回率有什么区别？",
+    "expected_answer_keywords": ["精确率", "召回率", "TP"],
+    "expected_source": "machine_learning_faq.md",
+    "query_type": "reasoning",
+    "needs_retrieval": true
+  },
+  {
+    "query": "你好",
+    "expected_answer_keywords": ["你好", "您", "帮助"],
+    "expected_source": null,
+    "query_type": "chitchat",
+    "needs_retrieval": false
+  },
+  {
+    "query": "谢谢",
+    "expected_answer_keywords": ["谢", "不客气", "欢迎"],
+    "expected_source": null,
+    "query_type": "chitchat",
+    "needs_retrieval": false
+  },
+  {
+    "query": "对比 Python GIL 的多线程限制与机器学习中的并行训练需求，给出建议",
+    "expected_answer_keywords": ["GIL", "并行", "训练"],
+    "expected_source": "python_basics.md",
+    "query_type": "complex",
+    "needs_retrieval": true
+  },
+  {
+    "query": "Python 上下文管理器 with 语句怎么用？",
+    "expected_answer_keywords": ["上下文管理器", "with", "__enter__"],
+    "expected_source": "python_basics.md",
+    "query_type": "factual",
+    "needs_retrieval": true
+  },
+  {
+    "query": "欠拟合和过拟合有什么区别？",
+    "expected_answer_keywords": ["欠拟合", "过拟合", "模型"],
+    "expected_source": "machine_learning_faq.md",
+    "query_type": "reasoning",
+    "needs_retrieval": true
+  },
+  {
+    "query": "再见",
+    "expected_answer_keywords": ["再见", "欢迎", "随时"],
+    "expected_source": null,
+    "query_type": "chitchat",
+    "needs_retrieval": false
+  }
+]

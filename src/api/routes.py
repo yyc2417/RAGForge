@@ -181,13 +181,16 @@ async def chat_stream(request: ChatRequest, graph=Depends(get_graph)):
                         if isinstance(output, dict) and "answer" in output:
                             final_state = output
 
-                    # LLM 逐 token 事件（generate 节点产生）
+                    # LLM 逐 token 事件：仅采纳 generate 节点的输出。
+                    # analyze/evaluate 等结构化调用的 token 事件是 JSON 碎片，
+                    # 不过滤会混入答案流（实测确认，必须按节点过滤）
                     elif kind == "on_chat_model_stream":
-                        chunk = event.get("data", {}).get("chunk")
-                        if chunk is not None:
-                            content = getattr(chunk, "content", "") or ""
-                            if content:
-                                yield {"event": "token", "data": json.dumps({"text": content}, ensure_ascii=False)}
+                        if event.get("metadata", {}).get("langgraph_node") == "generate":
+                            chunk = event.get("data", {}).get("chunk")
+                            if chunk is not None:
+                                content = getattr(chunk, "content", "") or ""
+                                if content:
+                                    yield {"event": "token", "data": json.dumps({"text": content}, ensure_ascii=False)}
             finally:
                 reset_current_collector(context_token)
 

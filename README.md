@@ -115,6 +115,23 @@ uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 # 输出：终端对比表 + reports/eval_report.json
 ```
 
+### 6. 可视化演示
+
+```bash
+uv run --extra ui streamlit run src/ui/streamlit_app.py
+```
+
+单文件 Streamlit 界面，进程内直调 LangGraph 状态机，实时展示：
+
+- **8 节点流水线**：三态流转（待执行 / 执行中 / 已完成）+ 执行次数——
+  `retrieve ×2` 即自愈循环最直观的证据
+- **诊断面板**：query_type / retrieval_strategy / failure_mode / suggested_action
+  逐项实时刷新，自愈动作（reformulate / switch_strategy）触发时醒目高亮
+- **流式回答**：`astream_events(v2)` 捕获 generate 节点逐 token 输出
+- **来源与收尾指标**：检索 chunk 与相关性分数表格、检索轮次、幻觉检测结论
+
+内置三个示例问题，其中「触发自愈」预设会演示策略切换的完整过程。
+
 ## 设计亮点
 
 ### 1. 诊断式评估（区别于普通打分）
@@ -188,6 +205,9 @@ RAGForge/
 │   │   ├── routes.py          #   /health /chat(async) /chat/stream(SSE)
 │   │   ├── schemas.py         #   请求/响应 Pydantic 模型
 │   │   └── dependencies.py    #   graph 注入（lifespan 预热，未就绪 503）
+│   ├── ui/                    # 可视化演示（可选依赖 streamlit）
+│   │   ├── event_view.py      #   astream_events 事件蒸馏器（纯逻辑，可单测）
+│   │   └── streamlit_app.py   #   单文件 Streamlit 界面
 │   └── utils/
 │       ├── logger.py          #   loguru 双输出（多 worker 安全）
 │       └── metrics.py         #   MetricsCollector（请求级实例 + ContextVar 注入）
@@ -198,8 +218,9 @@ RAGForge/
 │   ├── test_retrieval.py      #   检索层测试（离线，含索引一致性回归）
 │   ├── test_agent.py          #   Agent 状态机测试（全 mock，离线）
 │   ├── test_stage1.py         #   结构与管道构建测试（离线）
+│   ├── test_ui.py             #   事件蒸馏器测试（离线）
 │   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
-│   └── eval_dataset.json      #   评估数据集（15 QA）
+│   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
 ├── scripts/
 │   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
 ├── data/sample/               # 知识库（python_basics.md + machine_learning_faq.md）

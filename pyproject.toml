@@ -37,6 +37,9 @@ dev = [
     "httpx>=0.27.0",
 ]
 
+[project.optional-dependencies]
+ui = ["streamlit>=1.30"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # src 布局未打包安装，pythonpath 指向项目根供测试导入 src 包

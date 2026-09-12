@@ -56,9 +56,11 @@ def retrieve_node(
             docs, scores = hybrid_retriever.search_with_scores(query)
             # Task 6：若 reranker 可用则重排序
             if reranker is not None and getattr(reranker, "is_available", lambda: False)():
+                # rerank 会重排顺序但返回同一批 Document 对象，
+                # 按对象身份回映射原 RRF 分数（置 0 会误导下游展示与评估）
+                score_by_doc = {id(doc): s for doc, s in zip(docs, scores)}
                 docs = reranker.rerank(query, docs)
-                # rerank 后分数失去含义，置空
-                scores = [0.0] * len(docs)
+                scores = [score_by_doc.get(id(doc), 0.0) for doc in docs]
     else:
         # strategy == none 时不应进入此节点，兜底处理
         docs, scores = [], []

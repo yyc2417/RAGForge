@@ -49,12 +49,12 @@ class PromptManager:
         """你是一个检索质量诊断器。请诊断以下检索结果是否能支撑回答用户问题。
 
 用户查询：{query}
-检索到的文档（含相关性分数，越高越相关）：
+检索到的文档：
 {retrieved_docs}
 
 诊断维度（三选一）：
 - sufficient：检索结果与问题相关且信息充足，可 proceed 直接生成
-- low_recall：相关性分数普遍偏低（如 < 0.3），召回不足，建议 switch_strategy 切换检索策略
+- low_recall：检索结果与问题部分相关但关键信息缺失，召回不足，建议 switch_strategy 切换检索策略
 - irrelevant：检索结果与问题无关（语义不匹配），建议 reformulate 改写查询
 
 请输出 failure_mode、suggested_action 和 reason。"""

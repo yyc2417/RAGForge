@@ -14,6 +14,12 @@ import re
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    InternalServerError,
+    RateLimitError,
+)
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -36,12 +42,19 @@ class LLMClient:
             base_url=settings.deepseek_base_url,
             api_key=settings.deepseek_api_key,
             temperature=0.3,
+            # 超时上限：底层 SDK 默认 600s，一次挂起即可阻塞整个状态机
+            timeout=settings.llm_timeout,
+            # 内置重试关闭，重试统一交给下方 tenacity 管理（避免双重重试叠加）
+            max_retries=0,
         )
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(min=1, max=10),
-        retry=retry_if_exception_type(Exception),
+        # 只对瞬时故障重试；401/400 等永久性错误重试无意义且掩盖根因
+        retry=retry_if_exception_type(
+            (APIConnectionError, APITimeoutError, RateLimitError, InternalServerError)
+        ),
         reraise=True,
     )
     def generate(self, query: str, context: list[Document]) -> str:

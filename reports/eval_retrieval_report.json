@@ -1,0 +1,37 @@
+{
+  "retrieval_only": true,
+  "eval_k": 5,
+  "samples": 12,
+  "modes": [
+    {
+      "mode": "vector",
+      "recall_top5": 1.0,
+      "hits": 12
+    },
+    {
+      "mode": "bm25",
+      "recall_top5": 1.0,
+      "hits": 12
+    },
+    {
+      "mode": "hybrid",
+      "recall_top5": 1.0,
+      "hits": 12
+    },
+    {
+      "mode": "reranker",
+      "recall_top5": 1.0,
+      "hits": 12
+    }
+  ],
+  "index": {
+    "chunks": 10,
+    "collection_count": 10,
+    "embedding_model": "all-MiniLM-L6-v2",
+    "chunk_size": 500,
+    "chunk_overlap": 50,
+    "retrieval_k": 5,
+    "rrf_k": 60,
+    "reranker_top_n": 5
+  }
+}

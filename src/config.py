@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-v4-flash"
+    llm_timeout: int = 60  # 单次 LLM 请求超时（秒），防止挂起阻塞状态机
 
     # ── Embedding ──────────────────────────────────────────────────
     embedding_model: str = "all-MiniLM-L6-v2"

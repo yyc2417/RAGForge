@@ -73,8 +73,11 @@ def route_after_evaluate(state: AgentState) -> str:
 
 
 def route_after_verify(state: AgentState) -> str:
-    """verify 后：忠实则结束，幻觉则改写重检索（达上限强制结束）。"""
-    if state.get("is_faithful", True):
+    """verify 后：忠实（或未验证）则结束，确认幻觉则改写重检索（达上限强制结束）。
+
+    is_faithful=None（LLM 校验失败）视为通过：不因验证器故障误触发重检索循环。
+    """
+    if state.get("is_faithful") is not False:
         return "end"
     iter_count = state.get("iteration_count", 0)
     max_iter = state.get("max_iterations", 3)

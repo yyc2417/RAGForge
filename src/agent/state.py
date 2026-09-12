@@ -52,7 +52,9 @@ class AgentState(TypedDict, total=False):
     answer: str
 
     # ── verify 节点输出 ──
-    is_faithful: bool
+    # is_faithful: True/False 为判定结果；None 表示 LLM 校验失败未验证
+    # （路由层将 None 视为通过，评估层单独归类，避免向「忠实」偏置）
+    is_faithful: bool | None
     verification_reason: str
 
     # ── 策略切换辅助 ──

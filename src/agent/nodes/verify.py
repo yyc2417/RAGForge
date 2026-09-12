@@ -39,14 +39,16 @@ def verify_node(
         )
         is_faithful = result.is_faithful
         reason = result.reason
-    except Exception as e:  # noqa: BLE001 - LLM 失败时默认通过（避免误触发重检索循环）
-        logger.warning(f"[verify] LLM 校验失败，默认 is_faithful=True：{e}")
-        is_faithful = True
-        reason = "校验失败，默认通过"
+    except Exception as e:  # noqa: BLE001 - LLM 失败时标记为未验证，不做真伪判定
+        # 默认 True 会向评估偏置（幻觉被美化），None 表示「未验证」，
+        # 路由层将 None 视为通过（避免误触发重检索循环），评估层单独归类
+        logger.warning(f"[verify] LLM 校验失败，标记为未验证：{e}")
+        is_faithful = None
+        reason = "校验失败，未验证"
 
     # 幻觉检测不通过时递增迭代计数，确保 max_iterations 防线生效
     # （防止 verify→reformulate 回退循环中计数不增长导致无限循环）
-    if not is_faithful:
+    if is_faithful is False:
         iteration_count = state.get("iteration_count", 0) + 1
     else:
         iteration_count = state.get("iteration_count", 0)

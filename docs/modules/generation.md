@@ -138,7 +138,7 @@ LLMClient 在 `build_agent_graph` 中作为单例创建，通过 `functools.part
 
 | 配置键 | 默认值 | 来源 |
 |--------|--------|------|
-| `deepseek_model` | `deepseek-v4-flash` | `src.config.Settings` |
+| `deepseek_model` | `deepseek-flash` | `src.config.Settings` |
 | `deepseek_base_url` | `https://api.deepseek.com` | `src.config.Settings` |
 | `deepseek_api_key` | `""` | `.env` 环境变量（SecretStr 存储） |
 | `llm_timeout` | `60` | `src.config.Settings`（秒） |

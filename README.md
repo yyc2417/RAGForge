@@ -49,7 +49,7 @@ flowchart TD
 | 包管理 | uv | 极速依赖解析 |
 | Agent 框架 | LangGraph ≥ 1.2.4 | 8 节点状态机、条件边、astream_events |
 | LLM 编排 | LangChain ≥ 1.3.4 | LCEL chain、ChatPromptTemplate |
-| LLM | DeepSeek（OpenAI 兼容） | deepseek-v4-flash，60s 超时 + tenacity 瞬时故障重试 |
+| LLM | DeepSeek（OpenAI 兼容） | deepseek-flash，60s 超时 + tenacity 瞬时故障重试 |
 | 向量检索 | ChromaDB + langchain-chroma | 持久化、cosine relevance、确定性 ID + 指纹校验 |
 | 关键词检索 | rank-bm25 | BM25Okapi，jieba/regex 双分词（小写归一） |
 | 混合检索 | RRF（自实现） | `score = Σ 1/(k+rank)`，top-2k 候选融合 |
@@ -214,30 +214,32 @@ RAGForge/
 
 ## 评估指标对比
 
-运行 `uv run python scripts/eval.py` 生成（数据集：15 个 QA，覆盖 factual/reasoning/chitchat/complex 四类）：
+运行 `uv run python scripts/eval.py --rebuild` 生成（数据集：15 个 QA，覆盖 factual/reasoning/chitchat/complex 四类；模型 deepseek-flash）：
 
 | 配置 | Top-5 召回率 | 幻觉率 | P99 延迟 | 平均 Token |
 |------|:----------:|:-----:|:-------:|:---------:|
-| baseline（线性 RAG） | 91.7% | **0.0%** ✅ | 8446ms | 882 |
-| + Agent（状态机） | **100.0%** ✅ | **0.0%** ✅ | 47525ms | 672 ✅ |
+| baseline（线性 RAG） | 100.0% ✅ | 6.7% | 20659ms | 1444 |
+| + Agent（状态机） | 100.0% ✅ | **0.0%** ✅ | 21924ms | 963 |
+| + Hybrid（RRF 融合） | 100.0% ✅ | **0.0%** ✅ | 21584ms | **953** |
+| + Reranker（重排序） | 100.0% ✅ | **0.0%** ✅ | 31730ms | 957 |
 
 **目标门槛**：召回率 ≥ 90%、幻觉率 < 5%、P99 < 2s、平均 token < 800。
 
-> ⚠️ **上表为历史基线数据**（检索 k=3、按字符分块 500、忠实度双口径的旧版本产出），
-> 仅供版本对照，不代表当前代码的现状。当前版本已统一评估口径（检索 k=5、
-> token 化分块 220/30、忠实度统一 LLM 裁决、失败/未验证样本单独归类），
-> 并新增免 API 的离线检索评估（`--retrieval-only`，四策略 recall@5 均 100%）。
-> 完整基线待重跑 `scripts/eval.py` 后更新本表。完整明细见 `reports/eval_report.json`。
+> **评估口径**（2026-09-12 基线，0 错误 / 0 未验证样本）：统一检索 k=5、token 化分块
+> 220/30、忠实度由 LLM 统一裁决（关键词仅作失败 fallback）、失败样本不计入分母。
+> P99 远超 2s 门槛的原因是 LLM 生成延迟（每题 4~20s 的完整生成 + 多轮调用的长尾），
+> 属于 API 侧延迟而非检索/编排开销；生产环境以 `/chat/stream` 流式输出改善体感延迟。
+> 完整明细见 `reports/eval_report.json`（含索引指纹，可复现）。
 
-### 结果分析（基于历史基线）
+### 结果分析
 
-**召回率**：Agent 模式达到 100%，优于 baseline 的 91.7%。策略切换机制（vector → BM25）能有效补充向量检索未命中的关键词匹配场景。
+**召回率**：四种配置在 k=5 口径下均 100%——评估集（15 题全部改写自语料）区分度有限，召回率无法拉开差距；策略间的真实差异体现在幻觉率、token 效率与延迟。
 
-**幻觉率**：Agent 模式幻觉率 **0.0%**。三层保障：VERIFY_PROMPT 允许合理推理和总结、chitchat 查询跳过 verify 节点、双预算计数（检索次数 / 幻觉重试各自设上限）防止无限循环。
+**幻觉率**：三种 Agent 模式均 **0.0%**，baseline 6.7%（1 题被判不忠实）。Agent 的 verify → reformulate 自愈闭环实测有效：不忠实回答会被拦截并触发重检索。三层保障：VERIFY_PROMPT 允许合理推理和总结、chitchat 查询跳过 verify、双预算计数（检索次数 / 幻觉重试各自设上限）防止无限循环。
 
-**延迟**：Agent 模式 P99 约 48s，主要因 reformulate 循环（最多 3 轮 × 每轮多个 LLM 调用）。chitchat 查询仅需 3-4s（跳过检索和验证）。当前版本已通过路由短路（hybrid 无效切换直达生成、改写无效跳过重检索）消除了大部分空转循环，延迟显著下降（待重跑评估确认）。生产环境还可通过调低 `max_iterations`、缓存、异步流式输出（`/chat/stream`）进一步缓解。
+**Token 效率**：Agent 模式平均 963 token，显著优于 baseline 的 1444（诊断 prompt 精简、命中即走不空转）；hybrid 最省（953）。
 
-**Token**：Agent 模式平均 672 token，低于 baseline 的 882（诊断 prompt 更精简，循环时复用上下文）。
+**延迟**：P50 约 4s（baseline）/~11s（Agent 多轮调用），P99 长尾 21~32s 来自个别复杂查询的多轮循环叠加 LLM 生成延迟。与旧基线（Agent P99 47.5s）相比已大幅下降——hybrid 无效切换短路、改写无效跳过重检索消除了系统性空转。进一步优化方向：调低 `max_iterations`、缓存、流式输出。
 
 ## License
 

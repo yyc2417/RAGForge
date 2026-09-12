@@ -3,14 +3,16 @@
     {
       "mode": "baseline",
       "samples": 15,
-      "recall_top5": 0.9167,
-      "hallucination_rate": 0.0,
-      "faithfulness_rate": 1.0,
-      "latency_p50_ms": 2030.99,
-      "latency_p95_ms": 6203.27,
-      "latency_p99_ms": 8446.16,
-      "avg_token": 882,
-      "total_token": 13224,
+      "errors": 0,
+      "unverified": 0,
+      "recall_top5": 1.0,
+      "hallucination_rate": 0.0667,
+      "faithfulness_rate": 0.9333,
+      "latency_p50_ms": 4158.8,
+      "latency_p95_ms": 18225.75,
+      "latency_p99_ms": 20658.81,
+      "avg_token": 1444,
+      "total_token": 43315,
       "details": [
         {
           "query": "Python 的装饰器怎么用？",
@@ -19,12 +21,16 @@
           "retrieved_sources": [
             "python_basics.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "很抱歉，检索到的文档内容仅涉及 Python 3.13 的 free-threaded 模式（无 GIL），并未包含关于 Python 装饰器的使用方法。因此，我无法从知识库中找到相关信息来回答您的问题。如果您需要装饰器的用法，建议参考 Python 官方文档或其他教程资源。",
-          "is_faithful": true,
-          "e2e_ms": 2259.461999987252
+          "answer": "根据当前检索到的文档，没有找到关于 Python 装饰器用法的相关内容。文档中涉及的是列表推导式、GIL、上下文管理器、欠拟合和 Transformer 等主题，但未包含装饰器的定义、语法或示例。因此，无法从知识库中回答“Python 的装饰器怎么用”这个问题。",
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 16922.326599946246
         },
         {
           "query": "什么是生成器？yield 怎么用？",
@@ -32,13 +38,17 @@
           "expected_source": "python_basics.md",
           "retrieved_sources": [
             "python_basics.md",
-            "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "生成器（Generator）是一种惰性求值的迭代器，使用 `yield` 关键字来定义。与传统函数不同，生成器函数每次调用 `yield` 时会暂停执行并返回一个值，下次调用 `next()` 时从暂停处继续，从而按需生成数据，避免一次性将所有元素加载到内存。\n\n### `yield` 的基本用法\n在函数内部通过 `yield` 返回一个值，该函数就变成了生成器函数。例如斐波那契数列生成器：\n\n```python\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a          # 每次返回当前 a，并暂停\n        a, b = b, a + b\n\nfib = fibonacci()\nfirst_10 = [next(fib) for _ in range(10)]  # 取前10个： [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\n这里的 `yield a` 每次循环产生一个斐波那契数，`next(fib)` 驱动生成器继续执行到下一个 `yield`。\n\n### 生成器的优势\n- **内存效率高**：不需要把所有元素同时放入内存，特别适合处理大数据流或无限序列。\n- **惰性求值**：只在需要时才计算下一个值。\n\n（注意：检索内容还提到上下文管理器，但与问题无关，未使用。）",
+          "answer": "生成器（Generator）是一种**惰性求值的迭代器**，通过 `yield` 关键字来定义和产生值。它的特点是按需生成元素，而不是一次性把所有元素加载到内存中，因此内存效率高，适合处理大数据流。\n\n`yield` 的用法是：在函数中使用 `yield` 返回一个值，并暂停函数执行；下次再取值时，会从暂停的位置继续执行。\n\n文档中的例子：\n\n```python\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n\n# 取前10个斐波那契数\nfib = fibonacci()\nfirst_10 = [next(fib) for _ in range(10)]\n# 结果: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\n这里 `fibonacci()` 不会立刻执行完，而是返回一个生成器对象。每次调用 `next(fib)`，函数就运行到 `yield a`，返回当前的 `a`，然后暂停；下一次再调用 `next(fib)` 时，从 `a, b = b, a + b` 继续执行，从而不断产生下一个斐波那契数。",
           "is_faithful": true,
-          "e2e_ms": 4230.806899955496
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 8950.258400058374
         },
         {
           "query": "Python 的 GIL 是什么？",
@@ -47,26 +57,34 @@
           "retrieved_sources": [
             "python_basics.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，仅提到 Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），并未对 GIL 本身进行定义或解释，因此无法从知识库中找到关于“Python 的 GIL 是什么”这一问题的答案。",
+          "answer": "GIL（Global Interpreter Lock，全局解释器锁）是 CPython 中的一种互斥锁。它保证同一时刻只有一个线程执行 Python 字节码。\n\n它的主要影响包括：\n\n- **CPU 密集型任务**：多线程通常不会带来提速，因为线程之间会争抢 GIL；这类任务更适合使用多进程（`multiprocessing`）。\n- **I/O 密集型任务**：多线程仍然有效，因为进行 I/O 操作时线程会释放 GIL。\n- **异步编程**：`asyncio` 可以在单线程内实现并发，适合 I/O 密集型场景。\n\n另外，文档提到 Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），未来可能彻底移除 GIL。",
           "is_faithful": true,
-          "e2e_ms": 1693.034500000067
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3003.3060000278056
         },
         {
           "query": "Python 列表推导式的写法是什么？",
           "query_type": "factual",
           "expected_source": "python_basics.md",
           "retrieved_sources": [
+            "machine_learning_faq.md",
             "python_basics.md",
             "python_basics.md",
-            "python_basics.md"
+            "python_basics.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "Python 列表推导式提供了一种简洁的创建列表的方法，基本写法格式为：`[表达式 for 变量 in 可迭代对象]`。例如，`[x**2 for x in range(10)]` 可以生成 0 到 9 的平方数列表。如果需要添加筛选条件，可以在后面加上 `if` 子句，如 `[x**2 for x in range(10) if x % 2 == 0]` 只生成偶数的平方。这种写法比等价的 for 循环执行效率更高，因为它在底层使用了 C 语言级别的优化。",
+          "answer": "Python 列表推导式的基本写法是：\n\n```python\n[表达式 for 变量 in 可迭代对象]\n```\n\n如果需要在遍历时加条件过滤，可以写成：\n\n```python\n[表达式 for 变量 in 可迭代对象 if 条件]\n```\n\n例如：\n\n```python\n# 创建 0 到 9 的平方数列表\nsquares = [x**2 for x in range(10)]\n# 结果: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]\n\n# 只保留偶数的平方\neven_squares = [x**2 for x in range(10) if x % 2 == 0]\n# 结果: [0, 4, 16, 36, 64]\n```\n\n列表推导式是一种创建列表的简洁语法，并且通常比等价的 `for` 循环更快，因为它在 C 层面优化了迭代。",
           "is_faithful": true,
-          "e2e_ms": 2072.653300012462
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3623.8112999126315
         },
         {
           "query": "什么是过拟合？怎么解决？",
@@ -75,12 +93,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据提供的文档内容，我无法找到关于\"过拟合\"的定义或解决方法的相关信息。文档主要介绍了Embedding（嵌入）的概念、应用场景和常见模型，以及精确率、召回率、F1分数等分类评估指标，未涉及过拟合问题。因此，我无法从知识库中回答您的问题。",
+          "answer": "根据检索到的资料，**“过拟合”的完整定义没有在文档中明确给出**，因此无法直接从知识库中说明它的严格定义。\n\n不过，文档中列出了过拟合的两种解决方法：\n\n1. **早停（Early Stopping）**：当验证集损失不再下降时停止训练。\n2. **交叉验证**：使用 K-Fold 交叉验证来评估模型的泛化能力。\n\n另外，文档中关于**欠拟合**的描述是：模型过于简单，无法捕捉数据中的规律，训练集和验证集准确率都很低。过拟合通常与欠拟合相对，但当前检索到的内容没有对过拟合本身展开定义。",
           "is_faithful": true,
-          "e2e_ms": 1868.7257999554276
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 12615.930400090292
         },
         {
           "query": "梯度下降是什么？",
@@ -89,12 +111,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
-            "machine_learning_faq.md"
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，没有找到关于“梯度下降”的相关信息，因此无法从知识库中回答您的问题。",
+          "answer": "检索到的文档中没有关于“梯度下降”的定义、原理或相关说明，因此无法从当前知识库中找到该问题的答案。",
           "is_faithful": true,
-          "e2e_ms": 1584.070899989456
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3535.106400027871
         },
         {
           "query": "Embedding 在 RAG 系统中起什么作用？",
@@ -103,12 +129,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "Embedding 在 RAG 系统中起到核心作用。具体来说，它将用户的查询和知识库中的文档都转换为向量（即嵌入向量），然后通过计算余弦相似度等度量方式，找到与查询语义最相关的文档。这样就能实现高效的文本检索，从而支持 RAG 系统根据检索到的文档内容生成回答。",
+          "answer": "在 RAG 系统中，Embedding 的核心作用是支撑文本检索。具体来说，它会把用户查询和知识库文档都转换成连续向量空间中的稠密向量，然后通过计算向量之间的余弦相似度，找出与查询最相关的文档内容。这样 RAG 就能基于语义相关性来检索资料，而不是只依赖关键词匹配。文档中也明确提到，“文本检索（RAG 系统的核心）”正是 Embedding 的典型应用场景。",
           "is_faithful": true,
-          "e2e_ms": 1902.6354000670835
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 4158.802899997681
         },
         {
           "query": "为什么 Transformer 比传统 RNN 更适合处理长序列？",
@@ -117,12 +147,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，Transformer 完全基于注意力机制，抛弃了传统的循环结构（RNN/LSTM）。这种设计使其在处理长序列时更具优势：注意力机制允许模型直接关注序列中任意位置的依赖关系，而无需像 RNN 那样按顺序逐步传递信息，从而避免了长距离依赖带来的梯度消失或计算效率低下的问题。文档虽然没有详细展开，但“完全基于注意力机制”这一特点本身就暗示了其并行计算和长程建模能力优于顺序处理的 RNN。",
+          "answer": "Transformer 比传统 RNN 更适合处理长序列，主要原因是：\n\n1. **自注意力机制让长距离依赖更容易捕捉**  \n   Transformer 完全基于注意力机制，抛弃了 RNN/LSTM 的循环结构。自注意力让每个 token 都能直接关注序列中所有其他 token，并计算 Query、Key、Value 的加权和。因此，序列中相距较远的信息不需要像 RNN 那样一步步传递，长距离依赖处理能力更强。\n\n2. **支持并行计算，不受顺序处理限制**  \n   RNN 必须按时间顺序逐步处理序列，难以并行化；而 Transformer 不依赖循环结构，可以并行计算。这不仅提升了训练效率，也让它更适合处理较长序列。\n\n3. **多头注意力增强关系捕捉能力**  \n   Transformer 通过多头注意力并行多个注意力头，能够从不同维度捕捉 token 之间的关系，进一步提升对长序列中复杂依赖的建模能力。\n\n4. **位置编码补充顺序信息**  \n   由于自注意力本身不包含顺序信息，Transformer 通过位置编码给输入加入位置信息，从而在并行处理的同时保留序列顺序。\n\n因此，Transformer 凭借自注意力带来的直接长距离依赖建模能力和并行计算优势，比传统 RNN 更适合处理长序列。",
           "is_faithful": true,
-          "e2e_ms": 5001.723700086586
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 6020.0347998179495
         },
         {
           "query": "精确率和召回率有什么区别？",
@@ -131,40 +165,52 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，仅提到“精确率、召回率和 F1 分数这三个指标用于评估分类模型”，但没有具体说明精确率和召回率的定义或区别。因此，我无法从知识库中找到关于两者区别的详细信息。建议查阅其他资料来了解这两个指标的具体含义和不同之处。",
+          "answer": "抱歉，当前知识库中没有关于“精确率和召回率有什么区别”的相关内容，因此无法基于知识库回答这个问题。",
           "is_faithful": true,
-          "e2e_ms": 2444.854899891652
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3617.6044999156147
         },
         {
           "query": "你好",
           "query_type": "chitchat",
           "expected_source": null,
           "retrieved_sources": [
+            "machine_learning_faq.md",
             "python_basics.md",
+            "machine_learning_faq.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md"
           ],
           "hit": false,
-          "answer": "你好！欢迎提问。关于 Python 编程的相关问题，我可以根据文档内容为你解答，比如列表推导式、装饰器等。有什么具体问题吗？",
+          "answer": "你好！有什么可以帮你的吗？",
           "is_faithful": true,
-          "e2e_ms": 2030.985499965027
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 1890.8781001809984
         },
         {
           "query": "谢谢",
           "query_type": "chitchat",
           "expected_source": null,
           "retrieved_sources": [
+            "machine_learning_faq.md",
             "python_basics.md",
+            "machine_learning_faq.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md"
           ],
           "hit": false,
-          "answer": "不客气！如果你有任何关于 Python 编程或其他方面的问题，随时可以问我。😊",
+          "answer": "不客气！很高兴能帮到你，如果还有其他问题，随时欢迎提问。",
           "is_faithful": true,
-          "e2e_ms": 1737.439199932851
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 2204.206299968064
         },
         {
           "query": "对比 Python GIL 的多线程限制与机器学习中的并行训练需求，给出建议",
@@ -172,27 +218,35 @@
           "expected_source": "python_basics.md",
           "retrieved_sources": [
             "python_basics.md",
+            "machine_learning_faq.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，Python 3.13 引入了实验性的 **free-threaded 模式（无 GIL）**，这意味着未来 Python 有可能彻底移除 GIL。这一信息可以用于回答你的问题。\n\n### 对比分析\n\n- **Python GIL 的多线程限制**：传统的 CPython 解释器由于全局解释器锁（GIL）的存在，在多线程环境下同一时刻只能有一个线程执行 Python 字节码，导致 CPU 密集型任务（如数值计算）无法通过多线程获得真正的并行加速。这严重限制了 Python 在多核 CPU 上的性能发挥。\n- **机器学习中的并行训练需求**：机器学习训练（尤其是深度学习）通常需要大量并行计算，例如多 GPU 训练、分布式数据并行、模型并行等。这些操作往往依赖多线程或多进程来高效利用硬件资源，但 Python 的 GIL 会使得纯多线程方案在 CPU 端（如数据预处理、推理）成为瓶颈。\n\n### 建议\n\n1. **关注 Python 3.13 及后续版本的 free-threaded 模式**：如果机器学习项目中需要在 CPU 端进行多线程并行计算（例如数据加载、特征工程、模型推理），可以尝试使用 Python 3.13 的实验性 free-threaded 模式（无 GIL）来绕过限制。不过，目前该模式仍处于实验阶段，需要评估兼容性和稳定性。\n2. **继续使用成熟的并行策略**：在当前生产环境中，建议继续采用以下方式规避 GIL 的限制：\n   - 使用 **多进程**（`multiprocessing`）代替多线程，因为每个进程拥有独立的 GIL，能实现真正的并行。\n   - 将计算密集部分（如矩阵运算、GPU 训练）交给底层 C/C++ 扩展（如 NumPy、PyTorch、TensorFlow）完成，这些扩展在自身内部释放 GIL。\n   - 对于分布式训练，利用 PyTorch 的 `DistributedDataParallel` 或 TensorFlow 的 `tf.distribute`，它们通过多进程 + 通信高效实现并行。\n3. **长期展望**：随着 Python 社区推动 GIL 移除（如 free-threaded 模式的成熟），未来 Python 原生多线程的性能瓶颈有望大幅缓解。可以持续关注官方更新，并在新版本中逐步测试迁移可能性。\n\n总之，当前阶段应当根据具体场景灵活选择并行方案，同时积极接纳 Python 无 GIL 的新特性，以更好地满足机器学习并行训练的需求。",
+          "answer": "根据文档，CPython 的 GIL 是一个互斥锁，**同一时刻只有一个线程执行 Python 字节码**。因此：\n\n- **CPU 密集型任务**：多线程不会提速，应改用多进程（`multiprocessing`）。\n- **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作会释放 GIL；`asyncio` 也适合 I/O 密集场景。\n- Python 3.13 引入了实验性的 free-threaded 模式，未来可能移除 GIL。\n\n机器学习并行训练通常同时包含两类环节：  \n1. **I/O 密集环节**：如数据读取、增强、加载；  \n2. **计算密集环节**：如特征工程、梯度计算、CPU 上的矩阵运算等。\n\n文档没有直接展开机器学习并行训练的具体方案，但结合 GIL 特性可以给出以下建议：\n\n1. **计算密集部分用多进程，而不是 Python 多线程**：训练中偏 CPU 计算的部分若用多线程，会受 GIL 限制，难以真正并行；应优先使用 `multiprocessing` 或进程级并行。\n2. **I/O 密集部分可用多线程或 `asyncio`**：数据加载、预处理等若以 I/O 等待为主，多线程或异步编程仍能提升效率，因为 I/O 会释放 GIL。\n3. **将数据管道与模型计算解耦**：I/O 环节用线程/异步，计算环节用多进程，减少 GIL 争用。\n4. **关注 Python 3.13+ 的 free-threaded 模式**：它未来可能缓解 GIL 限制，但目前是实验性的，生产使用需谨慎评估。\n\n总之，在现有 CPython GIL 下，机器学习并行训练不能简单依赖 Python 多线程来解决计算瓶颈；应按任务类型选择多进程、异步 I/O 或外部/分布式并行方案。",
           "is_faithful": true,
-          "e2e_ms": 9006.88350002747
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 21267.072200076655
         },
         {
           "query": "Python 上下文管理器 with 语句怎么用？",
           "query_type": "factual",
           "expected_source": "python_basics.md",
           "retrieved_sources": [
+            "python_basics.md",
             "machine_learning_faq.md",
             "machine_learning_faq.md",
-            "machine_learning_faq.md"
+            "machine_learning_faq.md",
+            "python_basics.md"
           ],
-          "hit": false,
-          "answer": "抱歉，根据检索到的文档内容，我无法找到关于 Python 上下文管理器 `with` 语句用法的信息。文档中仅包含 Embedding（嵌入）概念、精确率、召回率和 F1 分数等内容，未涉及 Python 编程语法。建议您查阅其他资料或直接向我提问其他问题。",
+          "hit": true,
+          "answer": "`with` 语句用于 Python 的上下文管理器，可以确保资源在使用后正确释放，即使代码块中发生异常也会执行清理操作。\n\n基本用法是：\n\n```python\nwith 上下文管理器 as 变量：\n    # 使用资源\n```\n\n例如文件操作中，`with open(...) as f` 会在代码块结束后自动关闭文件：\n\n```python\nwith open(\"data.txt\", \"r\") as f:\n    content = f.read()\n```\n\n上下文管理器的核心是 `__enter__` 和 `__exit__` 方法：进入 `with` 代码块时调用 `__enter__`，退出时调用 `__exit__`，而 `__exit__` 保证即使发生异常也会执行清理。\n\n你也可以自定义上下文管理器。文档中给出了一种方式：使用 `contextlib` 中的 `@contextmanager` 装饰器，把生成器函数变成上下文管理器：\n\n```python\nfrom contextlib import contextmanager\n\n@contextmanager\ndef database_connection(url):\n    conn = create_connection(url)\n    try:\n        yield conn\n    finally:\n        conn.close()\n```\n\n使用时同样可以通过 `with` 进入并获取 `yield` 返回的对象：\n\n```python\nwith database_connection(url) as conn:\n    # 使用 conn\n    ...\n```\n\n这样连接会在代码块结束后自动关闭。",
           "is_faithful": true,
-          "e2e_ms": 1707.4948999797925
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 6082.573800114915
         },
         {
           "query": "欠拟合和过拟合有什么区别？",
@@ -201,54 +255,68 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "抱歉，根据检索到的文档内容，其中并未涉及“欠拟合”和“过拟合”的相关信息。文档主要介绍了Embedding（嵌入）的定义、应用场景和常见模型，以及精确率、召回率和F1分数等分类评估指标。因此，我无法从已有知识库中回答您的问题。",
+          "answer": "根据检索到的文档，欠拟合和过拟合的区别可以这样理解：\n\n- **欠拟合**：文档明确定义为“模型过于简单，无法捕捉数据中的规律”。  \n  - **识别方法**：训练集和验证集准确率都很低。  \n  - **解决办法**：增加模型复杂度（如更深网络、更多特征）、减少正则化、增加训练时间。\n\n- **过拟合**：文档中虽然出现过拟合标题，但没有给出完整的定义或识别标准，只列出了相关应对措施：  \n  - **早停**：验证集损失不再下降时停止训练。  \n  - **交叉验证**：用 K-Fold 交叉验证评估模型泛化能力。  \n  这说明过拟合主要与模型泛化能力下降、验证集损失变化有关。\n\n因此，按文档能得出的核心区别是：  \n**欠拟合偏向“模型太简单，训练集和验证集都学不好”；过拟合则偏向“模型泛化能力出现问题，需要通过早停、交叉验证等手段来改善”。**  \n不过，文档没有提供过拟合的准确率表现等细节，因此无法仅凭这些内容做更精确的对比。",
           "is_faithful": true,
-          "e2e_ms": 1654.6930000185966
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 10557.109200162813
         },
         {
           "query": "再见",
           "query_type": "chitchat",
           "expected_source": null,
           "retrieved_sources": [
+            "machine_learning_faq.md",
             "python_basics.md",
+            "machine_learning_faq.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md"
           ],
           "hit": false,
-          "answer": "再见！如果你有关于Python编程或其他知识的问题，欢迎随时提问。",
+          "answer": "再见！祝你一切顺利，有需要随时来找我。",
           "is_faithful": true,
-          "e2e_ms": 2418.6729999491945
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 2744.771699886769
         }
       ]
     },
     {
       "mode": "agent",
       "samples": 15,
+      "errors": 0,
+      "unverified": 0,
       "recall_top5": 1.0,
       "hallucination_rate": 0.0,
       "faithfulness_rate": 1.0,
-      "latency_p50_ms": 24089.7,
-      "latency_p95_ms": 42872.45,
-      "latency_p99_ms": 47524.69,
-      "avg_token": 672,
-      "total_token": 69256,
+      "latency_p50_ms": 10609.65,
+      "latency_p95_ms": 17355.58,
+      "latency_p99_ms": 21924.31,
+      "avg_token": 963,
+      "total_token": 64547,
       "details": [
         {
           "query": "Python 的装饰器怎么用？",
           "query_type": "factual",
           "expected_source": "python_basics.md",
           "retrieved_sources": [
+            "machine_learning_faq.md",
             "python_basics.md",
             "python_basics.md",
-            "python_basics.md"
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，Python 装饰器是一种用于修改函数行为的函数，通常使用 `@decorator` 语法糖来应用。具体用法可以参考以下说明：\n\n- 装饰器本质上是一个接受函数作为参数的可调用对象（通常是一个函数），并返回一个新函数，从而在不修改原函数代码的情况下增加额外功能。\n- 使用时，只需在目标函数定义的上方加上 `@装饰器名称` 即可。例如：\n  ```python\n  @my_decorator\n  def my_function():\n      pass\n  ```\n  这等价于 `my_function = my_decorator(my_function)`。\n\n文档未提供更详细的示例或具体场景，但以上信息可帮助您理解装饰器的基本使用方式。如需深入细节（如带参数的装饰器、多个装饰器叠加等），建议查阅更全面的 Python 教程。",
+          "answer": "根据知识库，Python 装饰器的用法可以这样理解：\n\n装饰器本身是一个函数，用来**修改其他函数的行为**。使用时通过 `@decorator` 语法糖，把装饰器写在被装饰函数的定义上方。它的本质是**高阶函数**：接收一个函数作为参数，并返回一个新的函数。\n\n以文档中的 `timer` 装饰器为例：\n\n1. 定义一个装饰器函数，比如 `timer(func)`，它接收被装饰的函数 `func`。\n2. 在装饰器内部定义一个 `wrapper(*args, **kwargs)` 函数。\n3. 在 `wrapper` 中，可以在调用 `func` 前后加入额外逻辑，例如记录开始时间、结束时间，并打印函数耗时。\n4. 调用 `func` 并保存返回值，最后返回这个返回值。\n5. 装饰器函数最终返回 `wrapper`。\n6. 在目标函数前加上 `@timer`，之后调用该函数时，实际执行的就是包装后的逻辑。\n\n文档还提到，Python 中常见的内置装饰器包括 `@staticmethod`、`@classmethod` 和 `@property`。",
           "is_faithful": true,
-          "e2e_ms": 33121.91480002366
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 14908.038399880752
         },
         {
           "query": "什么是生成器？yield 怎么用？",
@@ -256,13 +324,17 @@
           "expected_source": "python_basics.md",
           "retrieved_sources": [
             "python_basics.md",
-            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，生成器（Generator）是一种**惰性求值的迭代器**，它通过 `yield` 关键字实现。与普通函数一次性返回所有结果不同，生成器可以逐步产生值，每次遇到 `yield` 就暂停执行并返回一个值，下次调用时从暂停处继续执行。\n\n**`yield` 的使用方法**：在函数内部使用 `yield` 替代 `return`，该函数就会变成一个生成器函数。调用生成器函数会返回一个生成器对象，可以通过 `next()` 函数或循环来逐个获取值。\n\n文档中给出的示例是斐波那契数列生成器：\n\n```python\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a          # 每次产生当前的 a 值，并暂停\n        a, b = b, a + b\n\nfib = fibonacci()\nfirst_10 = [next(fib) for _ in range(10)]  # 取前10个数\n# 结果: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\n生成器的核心优势是**内存效率**：不需要一次性把所有元素加载到内存中，非常适合处理大数据流或无限序列。",
+          "answer": "生成器（Generator）是一种**惰性求值的迭代器**，它通过 `yield` 关键字来产出值，而不是一次性把所有结果都计算并返回。\n\n`yield` 的用法要点：\n\n- 在函数里使用 `yield`，这个函数就变成了生成器函数。\n- 调用生成器函数不会立刻执行函数体，而是返回一个生成器对象。\n- 每次调用 `next()` 时，函数执行到 `yield` 处暂停并返回一个值；下次再调用 `next()` 时，从暂停处继续执行。\n- 例如文档中的斐波那契数列生成器：\n\n```python\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n```\n\n使用时可以这样取前 10 个数：\n\n```python\nfib = fibonacci()\nfirst_10 = [next(fib) for _ in range(10)]\n# 结果: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\n生成器的主要优势是**内存效率高**：它不需要一次性把所有元素加载到内存，因此很适合处理大数据流。",
           "is_faithful": true,
-          "e2e_ms": 15525.441300007515
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 11897.258900105953
         },
         {
           "query": "Python 的 GIL 是什么？",
@@ -270,27 +342,35 @@
           "expected_source": "python_basics.md",
           "retrieved_sources": [
             "python_basics.md",
+            "python_basics.md",
             "machine_learning_faq.md",
+            "python_basics.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "Python 的 GIL（全局解释器锁）是 CPython 实现中的一个互斥锁，它确保同一时刻只有一个线程能够执行 Python 字节码。这意味着即使使用多线程，也无法利用多核 CPU 同时运行多条 Python 指令。\n\nGIL 对不同类型的任务影响不同：\n- **CPU 密集型任务**：多线程无法提升速度，推荐使用多进程（`multiprocessing`）来充分利用多核。\n- **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作（如文件读写、网络请求）会释放 GIL，让其他线程得以执行。\n- **异步编程**：`asyncio` 在单线程内实现并发，同样适合 I/O 密集场景。\n\n简而言之，GIL 是 CPython 为了简化内存管理而引入的设计，但它限制了多线程在 CPU 密集型计算上的并行能力。",
+          "answer": "Python 的 GIL（Global Interpreter Lock，全局解释器锁）是 CPython 解释器中的一种互斥锁。它的核心作用是保证同一时刻只有一个线程执行 Python 字节码。\n\nGIL 带来的主要影响包括：\n\n- **CPU 密集型任务**：多线程通常不会提速，因为多个线程无法真正并行执行 Python 字节码；这种情况下更适合使用多进程（`multiprocessing`）。\n- **I/O 密集型任务**：多线程仍然有效，因为进行 I/O 操作时会释放 GIL，其他线程可以继续运行。\n- **异步编程**：`asyncio` 可以在单线程内实现并发，适合 I/O 密集场景。\n\n此外，Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），未来可能彻底移除 GIL。",
           "is_faithful": true,
-          "e2e_ms": 29722.99490007572
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 7474.071600008756
         },
         {
           "query": "Python 列表推导式的写法是什么？",
           "query_type": "factual",
           "expected_source": "python_basics.md",
           "retrieved_sources": [
+            "machine_learning_faq.md",
             "python_basics.md",
             "python_basics.md",
-            "python_basics.md"
+            "python_basics.md",
+            "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "Python 列表推导式的写法是：`[表达式 for 变量 in 可迭代对象]`。例如，要生成 0 到 9 的平方数列表，可以写 `[x**2 for x in range(10)]`；如果需要条件过滤，可以在末尾添加 `if` 语句，如 `[x**2 for x in range(10) if x % 2 == 0]`，用于只保留偶数平方。这种语法简洁且执行效率高于等价的 for 循环。",
+          "answer": "Python 列表推导式的基本写法是：\n\n```python\n[表达式 for 变量 in 可迭代对象]\n```\n\n如果需要条件过滤，可以写成：\n\n```python\n[表达式 for 变量 in 可迭代对象 if 条件]\n```\n\n例如：\n\n```python\nsquares = [x**2 for x in range(10)]\n# 结果: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]\n\neven_squares = [x**2 for x in range(10) if x % 2 == 0]\n# 结果: [0, 4, 16, 36, 64]\n```\n\n文档还提到，列表推导式比等价的 `for` 循环更快，因为它在 C 层面优化了迭代。",
           "is_faithful": true,
-          "e2e_ms": 9301.24679999426
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 6705.805700039491
         },
         {
           "query": "什么是过拟合？怎么解决？",
@@ -299,12 +379,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据提供的文档内容，其中只涉及精确率、召回率和F1分数的定义及其在RAG系统中的应用，并未包含关于“过拟合”的任何信息。因此，我无法从知识库中找到与您问题相关的答案。建议您参考其他资料或询问更相关的问题。",
+          "answer": "**过拟合**是指模型在训练数据上表现很好，但在未见过的数据上表现较差。模型“记住”了训练数据中的噪声和细节，而没有学到一般性规律。\n\n**识别方法**：训练集准确率高，但验证集准确率低，说明泛化能力差。\n\n**常见解决方法**：\n1. **增加训练数据**：让模型学到更一般的规律。\n2. **正则化**：使用 L1（Lasso）或 L2（Ridge）正则化限制模型复杂度。\n3. **Dropout**：随机丢弃神经元，防止模型过度依赖某些特征。\n4. **早停（Early Stopping）**：当验证集损失不再下降时停止训练。\n5. **交叉验证**：使用 K-Fold 交叉验证评估模型的泛化能力。",
           "is_faithful": true,
-          "e2e_ms": 21104.106400045566
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 13944.977100007236
         },
         {
           "query": "梯度下降是什么？",
@@ -313,12 +397,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "抱歉，根据检索到的文档内容，虽然文档中提到了“梯度下降是什么？”这一标题，但并没有提供具体的解释或定义。因此，我无法从知识库中找到关于梯度下降的详细信息。建议您参考其他资料了解梯度下降的概念。",
+          "answer": "梯度下降是一种优化模型参数的核心算法。它的基本思想是：沿着损失函数梯度的反方向更新参数，逐步逼近损失的最小值。\n\n更新公式可以表示为：\n\n`参数 = 参数 - 学习率 × 梯度`\n\n常见的三种变体包括：\n\n- **批量梯度下降（BGD）**：使用全部数据计算梯度，结果精确但速度较慢。\n- **随机梯度下降（SGD）**：每次只用一个样本计算梯度，速度快但波动较大。\n- **小批量梯度下降（Mini-batch）**：介于两者之间，是常用折中方案，常见 batch_size 为 32、64、128。\n\n文档中还提到“常见优化器”，但未展开具体内容。",
           "is_faithful": true,
-          "e2e_ms": 32428.065499989316
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 10609.645400196314
         },
         {
           "query": "Embedding 在 RAG 系统中起什么作用？",
@@ -327,12 +415,19 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "在 RAG 系统中，Embedding 起到了核心的文本检索作用。具体来说，它将用户查询和知识库中的文档都映射为向量，然后通过计算向量间的余弦相似度来找到与查询最相关的文档。这样，系统能够高效地进行语义匹配，而不仅仅是关键词匹配，从而提升检索的准确性和召回率。",
+          "answer": "在 RAG 系统中，Embedding 的核心作用是支撑**文本检索**。它会把用户查询和待检索的文档都转换成连续向量空间中的稠密向量；由于语义相似的文本在向量空间里距离较近，系统就可以通过余弦相似度等度量，找出与查询最相关的文档片段。这样 RAG 能进行语义级检索，而不只是依赖关键词匹配，从而为后续生成提供相关上下文。文档也指出，文本检索是 RAG 系统的核心，而精确率、召回率等指标可用于评估这类检索的质量。",
           "is_faithful": true,
-          "e2e_ms": 28738.9630000107
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 14600.324500119314
         },
         {
           "query": "为什么 Transformer 比传统 RNN 更适合处理长序列？",
@@ -341,12 +436,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
-            "machine_learning_faq.md"
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
           ],
           "hit": true,
-          "answer": "Transformer 相比传统 RNN 更适合处理长序列，主要有两个关键原因：\n\n1. **支持并行计算**：Transformer 的自注意力机制可以同时计算所有 token 之间的关系，而 RNN 必须按时间步顺序处理输入，无法并行。当序列很长时，RNN 的计算效率会显著下降，而 Transformer 能充分利用 GPU 并行加速。\n\n2. **长距离依赖处理能力强**：Transformer 通过自注意力机制让每个 token 直接关注序列中的所有其他 token，无论距离多远都能建立联系。而 RNN 在处理长序列时容易出现梯度消失或梯度爆炸问题，导致较早的信息难以传递到较后的位置，实际只能捕捉有限范围内的依赖关系。\n\n这两点都源于 Transformer 完全基于注意力机制的设计（如文档所述：“完全基于注意力机制，抛弃了传统的循环结构”），使其在处理长序列时既高效又有效。",
+          "answer": "Transformer 比传统 RNN 更适合处理长序列，主要因为：\n\n1. **不依赖循环结构，支持并行计算**  \n   Transformer 完全基于注意力机制，抛弃了 RNN/LSTM 的顺序循环结构。RNN 必须按时间步依次处理序列，而 Transformer 可以并行计算，因此训练和处理长序列时效率更高。\n\n2. **长距离依赖建模能力更强**  \n   Transformer 的核心是自注意力机制：每个 token 都会关注所有其他 token，并计算 Query、Key、Value 的加权和。这意味着序列中任意两个位置之间的信息可以直接建立联系，不需要像 RNN 那样一步步传递，因此更适合捕捉长距离依赖。\n\n3. **多头注意力增强关系捕获能力**  \n   Transformer 使用多头注意力，可以并行多个注意力头，从不同维度捕获 token 之间的关系，有助于更全面地理解长序列中的复杂依赖。\n\n4. **位置编码补充顺序信息**  \n   由于自注意力本身不包含顺序信息，Transformer 通过位置编码给输入加入位置信息，使其在处理长序列时仍能保留必要的顺序关系。\n\n因此，文档中指出 Transformer 的重要优势包括“支持并行计算（不像 RNN 必须顺序处理）”以及“长距离依赖处理能力强”，这也是它比传统 RNN 更适合长序列的关键原因。",
           "is_faithful": true,
-          "e2e_ms": 48687.75080004707
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 13191.266900161281
         },
         {
           "query": "精确率和召回率有什么区别？",
@@ -355,12 +454,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "精确率和召回率都是评估分类模型性能的指标，但关注的侧重点不同：\n\n- **精确率（Precision）** 衡量的是“预测的准不准”，即预测为正类的样本中，有多少是真正的正类。计算公式为 TP / (TP + FP)。精确率高意味着模型预测为正的结果更可靠，误报少。\n- **召回率（Recall）** 衡量的是“找的全不全”，即实际为正类的样本中，有多少被正确识别出来。计算公式为 TP / (TP + FN)。召回率高意味着模型能更多地把真正的正类找出来，漏报少。\n\n简单来说：精确率关心“挑出来的对不对”，召回率关心“该挑的是否都挑出来了”。两个指标往往相互制约，需要根据具体任务的需求平衡。",
+          "answer": "精确率和召回率的区别在于**关注点不同**：\n\n- **精确率（Precision）**：关注“预测为正的样本中有多少真正为正”，公式是 \\(TP / (TP + FP)\\)。它回答的是“预测得准不准？”  \n  也就是更在意**误报**：如果很多本来不是正例的样本被预测成正例，精确率就会低。\n\n- **召回率（Recall）**：关注“实际为正的样本中有多少被正确预测出来”，公式是 \\(TP / (TP + FN)\\)。它回答的是“找得全不全？”  \n  也就是更在意**漏报**：如果很多真正的正例没有被找出来，召回率就会低。\n\n简单说：\n\n- **精确率**看的是：你找出来的结果里，有多少是对的。\n- **召回率**看的是：所有该找出来的结果里，你找到了多少。\n\n在 RAG 系统中也可以这样理解：  \n- 精确率对应“检索到的文档中有多少是真正相关的”；  \n- 召回率对应“相关文档中有多少被检索到了”。\n\n两者通常需要权衡，因此还会用 **F1 分数**来综合衡量，它是精确率和召回率的调和平均值。",
           "is_faithful": true,
-          "e2e_ms": 12222.657999955118
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 11468.151000095531
         },
         {
           "query": "你好",
@@ -368,9 +471,11 @@
           "expected_source": null,
           "retrieved_sources": [],
           "hit": false,
-          "answer": "你好！根据检索结果，当前知识库中未找到与您问题相关的文档内容。如需其他帮助，请提供更具体的问题，我将尽力为您解答。",
+          "answer": "你好！有什么可以帮你的吗？",
           "is_faithful": true,
-          "e2e_ms": 4178.183500072919
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3122.3057000897825
         },
         {
           "query": "谢谢",
@@ -378,9 +483,11 @@
           "expected_source": null,
           "retrieved_sources": [],
           "hit": false,
-          "answer": "不客气！如果您有其他问题，随时可以提出，我会尽力根据知识库内容为您解答。",
+          "answer": "不客气！很高兴能帮到你。如果还有其他问题，欢迎随时问我。",
           "is_faithful": true,
-          "e2e_ms": 3415.9218000713736
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3112.3655000701547
         },
         {
           "query": "对比 Python GIL 的多线程限制与机器学习中的并行训练需求，给出建议",
@@ -388,14 +495,20 @@
           "expected_source": "python_basics.md",
           "retrieved_sources": [
             "python_basics.md",
+            "machine_learning_faq.md",
             "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，Python 的 GIL（全局解释器锁）限制了多线程在 CPU 密集型任务上的并行能力——同一时刻只有一个线程能执行 Python 字节码，因此多线程无法利用多核加速 CPU 密集型计算。而机器学习中的模型训练（尤其是深度学习）通常属于 CPU/GPU 密集型任务，涉及大量矩阵运算和前向/反向传播，如果直接使用 Python 多线程进行训练，会受到 GIL 的约束，无法获得真正的并行加速。\n\n**建议**：\n\n1. **对于 CPU 上的模型训练**：应避免使用 Python 原生多线程，改用 `multiprocessing` 多进程（不受 GIL 影响）或借助分布式训练框架（如 `Horovod`、`PyTorch Distributed`）实现多进程/多机并行。文档中也明确指出“CPU 密集型任务：多线程不会提速，应该用多进程”。\n\n2. **对于 GPU 上的模型训练**：深度学习框架（如 TensorFlow、PyTorch）的核心计算在 C++/CUDA 中执行，不依赖 Python 线程，因此不受 GIL 影响。此时 Python 线程主要用于数据加载等 I/O 操作，GIL 影响较小，可继续使用多线程或异步编程（如 `asyncio`）优化数据预处理。\n\n3. **关注 Python 3.13 的 free-threaded 模式**：文档提到 Python 3.13 引入了实验性的无 GIL 模式，未来可能彻底移除 GIL。如果后续版本稳定，可以直接利用多线程进行 CPU 并行训练，但目前仍属实验性质，生产环境建议优先使用多进程或 GPU 方案。\n\n4. **混合策略**：在机器学习流水线中，将数据预处理（I/O 密集型）与模型训练（计算密集型）分开：数据加载用多线程或 `asyncio` 提高吞吐，训练部分用多进程或 GPU 并行。文档中也提到“I/O 密集型任务：多线程仍然有效”，合理组合可提升整体效率。\n\n总之，GIL 对机器学习并行训练的限制主要集中在纯 Python 线程的 CPU 计算上，通过使用多进程、GPU 加速或异步 I/O 可以有效规避，未来无 GIL Python 可能提供更直接的解决方案。",
+          "answer": "根据文档，Python 的 GIL 是 CPython 中的互斥锁，同一时刻只有一个线程执行 Python 字节码。因此：\n\n- **CPU 密集型任务**：多线程不会提速，应改用多进程（`multiprocessing`）。\n- **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作会释放 GIL；`asyncio` 也适合单线程内实现 I/O 并发。\n- Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），但文档说明它仍是实验性的，未来才可能彻底移除 GIL。\n\n机器学习方面，文档提到 **Transformer 支持并行计算**，不像 RNN 必须顺序处理，因此架构本身对并行更友好；但文档没有展开多 GPU、分布式训练等具体并行训练机制。因此可以得出以下对比与建议：\n\n1. **不要用 Python 多线程硬扛 CPU 密集型训练/预处理**  \n   如果训练流程中的计算主要是 CPU 密集型，并且依赖 Python 字节码执行，多线程很可能受 GIL 限制，无法提速。按文档建议，优先考虑多进程。\n\n2. **I/O 密集型环节可用多线程或异步**  \n   例如数据读取、日志、网络请求等，多线程仍可能有效，因为 I/O 会释放 GIL；也可以用 `asyncio` 处理 I/O 密集场景。\n\n3. **模型架构选择会影响并行效率**  \n   文档指出 Transformer 支持并行计算，而 RNN 必须顺序处理。因此，如果任务对并行训练或并行推理有较高需求，Transformer 类架构比必须顺序处理的 RNN 更有利。\n\n4. **关注 free-threaded Python，但不要急于依赖**  \n   Python 3.13 的实验性无 GIL 模式可能缓解多线程限制，但文档强调其仍是实验性，当前不建议作为稳定生产方案。\n\n5. **具体并行训练方案需结合框架和硬件验证**  \n   文档没有给出可直接照搬的机器学习分布式训练配置，因此实际落地时，应区分 Python 层多线程限制与训练框架内部并行机制，并根据具体栈测试验证。",
           "is_faithful": true,
-          "e2e_ms": 40380.179800093174
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 23066.495300037786
         },
         {
           "query": "Python 上下文管理器 with 语句怎么用？",
@@ -403,13 +516,17 @@
           "expected_source": "python_basics.md",
           "retrieved_sources": [
             "python_basics.md",
-            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "python_basics.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，没有找到关于Python上下文管理器with语句用法的相关信息。文档内容仅涉及Python 3.13的实验性free-threaded模式（无GIL）。因此，无法从知识库中回答你的问题。",
+          "answer": "`with` 语句用于上下文管理，主要作用是确保资源在使用后能被正确释放，即使代码块中发生异常也会执行清理。\n\n基本用法如下：\n\n```python\n# 文件操作：离开 with 代码块后自动关闭文件\nwith open(\"data.txt\", \"r\") as f:\n    content = f.read()\n```\n\n你也可以自定义上下文管理器。文档中给出的方式是使用 `contextlib.contextmanager` 装饰器，在函数中用 `yield` 提供资源，并在 `finally` 中做清理：\n\n```python\nfrom contextlib import contextmanager\n\n@contextmanager\ndef database_connection(url):\n    conn = create_connection(url)\n    try:\n        yield conn\n    finally:\n        conn.close()\n```\n\n使用时：\n\n```python\nwith database_connection(url) as conn:\n    # 使用 conn 执行操作\n    ...\n```\n\n上下文管理器的核心是 `__enter__` 和 `__exit__` 方法。其中 `__exit__` 负责清理工作，并且能保证即使发生异常也会执行。因此，`with` 常用于文件、数据库连接等需要明确释放的资源管理场景。",
           "is_faithful": true,
-          "e2e_ms": 27810.53359992802
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 8477.66980016604
         },
         {
           "query": "欠拟合和过拟合有什么区别？",
@@ -418,12 +535,16 @@
           "retrieved_sources": [
             "machine_learning_faq.md",
             "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
             "machine_learning_faq.md"
           ],
           "hit": true,
-          "answer": "根据检索到的文档内容，我无法找到关于欠拟合和过拟合的区别的相关信息。文档主要介绍了嵌入（Embedding）的定义、应用场景、常见模型，以及精确率、召回率和F1分数等概念，但未涉及欠拟合和过拟合的内容。建议您查阅其他相关资料来了解这两个概念的区别。",
+          "answer": "欠拟合和过拟合的核心区别在于模型对数据规律的捕捉程度，以及它在训练集和验证集上的表现。\n\n**1. 定义上的区别**\n- **欠拟合**：模型过于简单，无法捕捉数据中的规律。\n- **过拟合**：模型在训练数据上表现很好，但在未见过的数据上表现差；它“记住”了训练数据的噪声和细节，而不是学到一般性规律。\n\n**2. 识别方法上的区别**\n- **欠拟合**：训练集和验证集准确率都很低。\n- **过拟合**：训练集准确率高，验证集准确率低，泛化能力差。\n\n**3. 解决方法上的区别**\n- **欠拟合**：\n  1. 增加模型复杂度，例如更深的网络、更多特征；\n  2. 减少正则化，例如降低正则化系数；\n  3. 增加训练时间，让模型可能继续收敛。\n- **过拟合**：\n  1. 增加训练数据；\n  2. 使用正则化，如 L1、L2 正则化；\n  3. 使用 Dropout，随机丢弃神经元；\n  4. 使用早停，在验证集损失不再下降时停止训练；\n  5. 使用 K-Fold 交叉验证评估模型泛化能力。\n\n简单来说：**欠拟合是“学得太少”，连训练数据规律都没学好；过拟合是“学得太多”，把训练数据中的噪声也学到了，导致在新数据上表现差。**",
           "is_faithful": true,
-          "e2e_ms": 24089.700800017454
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 9546.78130010143
         },
         {
           "query": "再见",
@@ -431,9 +552,547 @@
           "expected_source": null,
           "retrieved_sources": [],
           "hit": false,
-          "answer": "你好！再见，祝你一切顺利！如果以后还有问题，随时欢迎再来问我。",
+          "answer": "再见！祝你一切顺利，有需要随时再来。",
           "is_faithful": true,
-          "e2e_ms": 3751.158499973826
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3123.250999953598
+        }
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "samples": 15,
+      "errors": 0,
+      "unverified": 0,
+      "recall_top5": 1.0,
+      "hallucination_rate": 0.0,
+      "faithfulness_rate": 1.0,
+      "latency_p50_ms": 11464.09,
+      "latency_p95_ms": 17621.56,
+      "latency_p99_ms": 21583.88,
+      "avg_token": 953,
+      "total_token": 63844,
+      "details": [
+        {
+          "query": "Python 的装饰器怎么用？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "Python 装饰器的基本用法是：定义一个接收函数作为参数的函数，并在其中返回一个新函数，然后用 `@装饰器名` 放到目标函数定义前。\n\n文档中给出的典型结构是：\n\n```python\ndef decorator(func):\n    def wrapper(*args, **kwargs):\n        # 在调用原函数前后添加额外逻辑\n        result = func(*args, **kwargs)\n        return result\n    return wrapper\n\n@decorator\ndef my_func():\n    ...\n```\n\n说明：\n- 装饰器本质上是高阶函数：接收一个函数，返回一个新函数。\n- `@decorator` 是语法糖，等价于把下面的函数传给装饰器并替换成装饰器返回的新函数。\n- `wrapper` 通常用 `*args, **kwargs` 接收原函数的参数，以便适配不同参数形式。\n- 文档中的 `timer` 装饰器示例就是在 `wrapper` 中记录开始和结束时间，然后打印函数名和耗时。\n\n此外，Python 常见的内置装饰器包括 `@staticmethod`、`@classmethod`、`@property`。它们也用于修改或补充函数/方法的行为。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 14532.133399974555
+        },
+        {
+          "query": "什么是生成器？yield 怎么用？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "生成器（Generator）是 Python 中一种**惰性求值的迭代器**，核心关键字是 `yield`。它不会一次性把所有元素计算并加载到内存，而是需要时再逐个产出，因此**内存效率高，适合处理大数据流**。\n\n`yield` 的用法可以理解为：\n\n- 在函数里使用 `yield 值`，这个函数就变成生成器函数。\n- 调用生成器函数时，函数体不会立刻全部执行，而是返回一个生成器对象。\n- 可以用 `next()` 逐个取值，也可以用 `for` 循环迭代。\n- 每次执行到 `yield` 时产出一个值，之后可以继续从该位置往下执行。\n\n例如文档中的斐波那契生成器：\n\n```python\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n\n# 取前10个斐波那契数\nfib = fibonacci()\nfirst_10 = [next(fib) for _ in range(10)]\n# 结果: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\n这里 `fibonacci()` 返回的是生成器对象，每次调用 `next(fib)` 才会产出一个斐波那契数。  \n总结：**生成器是用 `yield` 定义、按需产出值的迭代器；`yield` 用于在生成器函数中逐个返回值。**",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 15498.885700013489
+        },
+        {
+          "query": "Python 的 GIL 是什么？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "Python 的 GIL（Global Interpreter Lock，全局解释器锁）是 CPython 解释器中的一种互斥锁。它的作用是保证同一时刻只有一个线程执行 Python 字节码。\n\n这意味着：\n- **CPU 密集型任务**：多线程通常不会提升性能，应改用多进程（`multiprocessing`）。\n- **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作期间会释放 GIL。\n- **异步编程**：`asyncio` 可在单线程内实现并发，适合 I/O 密集场景。\n\n另外，文档提到 Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），未来可能彻底移除 GIL。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 7151.982800103724
+        },
+        {
+          "query": "Python 列表推导式的写法是什么？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "python_basics.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "Python 列表推导式的基本写法是：\n\n```python\n[表达式 for 变量 in 可迭代对象]\n```\n\n如果需要加条件过滤，可以写成：\n\n```python\n[表达式 for 变量 in 可迭代对象 if 条件]\n```\n\n例如：\n\n```python\n# 创建平方数列表\nsquares = [x**2 for x in range(10)]\n\n# 只保留偶数的平方\neven_squares = [x**2 for x in range(10) if x % 2 == 0]\n```\n\n列表推导式是一种简洁创建列表的语法，通常比等价的 `for` 循环更快。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 6619.696100009605
+        },
+        {
+          "query": "什么是过拟合？怎么解决？",
+          "query_type": "factual",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "**过拟合**是指模型在训练数据上表现很好，但在未见过的数据上表现较差。它往往是因为模型“记住”了训练数据中的噪声和细节，而没有学到更具普遍性的规律。\n\n**识别方法**：训练集准确率很高，但验证集准确率较低，说明泛化能力差。\n\n**解决方法**包括：\n\n1. **增加训练数据**：让模型接触到更多样本，更容易学到一般性规律。\n2. **正则化**：使用 L1（Lasso）或 L2（Ridge）正则化来限制模型复杂度。\n3. **Dropout**：随机丢弃部分神经元，减少模型对某些特征的过度依赖。\n4. **早停（Early Stopping）**：当验证集损失不再下降时停止训练。\n5. **交叉验证**：例如使用 K-Fold 交叉验证来评估模型的泛化能力。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 10503.45869990997
+        },
+        {
+          "query": "梯度下降是什么？",
+          "query_type": "factual",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "梯度下降是一种优化模型参数的核心算法。它的基本思想是：沿着损失函数梯度的反方向更新参数，逐步逼近损失函数的最小值。\n\n更新公式可以表示为：\n\n`参数 = 参数 - 学习率 × 梯度`\n\n其中，学习率决定每次更新的步长。\n\n常见有三种变体：\n\n- **批量梯度下降（BGD）**：使用全部数据计算梯度，结果更精确，但计算速度慢。\n- **随机梯度下降（SGD）**：每次只用一个样本计算梯度，速度快，但更新波动较大。\n- **小批量梯度下降（Mini-batch）**：介于两者之间，是常用折中方案，常见 batch_size 为 32、64、128。\n\n文档中还提到会有一些常见优化器，但未展开具体内容。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 11464.094799943268
+        },
+        {
+          "query": "Embedding 在 RAG 系统中起什么作用？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "在 RAG 系统中，Embedding 的核心作用是支撑**文本检索**，这也是 RAG 系统的关键环节。\n\n具体来说：\n\n- **将查询和文档都转换为向量**：Embedding 把文本这类离散数据映射成连续向量空间中的稠密向量。\n- **通过向量相似度找相关内容**：把用户查询和知识库文档分别转成向量后，可以用**余弦相似度**等方式计算它们之间的相似程度，从而找出与查询最相关的文档。\n- **语义相近的文本向量也接近**：例如“猫”和“狗”语义相似，它们的向量会比较接近；而“汽车”语义不同，向量距离会更远。这使得 RAG 不只依赖关键词匹配，而能更好地按语义检索。\n\n因此，在 RAG 中，Embedding 主要负责把查询和文档表示成可比较的向量，并据此完成相关文档检索。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 13366.533800028265
+        },
+        {
+          "query": "为什么 Transformer 比传统 RNN 更适合处理长序列？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
+          ],
+          "hit": true,
+          "answer": "根据文档内容，Transformer 比传统 RNN 更适合处理长序列，主要有以下原因：\n\n1. **支持并行计算**  \n   Transformer 不像 RNN 那样必须按顺序逐步处理序列，因此可以并行计算，处理长序列时效率更高。\n\n2. **长距离依赖处理能力强**  \n   Transformer 完全基于注意力机制，抛弃了传统的循环结构。其核心的自注意力机制让每个 token 都能关注所有其他 token，并通过 Query、Key、Value 的加权和来建模关系。这意味着序列中相距很远的位置也能直接建立联系，不像 RNN 需要逐步传递信息。\n\n3. **多头注意力增强表达能力**  \n   Transformer 使用多头注意力，可以并行多个注意力头，从不同维度捕获 token 之间的关系，有助于处理复杂的长序列依赖。\n\n4. **位置编码补充顺序信息**  \n   由于自注意力本身不包含顺序信息，Transformer 通过位置编码给输入加入位置信息，从而在并行处理的同时保留序列顺序。\n\n总结来说，Transformer 通过并行计算和全局自注意力机制，避免了 RNN 顺序处理的瓶颈，并且能更直接地建模长距离依赖，因此更适合处理长序列。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 14982.761799823493
+        },
+        {
+          "query": "精确率和召回率有什么区别？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "精确率和召回率的区别主要在于**关注的角度不同**：\n\n- **精确率（Precision）**：  \n  公式是 **TP / (TP + FP)**。  \n  它衡量的是：在所有“被预测为正”的样本中，有多少是真正的正样本。  \n  简单说就是：**预测得准不准？**\n\n- **召回率（Recall）**：  \n  公式是 **TP / (TP + FN)**。  \n  它衡量的是：在所有“实际为正”的样本中，有多少被正确预测出来了。  \n  简单说就是：**找得全不全？**\n\n可以这样理解：\n\n| 指标 | 关注点 | 分母 | 回答的问题 |\n|---|---|---|---|\n| 精确率 | 预测为正的样本中有多少是真的正 | TP + FP | 预测的准不准？ |\n| 召回率 | 实际为正的样本中有多少被找出来 | TP + FN | 找的全不全？ |\n\n在 RAG 系统的检索评估中，精确率表示**检索到的文档中有多少是真正相关的**，召回率表示**相关文档中有多少被检索到了**。\n\n另外，F1 分数是精确率和召回率的调和平均值，用来综合平衡这两个指标。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 12540.142700076103
+        },
+        {
+          "query": "你好",
+          "query_type": "chitchat",
+          "expected_source": null,
+          "retrieved_sources": [],
+          "hit": false,
+          "answer": "你好！有什么可以帮你的吗？",
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 2992.524500004947
+        },
+        {
+          "query": "谢谢",
+          "query_type": "chitchat",
+          "expected_source": null,
+          "retrieved_sources": [],
+          "hit": false,
+          "answer": "不客气！很高兴能帮到你，如果还有其他问题，随时来问我。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 2852.5347001850605
+        },
+        {
+          "query": "对比 Python GIL 的多线程限制与机器学习中的并行训练需求，给出建议",
+          "query_type": "complex",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "根据检索到的文档，Python 的 GIL 是 CPython 中的互斥锁，**同一时刻只有一个线程执行 Python 字节码**。这带来几个直接影响：\n\n- **CPU 密集型任务**：多线程不会提速，应该用多进程（`multiprocessing`）。\n- **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作会释放 GIL。\n- **异步编程**：`asyncio` 在单线程内实现并发，适合 I/O 密集场景。\n- Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），未来可能彻底移除 GIL。\n\n对比机器学习中的并行训练需求，可以这样理解：\n\n机器学习训练通常包含大量计算，如果这些计算主要发生在 Python 字节码层面，就类似于文档所说的 **CPU 密集型任务**。此时，指望用 Python 多线程来并行加速训练计算，会受到 GIL 限制，难以真正利用多核。因此，文档给出的思路是：**CPU 密集型任务用多进程，而不是多线程**。\n\n可以给出如下建议：\n\n1. **计算密集的预处理或训练任务**  \n   优先考虑 `multiprocessing` 多进程，绕开 GIL，利用多核并行。  \n   如果训练计算由底层库承担，则需要确认这些库是否释放 GIL；文档没有涉及具体机器学习框架的行为，不能直接假定多线程一定有效。\n\n2. **数据加载、网络请求等 I/O 密集环节**  \n   使用多线程或 `asyncio` 是合适的，因为文档指出 I/O 操作会释放 GIL，多线程仍然有效，`asyncio` 也适合 I/O 密集场景。\n\n3. **不要把 Python 多线程当作通用并行训练方案**  \n   在 GIL 存在的情况下，纯 Python 多线程不适合 CPU 密集型并行训练计算。更稳妥的方向是多进程，或结合具体框架已有的并行/分布式能力。\n\n4. **关注 Python 3.13 free-threaded 模式**  \n   文档提到这是实验性无 GIL 模式，未来可能移除 GIL。但当前仍是实验性，不宜作为稳定生产依赖。\n\n总结：GIL 的限制与机器学习中计算密集的并行训练需求存在冲突。基于文档建议，计算密集部分应优先用多进程；I/O 密集部分可用多线程或 `asyncio`；具体机器学习框架的并行训练方案，文档未提供，需要结合框架自身机制进一步确认。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 22574.462899938226
+        },
+        {
+          "query": "Python 上下文管理器 with 语句怎么用？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
+          ],
+          "hit": true,
+          "answer": "`with` 语句用于上下文管理器，核心作用是确保资源在使用完后被正确释放，即使过程中发生异常也会执行清理。\n\n常见用法是文件操作：\n\n```python\nwith open(\"data.txt\", \"r\") as f:\n    content = f.read()\n```\n\n这里 `with` 会在代码块结束后自动关闭文件，不需要手动调用 `f.close()`。\n\n也可以自定义上下文管理器。例如使用 `contextlib.contextmanager`：\n\n```python\nfrom contextlib import contextmanager\n\n@contextmanager\ndef database_connection(url):\n    conn = create_connection(url)\n    try:\n        yield conn\n    finally:\n        conn.close()\n```\n\n使用时：\n\n```python\nwith database_connection(url) as conn:\n    # 使用 conn\n    ...\n```\n\n上下文管理器的核心是 `__enter__` 和 `__exit__` 方法。`__enter__` 负责进入上下文时的准备，`__exit__` 负责退出时的清理工作，并且能保证即使发生异常也会执行清理操作。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 7923.058500047773
+        },
+        {
+          "query": "欠拟合和过拟合有什么区别？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "欠拟合和过拟合的主要区别在于**模型复杂度**以及**在训练集和验证集上的表现**：\n\n| 对比项 | 欠拟合 | 过拟合 |\n|---|---|---|\n| 本质 | 模型过于简单，无法捕捉数据中的规律 | 模型“记住”了训练数据中的噪声和细节，而没有学到一般性规律 |\n| 训练集表现 | 准确率通常较低 | 准确率通常很高 |\n| 验证集表现 | 准确率也较低 | 准确率较低，泛化能力差 |\n| 核心识别方法 | 训练集和验证集准确率都很低 | 训练集准确率高，但验证集准确率低 |\n| 常见解决方向 | 增加模型复杂度，如更深网络、更多特征；减少正则化；增加训练时间 | 增加训练数据；使用 L1/L2 正则化；使用 Dropout；早停；交叉验证 |\n\n简单来说：  \n- **欠拟合**：模型学得不够，训练和验证表现都差。  \n- **过拟合**：模型学得“太死”，训练表现好，但面对新数据表现差。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 12829.74119996652
+        },
+        {
+          "query": "再见",
+          "query_type": "chitchat",
+          "expected_source": null,
+          "retrieved_sources": [],
+          "hit": false,
+          "answer": "再见！祝你一切顺利，有需要随时再来。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3317.4360000994056
+        }
+      ]
+    },
+    {
+      "mode": "reranker",
+      "samples": 15,
+      "errors": 0,
+      "unverified": 0,
+      "recall_top5": 1.0,
+      "hallucination_rate": 0.0,
+      "faithfulness_rate": 1.0,
+      "latency_p50_ms": 11250.21,
+      "latency_p95_ms": 24919.15,
+      "latency_p99_ms": 31729.54,
+      "avg_token": 957,
+      "total_token": 66028,
+      "details": [
+        {
+          "query": "Python 的装饰器怎么用？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
+          ],
+          "hit": true,
+          "answer": "Python 装饰器的用法可以概括为：先定义一个装饰器函数，再用 `@装饰器名` 放到目标函数定义上方。\n\n基本步骤：\n\n1. 装饰器函数接收一个函数作为参数。\n2. 在装饰器内部定义一个包装函数，通常用 `*args, **kwargs` 接收原函数参数。\n3. 在包装函数中调用原函数，并可在调用前后添加额外逻辑。\n4. 返回这个包装函数。\n5. 用 `@decorator` 语法糖装饰目标函数。\n\n文档中的 `timer` 示例就是这样：\n\n```python\nimport time\n\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        end = time.time()\n        print(f\"{func.__name__} 耗时: {end - start:.4f}秒\")\n        return result\n    return wrapper\n\n@timer\ndef slow_function():\n    time.sleep(1)\n    return \"完成\"\n```\n\n调用 `slow_function()` 时，实际执行的是 `wrapper`，因此会先记录开始时间，再执行原函数，最后打印耗时并返回结果。\n\n装饰器本质上是高阶函数：它接收一个函数，返回一个新函数。除了自定义装饰器，Python 还常见一些内置装饰器，例如：\n\n- `@staticmethod`\n- `@classmethod`\n- `@property`\n\n简单说，装饰器用于在不修改原函数主体代码的情况下，给函数增加额外行为。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 19501.427500043064
+        },
+        {
+          "query": "什么是生成器？yield 怎么用？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "生成器（Generator）是 Python 中一种**惰性求值的迭代器**，它的核心是使用 `yield` 关键字。\n\n`yield` 的用法是：在函数中使用它来逐个“产出”值。调用这个函数时不会一次性算出所有结果，而是通过 `next()` 按需获取下一个值。\n\n文档中的例子是斐波那契数列：\n\n```python\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n\n# 取前10个斐波那契数\nfib = fibonacci()\nfirst_10 = [next(fib) for _ in range(10)]\n# 结果: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\n这里每次 `yield a` 都会产出一个斐波那契数，下一次调用 `next(fib)` 时再继续往下执行。因为 `while True` 可以配合 `yield` 惰性产生值，所以即使表示无限序列也不会一次性占满内存。\n\n生成器的主要优势是**内存效率高**：不需要一次性把所有元素加载到内存中，适合处理大数据流。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 11250.214299885556
+        },
+        {
+          "query": "Python 的 GIL 是什么？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "Python 的 **GIL（Global Interpreter Lock，全局解释器锁）** 是 CPython 解释器中的一种互斥锁。它的核心作用是：**同一时刻只允许一个线程执行 Python 字节码**。\n\n因此，GIL 会带来这些影响：\n\n- **CPU 密集型任务**：多线程通常不会提速，因为多个线程无法真正并行执行 Python 字节码；这种场景更适合使用多进程 `multiprocessing`。\n- **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作期间会释放 GIL，其他线程可以继续执行。\n- **异步编程**：`asyncio` 可以在单线程内实现并发，适合 I/O 密集场景。\n\n另外，文档提到 Python 3.13 引入了实验性的 **free-threaded 模式（无 GIL）**，未来可能彻底移除 GIL。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 6378.26759996824
+        },
+        {
+          "query": "Python 列表推导式的写法是什么？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "python_basics.md",
+            "python_basics.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "Python 列表推导式的基本写法是：\n\n```python\n[表达式 for 变量 in 可迭代对象]\n```\n\n如果需要过滤条件，可以加上 `if`：\n\n```python\n[表达式 for 变量 in 可迭代对象 if 条件]\n```\n\n例如：\n\n```python\n# 创建平方数列表\nsquares = [x**2 for x in range(10)]\n# 结果: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]\n\n# 只保留偶数的平方\neven_squares = [x**2 for x in range(10) if x % 2 == 0]\n# 结果: [0, 4, 16, 36, 64]\n```\n\n文档还提到，列表推导式比等价的 `for` 循环更快，因为它在 C 层面优化了迭代。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 7470.736399991438
+        },
+        {
+          "query": "什么是过拟合？怎么解决？",
+          "query_type": "factual",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "过拟合是指模型在训练数据上表现很好，但在未见过的数据上表现差。它本质上“记住”了训练数据里的噪声和细节，而没有学到一般性规律。\n\n识别过拟合时，通常会看到：训练集准确率高，但验证集准确率低，说明泛化能力差。\n\n常见的解决方法包括：\n\n1. **增加训练数据**：让模型接触到更多样本，更容易学到一般规律。\n2. **正则化**：使用 L1（Lasso）或 L2（Ridge）正则化来限制模型复杂度。\n3. **Dropout**：训练时随机丢弃部分神经元，减少模型对某些特征的过度依赖。\n4. **早停（Early Stopping）**：当验证集损失不再下降时停止训练，避免继续拟合训练数据。\n5. **交叉验证**：使用 K-Fold 交叉验证来评估模型的泛化能力。\n\n这些方法的核心目标是控制模型复杂度、提升模型在未见数据上的表现。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 13496.965500060469
+        },
+        {
+          "query": "梯度下降是什么？",
+          "query_type": "factual",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "梯度下降是一种优化模型参数的核心算法。它的原理是沿着损失函数梯度的反方向更新参数，逐步逼近最小值。\n\n更新公式为：\n\n**参数 = 参数 - 学习率 × 梯度**\n\n根据计算梯度时使用数据量的不同，常见有三种变体：\n\n- **批量梯度下降（BGD）**：用全部数据计算梯度，结果精确但速度慢。\n- **随机梯度下降（SGD）**：每次只用一个样本，速度快但波动大。\n- **小批量梯度下降（Mini-batch）**：折中方案，常用 batch_size 为 32/64/128。\n\n文档中还提到有常见优化器，但未展开具体内容。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 10675.947799813002
+        },
+        {
+          "query": "Embedding 在 RAG 系统中起什么作用？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "在 RAG 系统中，Embedding 主要用于**文本检索**，而且是 RAG 的核心环节。\n\n具体来说，它会将用户的**查询**和知识库中的**文档**都转换成连续向量空间中的稠密向量。语义相近的文本，其向量也会比较接近；语义不同的文本，向量距离则较远。然后系统可以通过计算向量之间的相似度（例如余弦相似度），找到与查询最相关的文档内容，再把这些内容作为上下文提供给生成模型使用。\n\n所以，Embedding 在 RAG 中的作用可以概括为：**把查询和文档映射到向量空间，并通过向量相似度实现语义检索，从而找到最相关的知识片段。**",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 33432.1424998343
+        },
+        {
+          "query": "为什么 Transformer 比传统 RNN 更适合处理长序列？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
+          ],
+          "hit": true,
+          "answer": "Transformer 比传统 RNN 更适合处理长序列，检索文档给出的关键原因主要有两点：\n\n1. **长距离依赖处理能力更强**  \n   Transformer 完全基于注意力机制，抛弃了 RNN/LSTM 的循环结构。它的自注意力机制让每个 token 都能关注所有其他 token，并计算 Query、Key、Value 的加权和。这样，序列中任意两个位置可以直接建立联系，长距离依赖不需要像 RNN 那样按顺序逐步传递，因此更适合捕捉长序列中的远距离关系。\n\n2. **支持并行计算，不受顺序处理限制**  \n   文档明确指出，Transformer 支持并行计算，“不像 RNN 必须顺序处理”。传统 RNN 需要按时间步依次处理序列，长序列下并行性差；而 Transformer 不依赖循环结构，可以更高效地并行处理序列信息。\n\n此外，Transformer 还通过多头注意力并行捕捉不同维度的关系，并用位置编码补充自注意力本身缺失的顺序信息。这些设计共同增强了它处理长序列的能力。\n\n因此，核心可以概括为：**自注意力带来的直接长距离建模能力 + 非循环结构带来的并行计算优势**，使 Transformer 比传统 RNN 更适合长序列。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 18042.2806001734
+        },
+        {
+          "query": "精确率和召回率有什么区别？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "精确率和召回率都是分类模型（以及在 RAG 中评估检索质量）的指标，但关注点不同：\n\n- **精确率（Precision）**：计算方式是 `TP / (TP + FP)`。它衡量的是“预测为正的样本中，真正为正的比例”，关注的是**预测得准不准**。在 RAG 中，可以理解为：检索到的文档里，有多少是真正相关的。\n\n- **召回率（Recall）**：计算方式是 `TP / (TP + FN)`。它衡量的是“实际为正的样本中，被正确预测出来的比例”，关注的是**找得全不全**。在 RAG 中，可以理解为：所有相关文档里，有多少被检索到了。\n\n简单说：\n- **精确率高**：说明模型或检索系统给出的正例中，错误较少。\n- **召回率高**：说明模型或检索系统没有漏掉太多真正的正例。\n\n两者并不总是同时高，实际中常常需要权衡。文档还提到，**F1 分数**是精确率和召回率的调和平均值，用来综合平衡这两个指标。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 14382.905500009656
+        },
+        {
+          "query": "你好",
+          "query_type": "chitchat",
+          "expected_source": null,
+          "retrieved_sources": [],
+          "hit": false,
+          "answer": "你好！有什么我可以帮你的吗？",
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 2971.208200091496
+        },
+        {
+          "query": "谢谢",
+          "query_type": "chitchat",
+          "expected_source": null,
+          "retrieved_sources": [],
+          "hit": false,
+          "answer": "不用客气，很高兴能帮到你！",
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3832.434399984777
+        },
+        {
+          "query": "对比 Python GIL 的多线程限制与机器学习中的并行训练需求，给出建议",
+          "query_type": "complex",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
+          ],
+          "hit": true,
+          "answer": "根据知识库内容，可以从 GIL 的角度给出以下对比和建议：\n\n1. **Python GIL 的限制**\n   - GIL 是 CPython 中的互斥锁，同一时刻只有一个线程执行 Python 字节码。\n   - 对 **CPU 密集型任务**：多线程不会提速，文档建议改用多进程（`multiprocessing`）。\n   - 对 **I/O 密集型任务**：多线程仍然有效，因为 I/O 操作会释放 GIL；`asyncio` 也适合在单线程内处理 I/O 密集场景。\n   - Python 3.13 引入了实验性的 free-threaded 模式（无 GIL），但仍是实验性方向，未来才可能彻底移除 GIL。\n\n2. **与机器学习并行训练需求的对比**\n   - 知识库中没有直接说明“机器学习并行训练”的具体需求、框架配置或实现方式，因此无法给出针对某类训练框架的精确建议。\n   - 但按 GIL 文档的逻辑，可以先判断训练瓶颈：\n     - 如果瓶颈是 **CPU 密集型计算**，不应依赖 Python 多线程并行，应优先考虑文档提到的多进程方向。\n     - 如果瓶颈是 **数据读取、网络或磁盘 I/O**，则多线程或 `asyncio` 更合适，因为 I/O 会释放 GIL。\n\n3. **建议**\n   - 先区分机器学习训练中的主要瓶颈是 CPU 密集还是 I/O 密集。\n   - CPU 密集型部分：优先用多进程，而不是普通多线程。\n   - I/O 密集型部分：可用多线程或异步编程。\n   - 不要把 Python 多线程当作 CPU 密集型训练加速的通用方案。\n   - 对具体机器学习并行训练策略，需要结合额外资料；当前知识库未提供相关内容。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 21270.730799995363
+        },
+        {
+          "query": "Python 上下文管理器 with 语句怎么用？",
+          "query_type": "factual",
+          "expected_source": "python_basics.md",
+          "retrieved_sources": [
+            "python_basics.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "python_basics.md"
+          ],
+          "hit": true,
+          "answer": "`with` 语句用于管理需要“获取后释放”的资源，比如文件、数据库连接等。它的好处是：进入 `with` 代码块时获取资源，离开代码块时自动清理，避免忘记关闭。\n\n例如文件操作：\n\n```python\nwith open(\"data.txt\", \"r\") as f:\n    content = f.read()\n```\n\n这里不需要手动调用 `f.close()`，离开 `with` 后文件会自动关闭。\n\n也可以自定义上下文管理器。使用 `contextlib.contextmanager` 装饰一个生成器函数：\n\n```python\nfrom contextlib import contextmanager\n\n@contextmanager\ndef database_connection(url):\n    conn = create_connection(url)\n    try:\n        yield conn\n    finally:\n        conn.close()\n```\n\n使用时：\n\n```python\nwith database_connection(url) as conn:\n    # 使用 conn\n    ...\n```\n\n上下文管理器的核心是 `__enter__` 和 `__exit__` 方法，其中 `__exit__` 保证即使代码块中发生异常，也会执行清理操作。因此，`with` 适合确保资源正确释放。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 9131.314200116321
+        },
+        {
+          "query": "欠拟合和过拟合有什么区别？",
+          "query_type": "reasoning",
+          "expected_source": "machine_learning_faq.md",
+          "retrieved_sources": [
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md",
+            "machine_learning_faq.md"
+          ],
+          "hit": true,
+          "answer": "欠拟合和过拟合的主要区别在于**模型复杂度与泛化表现**：\n\n- **欠拟合**：模型过于简单，无法捕捉数据中的规律。  \n  - **识别方法**：训练集和验证集准确率都很低。  \n  - **解决思路**：增加模型复杂度（如更深的网络、更多特征）、减少正则化、增加训练时间，让模型充分学习。\n\n- **过拟合**：模型在训练数据上表现很好，但在未见过的数据上表现差，也就是“记住”了训练数据的噪声和细节，而没有学到一般性规律。  \n  - **识别方法**：训练集准确率高，验证集准确率低，泛化能力差。  \n  - **解决思路**：增加训练数据、使用 L1/L2 正则化、Dropout、早停、交叉验证等。\n\n简单说：**欠拟合是模型学得不够，训练和验证表现都差；过拟合是模型学得“太死”，训练表现好但验证/新数据表现差。**",
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "error": null,
+          "e2e_ms": 11589.753599837422
+        },
+        {
+          "query": "再见",
+          "query_type": "chitchat",
+          "expected_source": null,
+          "retrieved_sources": [],
+          "hit": false,
+          "answer": "再见！祝你有愉快的一天，有需要随时来找我。",
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "error": null,
+          "e2e_ms": 3508.4943000692874
         }
       ]
     }
@@ -443,5 +1102,15 @@
     "hallucination_rate": 0.05,
     "latency_p99_ms": 2000,
     "avg_token": 800
+  },
+  "index": {
+    "chunks": 15,
+    "collection_count": 15,
+    "embedding_model": "all-MiniLM-L6-v2",
+    "chunk_size": 220,
+    "chunk_overlap": 30,
+    "retrieval_k": 5,
+    "rrf_k": 60,
+    "reranker_top_n": 5
   }
 }

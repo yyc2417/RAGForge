@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # ── LLM（DeepSeek，OpenAI 兼容格式）────────────────────────────
     deepseek_api_key: SecretStr = SecretStr("")
     deepseek_base_url: str = "https://api.deepseek.com"
-    deepseek_model: str = "deepseek-v4-flash"
+    deepseek_model: str = "deepseek-flash"  # 官方推荐模型名（deepseek-v4-flash 已下线，为兼容别名）
     llm_timeout: int = Field(60, gt=0)  # 单次 LLM 请求超时（秒），防止挂起阻塞状态机
 
     # ── Embedding ──────────────────────────────────────────────────

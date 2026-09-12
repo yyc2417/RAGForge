@@ -30,6 +30,8 @@ class Settings(BaseSettings):
 
     # ── Embedding ──────────────────────────────────────────────────
     embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_device: str = "cpu"  # cpu / cuda
+    embedding_batch_size: int = Field(32, gt=0)
 
     # ── 向量存储（ChromaDB）─────────────────────────────────────────
     chroma_persist_dir: str = "./chroma_db"
@@ -38,9 +40,9 @@ class Settings(BaseSettings):
     # ── 数据路径 ────────────────────────────────────────────────────
     data_dir: str = "data/sample"
 
-    # ── 检索参数 ────────────────────────────────────────────────────
-    chunk_size: int = Field(500, gt=0)
-    chunk_overlap: int = Field(50, ge=0)
+    # ── 检索参数（chunk 单位为 token，cl100k 估算；需小于 embedding 窗口）──
+    chunk_size: int = Field(220, gt=0)
+    chunk_overlap: int = Field(30, ge=0)
     retrieval_k: int = Field(3, gt=0)
 
     # ── 混合检索 + Reranker（Task 6）────────────────────────────────

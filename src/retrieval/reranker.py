@@ -10,11 +10,15 @@ CrossEncoder 评分：对 (query, doc) pair 输出相关性分数，按分数重
 """
 
 import threading
+import time
 
 from langchain_core.documents import Document
 
 from src.config import settings
 from src.utils.logger import logger
+
+# 加载失败后的冷却时间（秒）：冷却期内直接降级，避免每次请求都重复尝试下载
+_LOAD_RETRY_COOLDOWN_SEC = 600
 
 
 class Reranker:
@@ -29,26 +33,31 @@ class Reranker:
                 instance = super().__new__(cls)
                 instance._model = None
                 instance._model_name = model_name or settings.reranker_model
-                instance._load_attempted = False
+                instance._last_failure = 0.0
+                instance._load_lock = threading.Lock()
                 cls._instance = instance
             return cls._instance
 
     def _ensure_loaded(self) -> None:
-        """懒加载模型（仅首次调用时尝试，失败后不再重试）。"""
-        if self._load_attempted:
-            return
-        self._load_attempted = True
-        try:
-            from sentence_transformers import CrossEncoder
+        """懒加载模型（加锁的 check-then-act；失败后冷却期内不重试）。"""
+        with self._load_lock:
+            if self._model is not None:
+                return
+            if time.monotonic() - self._last_failure < _LOAD_RETRY_COOLDOWN_SEC:
+                return
+            try:
+                from sentence_transformers import CrossEncoder
 
-            logger.info(f"[reranker] 尝试加载模型: {self._model_name}")
-            self._model = CrossEncoder(self._model_name)
-            logger.info(f"[reranker] 模型加载成功，重排序可用")
-        except Exception as e:  # noqa: BLE001 - 下载/导入失败均降级
-            logger.warning(
-                f"[reranker] 模型加载失败，已降级为跳过重排序：{type(e).__name__}: {e}"
-            )
-            self._model = None
+                logger.info(f"[reranker] 尝试加载模型: {self._model_name}")
+                self._model = CrossEncoder(self._model_name)
+                logger.info(f"[reranker] 模型加载成功，重排序可用")
+            except Exception as e:  # noqa: BLE001 - 下载/导入失败均降级
+                self._last_failure = time.monotonic()
+                logger.warning(
+                    f"[reranker] 模型加载失败，已降级为跳过重排序"
+                    f"（{_LOAD_RETRY_COOLDOWN_SEC}s 后可重试）：{type(e).__name__}: {e}"
+                )
+                self._model = None
 
     def is_available(self) -> bool:
         """Reranker 是否可用（模型加载成功）。"""
@@ -68,7 +77,7 @@ class Reranker:
         Returns:
             按相关性重排后的文档列表；模型不可用时直接返回原顺序前 top_n
         """
-        top_n = top_n or settings.reranker_top_n
+        top_n = top_n if top_n is not None else settings.reranker_top_n
 
         if not documents:
             return []

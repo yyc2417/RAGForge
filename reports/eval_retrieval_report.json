@@ -25,11 +25,11 @@
     }
   ],
   "index": {
-    "chunks": 10,
-    "collection_count": 10,
+    "chunks": 15,
+    "collection_count": 15,
     "embedding_model": "all-MiniLM-L6-v2",
-    "chunk_size": 500,
-    "chunk_overlap": 50,
+    "chunk_size": 220,
+    "chunk_overlap": 30,
     "retrieval_k": 5,
     "rrf_k": 60,
     "reranker_top_n": 5

@@ -60,7 +60,7 @@ class HybridRetriever:
         Returns:
             (documents, scores) 二元组，分数为 RRF 融合分（越高越相关）
         """
-        k = k or settings.retrieval_k
+        k = k if k is not None else settings.retrieval_k
         # 每路取 top-2k 候选，扩大召回池
         candidate_k = max(k * 2, k + 1)
 

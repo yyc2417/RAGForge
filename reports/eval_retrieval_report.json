@@ -1,32 +1,36 @@
 {
   "retrieval_only": true,
   "eval_k": 5,
-  "samples": 12,
+  "samples": 30,
   "modes": [
     {
       "mode": "vector",
-      "recall_top5": 1.0,
-      "hits": 12
+      "recall_top5": 0.7333,
+      "mrr_at5": 0.6167,
+      "hits": 22
     },
     {
       "mode": "bm25",
       "recall_top5": 1.0,
-      "hits": 12
+      "mrr_at5": 0.9833,
+      "hits": 30
     },
     {
       "mode": "hybrid",
-      "recall_top5": 1.0,
-      "hits": 12
+      "recall_top5": 0.9667,
+      "mrr_at5": 0.7633,
+      "hits": 29
     },
     {
       "mode": "reranker",
-      "recall_top5": 1.0,
-      "hits": 12
+      "recall_top5": 0.9667,
+      "mrr_at5": 0.9667,
+      "hits": 29
     }
   ],
   "index": {
-    "chunks": 15,
-    "collection_count": 15,
+    "chunks": 49,
+    "collection_count": 49,
     "embedding_model": "all-MiniLM-L6-v2",
     "chunk_size": 220,
     "chunk_overlap": 30,

@@ -1,150 +1,287 @@
 [
   {
-    "query": "Python 的装饰器怎么用？",
-    "expected_answer_keywords": [
-      "装饰器",
-      "@",
-      "函数"
-    ],
+    "query": "Python 列表推导式比等价的 for 循环更快，原因是什么？",
+    "query_type": "factual",
+    "answerable": true,
     "expected_source": "python_basics.md",
-    "query_type": "factual"
+    "gold_keywords": ["C 层面", "列表推导式"]
   },
   {
-    "query": "什么是生成器？yield 怎么用？",
-    "expected_answer_keywords": [
-      "生成器",
-      "yield"
-    ],
+    "query": "怎么用 Python 写一个带计时功能的装饰器？",
+    "query_type": "factual",
+    "answerable": true,
     "expected_source": "python_basics.md",
-    "query_type": "factual"
+    "gold_keywords": ["timer", "耗时"]
   },
   {
-    "query": "Python 的 GIL 是什么？",
-    "expected_answer_keywords": [
-      "GIL",
-      "线程",
-      "锁"
-    ],
+    "query": "Python 3.13 引入的 free-threaded 模式是什么？",
+    "query_type": "factual",
+    "answerable": true,
     "expected_source": "python_basics.md",
-    "query_type": "factual"
+    "gold_keywords": ["free-threaded", "3.13"]
   },
   {
-    "query": "Python 列表推导式的写法是什么？",
-    "expected_answer_keywords": [
-      "列表推导",
-      "for"
-    ],
+    "query": "@functools.wraps 装饰器的作用是什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "python_advanced.md",
+    "gold_keywords": ["wraps", "__name__"]
+  },
+  {
+    "query": "在 asyncio 协程里直接调用 time.sleep 会怎样？正确做法是什么？",
+    "query_type": "reasoning",
+    "answerable": true,
+    "expected_source": "python_advanced.md",
+    "gold_keywords": ["事件循环", "run_in_executor"]
+  },
+  {
+    "query": "生成器怎么实现与调用方的双向通信？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "python_advanced.md",
+    "gold_keywords": ["send", "双向"]
+  },
+  {
+    "query": "Adam 和 SGD+Momentum 优化器各自适合什么场景？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "machine_learning_faq.md",
+    "gold_keywords": ["Adam", "Momentum"]
+  },
+  {
+    "query": "Transformer 抛弃循环结构后，靠什么机制获得位置信息？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "machine_learning_faq.md",
+    "gold_keywords": ["位置编码", "Positional"]
+  },
+  {
+    "query": "RAG 系统里常用的中文 Embedding 模型有哪些？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "machine_learning_faq.md",
+    "gold_keywords": ["BGE", "all-MiniLM"]
+  },
+  {
+    "query": "F1 分数的计算公式是什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "machine_learning_faq.md",
+    "gold_keywords": ["调和平均", "F1"]
+  },
+  {
+    "query": "ResNet 的残差连接解决了什么问题？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "deep_learning_basics.md",
+    "gold_keywords": ["残差", "梯度消失"]
+  },
+  {
+    "query": "LSTM 有哪三个门？各自负责什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "deep_learning_basics.md",
+    "gold_keywords": ["遗忘门", "输出门"]
+  },
+  {
+    "query": "大模型微调时学习率调度的常见策略有哪些？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "deep_learning_basics.md",
+    "gold_keywords": ["Warmup", "Cosine"]
+  },
+  {
+    "query": "RRF 融合公式相比加权分数融合的优点是什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "rag_techniques.md",
+    "gold_keywords": ["RRF", "排名"]
+  },
+  {
+    "query": "CrossEncoder 和双塔模型在检索里怎么取舍？",
+    "query_type": "reasoning",
+    "answerable": true,
+    "expected_source": "rag_techniques.md",
+    "gold_keywords": ["CrossEncoder", "双塔"]
+  },
+  {
+    "query": "RAG 的分块太大或太小分别会有什么问题？",
+    "query_type": "reasoning",
+    "answerable": true,
+    "expected_source": "rag_techniques.md",
+    "gold_keywords": ["稀释", "不完整"]
+  },
+  {
+    "query": "联合索引的最左前缀原则是什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "sql_database_basics.md",
+    "gold_keywords": ["最左前缀", "联合索引"]
+  },
+  {
+    "query": "数据库的持久性（Durability）靠什么机制保证？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "sql_database_basics.md",
+    "gold_keywords": ["redo log", "WAL"]
+  },
+  {
+    "query": "深分页为什么要用游标代替 OFFSET？",
+    "query_type": "reasoning",
+    "answerable": true,
+    "expected_source": "sql_database_basics.md",
+    "gold_keywords": ["游标", "OFFSET"]
+  },
+  {
+    "query": "Dockerfile 怎么利用层缓存加速构建？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "docker_basics.md",
+    "gold_keywords": ["requirements.txt", "依赖层缓存"]
+  },
+  {
+    "query": "Docker 的 Volume 和 Bind Mount 有什么区别？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "docker_basics.md",
+    "gold_keywords": ["Volume", "Bind Mount"]
+  },
+  {
+    "query": "容器退出码 137 通常意味着什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "docker_basics.md",
+    "gold_keywords": ["137", "OOM"]
+  },
+  {
+    "query": "HTTP 401 和 403 状态码的区别是什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "web_api_design.md",
+    "gold_keywords": ["401", "403"]
+  },
+  {
+    "query": "JWT 签发后想提前撤销，应该怎么办？",
+    "query_type": "reasoning",
+    "answerable": true,
+    "expected_source": "web_api_design.md",
+    "gold_keywords": ["撤销", "refresh token"]
+  },
+  {
+    "query": "令牌桶限流算法的特点是什么？",
+    "query_type": "factual",
+    "answerable": true,
+    "expected_source": "web_api_design.md",
+    "gold_keywords": ["令牌桶", "突发"]
+  },
+  {
+    "query": "GIL 在 Python 3.13 有了什么变化？绕过 GIL 的两条路分别适合什么负载？",
+    "query_type": "complex",
+    "answerable": true,
     "expected_source": "python_basics.md",
-    "query_type": "factual"
+    "gold_keywords": ["free-threaded", "multiprocessing"]
   },
   {
-    "query": "什么是过拟合？怎么解决？",
-    "expected_answer_keywords": [
-      "过拟合",
-      "训练",
-      "正则化"
-    ],
-    "expected_source": "machine_learning_faq.md",
-    "query_type": "factual"
+    "query": "RAG 检索的粗排和精排两级架构，为什么快和准不可兼得？",
+    "query_type": "complex",
+    "answerable": true,
+    "expected_source": "rag_techniques.md",
+    "gold_keywords": ["CrossEncoder", "离线建索引"]
   },
   {
-    "query": "梯度下降是什么？",
-    "expected_answer_keywords": [
-      "梯度",
-      "学习率",
-      "损失"
-    ],
-    "expected_source": "machine_learning_faq.md",
-    "query_type": "factual"
+    "query": "数据库的 redo log 和 undo log 分别支撑 ACID 的哪两个特性？",
+    "query_type": "complex",
+    "answerable": true,
+    "expected_source": "sql_database_basics.md",
+    "gold_keywords": ["redo log", "undo log"]
   },
   {
-    "query": "Embedding 在 RAG 系统中起什么作用？",
-    "expected_answer_keywords": [
-      "Embedding",
-      "向量",
-      "检索"
-    ],
+    "query": "RAG 检索评估里，精确率和召回率分别回答什么问题？",
+    "query_type": "complex",
+    "answerable": true,
     "expected_source": "machine_learning_faq.md",
-    "query_type": "reasoning"
+    "gold_keywords": ["精确率", "召回率"]
   },
   {
-    "query": "为什么 Transformer 比传统 RNN 更适合处理长序列？",
-    "expected_answer_keywords": [
-      "Transformer",
-      "注意力",
-      "并行"
-    ],
-    "expected_source": "machine_learning_faq.md",
-    "query_type": "reasoning"
+    "query": "LSTM 的门控机制解决了普通 RNN 的什么问题？",
+    "query_type": "complex",
+    "answerable": true,
+    "expected_source": "deep_learning_basics.md",
+    "gold_keywords": ["LSTM", "梯度消失"]
   },
   {
-    "query": "精确率和召回率有什么区别？",
-    "expected_answer_keywords": [
-      "精确率",
-      "召回率",
-      "TP"
-    ],
-    "expected_source": "machine_learning_faq.md",
-    "query_type": "reasoning"
+    "query": "Kubernetes 的 Pod 和 Deployment 有什么区别？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "Rust 语言的所有权机制是怎么工作的？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "React 的 useEffect 钩子的执行时机是什么？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "比特币的工作量证明大概消耗多少电力？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "GraphQL 相比 REST 有什么优缺点？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "MySQL 9.0 有哪些新特性？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "Llama 3 一共用了多少 token 训练？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "Podman 和 Docker 在守护进程架构上有什么不同？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "BERT 的参数量是多少？",
+    "query_type": "factual",
+    "answerable": false
+  },
+  {
+    "query": "2026 年最值得买的智能手机是哪款？",
+    "query_type": "factual",
+    "answerable": false
   },
   {
     "query": "你好",
-    "expected_answer_keywords": [
-      "你好",
-      "您",
-      "帮助"
-    ],
-    "expected_source": null,
-    "query_type": "chitchat"
+    "query_type": "chitchat",
+    "answerable": true
   },
   {
     "query": "谢谢",
-    "expected_answer_keywords": [
-      "谢",
-      "不客气",
-      "欢迎"
-    ],
-    "expected_source": null,
-    "query_type": "chitchat"
+    "query_type": "chitchat",
+    "answerable": true
   },
   {
-    "query": "对比 Python GIL 的多线程限制与机器学习中的并行训练需求，给出建议",
-    "expected_answer_keywords": [
-      "GIL",
-      "并行",
-      "训练"
-    ],
-    "expected_source": "python_basics.md",
-    "query_type": "complex"
+    "query": "你是谁？",
+    "query_type": "chitchat",
+    "answerable": true
   },
   {
-    "query": "Python 上下文管理器 with 语句怎么用？",
-    "expected_answer_keywords": [
-      "上下文管理器",
-      "with",
-      "__enter__"
-    ],
-    "expected_source": "python_basics.md",
-    "query_type": "factual"
+    "query": "今天天气怎么样？",
+    "query_type": "chitchat",
+    "answerable": true
   },
   {
-    "query": "欠拟合和过拟合有什么区别？",
-    "expected_answer_keywords": [
-      "欠拟合",
-      "过拟合",
-      "模型"
-    ],
-    "expected_source": "machine_learning_faq.md",
-    "query_type": "reasoning"
-  },
-  {
-    "query": "再见",
-    "expected_answer_keywords": [
-      "再见",
-      "欢迎",
-      "随时"
-    ],
-    "expected_source": null,
-    "query_type": "chitchat"
+    "query": "讲个笑话",
+    "query_type": "chitchat",
+    "answerable": true
   }
 ]

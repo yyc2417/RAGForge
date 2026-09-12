@@ -8,7 +8,7 @@ prompt 引导 LLM 输出 JSON → 手工解析 → 本模块 Pydantic 校验
 LLM 输出 "Factual"/"低召回" 等变体不再直接落入降级分支。
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, Field
 
@@ -43,6 +43,11 @@ _ENUM_ALIASES: dict[str, str] = {
     "具体化": "specify",
     "泛化": "generalize",
     "同义替换": "synonym_replace",
+    "拒答": "refused",
+    "诚实拒答": "refused",
+    "编造": "fabricated",
+    "幻觉": "fabricated",
+    "其他": "other",
 }
 
 
@@ -121,3 +126,20 @@ class VerifyResult(BaseModel):
         ..., description="回答是否忠实于检索文档（True=无幻觉，False=存在幻觉）"
     )
     reason: str = Field(default="", description="检测原因说明")
+
+
+class RefusalJudgeResult(BaseModel):
+    """不可答题裁决输出：RAG 系统对语料外问题的行为判定（评估脚本专用）。"""
+
+    verdict: Annotated[
+        Literal["refused", "fabricated", "other"],
+        BeforeValidator(_normalize_enum),
+    ] = Field(
+        ...,
+        description=(
+            "refused(诚实承认无法回答) / "
+            "fabricated(编造了具体的事实性内容) / "
+            "other(答非所问等其他情况)"
+        ),
+    )
+    reason: str = Field(default="", description="判定理由")

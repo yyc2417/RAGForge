@@ -1,12 +1,20 @@
 """RAGForge 自动化评估脚本
 
-跑 4 套检索配置，计算召回率、幻觉率、延迟、token 消耗，输出对比表。
+跑 4 套检索配置，计算召回率、幻觉率、拒答准确率、延迟、token 消耗，输出对比表。
 
 四套配置：
 - baseline：Task 4 线性 RAG（vector-only，无 Agent）
 - agent：Task 5 Agent 状态机（vector/bm25 策略，无混合）
 - hybrid：Task 6 Agent + HybridRetriever（RRF 融合，无 Reranker）
 - reranker：Task 6 Agent + HybridRetriever + Reranker（CrossEncoder 重排序）
+
+数据集分层（对齐业界惯例：RAGAS 题型分布 / SQuAD 式 is_impossible）：
+- 可答题（answerable=true 且有 expected_source）：chunk 级召回判定
+  （expected_source + gold_keywords 双条件）→ Recall@5 + MRR@5；
+  生成层判忠实度
+- 不可答题（answerable=false，语料外问题）：LLM 裁决「诚实拒答 / 编造 /
+  其他」→ 拒答准确率 + 编造率——幻觉率在这里才有真实含义
+- chitchat：不计召回与忠实度统计
 
 运行：
     uv run python scripts/eval.py                       # 完整评估（需 DEEPSEEK_API_KEY）
@@ -17,14 +25,6 @@
 输出：
     - 终端 rich 表格对比矩阵
     - reports/eval_report.json 完整报告（retrieval-only 输出 reports/eval_retrieval_report.json）
-
-口径说明：
-- 所有模式统一检索 EVAL_K 条，recall_top5 名副其实（此前各模式实际按
-  settings.retrieval_k=3 检索，指标名与口径不符）
-- 忠实度统一由 LLM 裁决（verify 同款 prompt）：agent 模式优先取 verify 节点
-  结果，baseline 直接裁决；LLM 失败回退关键词粗判并单独标记 faithfulness_source
-- 执行失败样本计入 errors，不进忠实度/延迟统计；verify 未验证样本计入
-  unverified，不进忠实度分母（避免向「忠实」偏置）
 """
 
 import argparse
@@ -45,7 +45,7 @@ from src.agent import build_agent_graph_from_pipeline, initial_state  # noqa: E4
 from src.config import PROJECT_ROOT as CFG_ROOT, settings  # noqa: E402
 from src.generation.llm_client import LLMClient  # noqa: E402
 from src.generation.prompts import PromptManager  # noqa: E402
-from src.generation.schemas import VerifyResult  # noqa: E402
+from src.generation.schemas import RefusalJudgeResult, VerifyResult  # noqa: E402
 from src.ingestion import DocumentParser, EmbeddingService, TextChunker  # noqa: E402
 from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore  # noqa: E402
 from src.utils.logger import logger  # noqa: E402
@@ -97,6 +97,22 @@ def _doc_sources(state: dict) -> list[str]:
         for doc in docs
         if hasattr(doc, "metadata")
     ]
+
+
+def _chunk_hit_rank(docs: list, expected_source: str, gold_keywords: list[str]) -> int:
+    """chunk 级命中判定：返回第一个命中 chunk 的 1-based 排名，未命中返回 0。
+
+    命中条件（双条件，缺一不可）：来源文件匹配 expected_source，
+    且 chunk 内容包含任一 gold_keyword——相比纯文件名子串匹配，
+    在多文件语料下仍能定位到具体知识块（对齐 RAGAS 的 reference_contexts 惯例）。
+    """
+    for rank, doc in enumerate(docs, start=1):
+        if not hasattr(doc, "page_content"):
+            continue
+        src = _source_filename(getattr(doc, "metadata", {}).get("source", ""))
+        if src == expected_source and any(kw in doc.page_content for kw in gold_keywords):
+            return rank
+    return 0
 
 
 def _index_fingerprint(chunks: list, vector_store: VectorStore) -> dict:
@@ -204,16 +220,20 @@ class Evaluator:
             return self._keyword_check(answer, keywords), "keyword"
 
     def _run_single(self, mode: str, item: dict) -> dict:
-        """对单个 QA 项执行指定模式，返回结果字典。"""
+        """对单个 QA 项执行指定模式，返回结果字典（按题型分层判定）。"""
         query = item["query"]
+        answerable = item.get("answerable", item.get("expected_source") is not None)
+        is_chitchat = item.get("query_type") == "chitchat"
         expected_source = item.get("expected_source")
-        expected_keywords = item.get("expected_answer_keywords", [])
+        gold_keywords = item.get("gold_keywords", item.get("expected_answer_keywords", []))
 
         t0 = time.perf_counter()
         retrieved_sources: list[str] = []
         answer_text = ""
         is_faithful: bool | None = None
         faith_source = "unverified"
+        refusal_verdict: str | None = None
+        chunk_rank = 0
         error: str | None = None
 
         try:
@@ -225,10 +245,7 @@ class Evaluator:
                     for d in docs
                 ]
                 answer_text = llm.generate(query, docs)
-                # baseline 无 verify 节点，走统一裁决器（LLM 优先，失败回退关键词）
-                is_faithful, faith_source = self._judge_faithfulness(
-                    query, answer_text, docs, expected_keywords
-                )
+                verify_result: bool | None = None
             else:
                 graph = self._get_pipeline(mode)
                 final_state = graph.invoke(
@@ -237,15 +254,25 @@ class Evaluator:
                 )
                 retrieved_sources = _doc_sources(final_state)
                 answer_text = final_state.get("answer", "")
+                docs = final_state.get("documents", []) or []
                 verify_result = final_state.get("is_faithful")
-                if verify_result is not None:
+
+            # ── 按题型分层判定 ──
+            if expected_source:
+                # 可答题：chunk 级召回 + 忠实度
+                chunk_rank = _chunk_hit_rank(docs, expected_source, gold_keywords)
+                if mode != "baseline" and verify_result is not None:
                     is_faithful, faith_source = verify_result, "llm_verify"
                 else:
-                    # verify 节点校验失败（is_faithful=None），走统一裁决器兜底
-                    docs = final_state.get("documents", []) or []
+                    # baseline 无 verify 节点 / agent verify 失败：统一裁决器兜底
                     is_faithful, faith_source = self._judge_faithfulness(
-                        query, answer_text, docs, expected_keywords
+                        query, answer_text, docs, gold_keywords
                     )
+            elif is_chitchat:
+                faith_source = "n/a"  # 寒暄不计忠实度统计
+            else:
+                # 不可答题（语料外问题）：拒答行为裁决
+                refusal_verdict = self._judge_refusal(query, answer_text)
         except Exception as e:  # noqa: BLE001 - 失败样本单独归类，不污染指标
             logger.error(f"[eval] {mode} 执行失败 query='{query}': {e}")
             error = str(e)
@@ -256,20 +283,18 @@ class Evaluator:
         if error is None:
             get_current_collector().record_e2e_latency(e2e_ms)
 
-        # 召回判定：chitchat 无 expected_source，视为跳过
-        hit = False
-        if expected_source:
-            hit = any(expected_source in s for s in retrieved_sources)
-
         return {
             "query": query,
             "query_type": item.get("query_type", "factual"),
+            "answerable": answerable,
             "expected_source": expected_source,
             "retrieved_sources": retrieved_sources,
-            "hit": hit,
+            "chunk_rank": chunk_rank,
+            "hit": chunk_rank > 0,
             "answer": answer_text,
             "is_faithful": is_faithful,
             "faithfulness_source": faith_source,
+            "refusal_verdict": refusal_verdict,
             "error": error,
             "e2e_ms": e2e_ms,
         }
@@ -280,6 +305,22 @@ class Evaluator:
         if not keywords:
             return True
         return any(kw in answer for kw in keywords)
+
+    def _judge_refusal(self, query: str, answer: str) -> str:
+        """不可答题行为裁决：refused(诚实拒答) / fabricated(编造) / other。
+
+        幻觉率的真战场：语料外问题若被强行作答（编造具体事实）即计为编造。
+        """
+        try:
+            llm = self._ensure_llm()
+            result: RefusalJudgeResult = llm.invoke_structured(
+                PromptManager.UNANSWERABLE_JUDGE_PROMPT, RefusalJudgeResult,
+                query=query, answer=answer,
+            )
+            return result.verdict
+        except Exception as e:  # noqa: BLE001 - 裁决失败不臆断，记为 other
+            logger.warning(f"[eval] 拒答裁决失败，记为 other：{e}")
+            return "other"
 
     def evaluate_mode(self, mode: str) -> dict:
         """对单套模式跑全部数据集，返回汇总指标。"""
@@ -301,14 +342,31 @@ class Evaluator:
                 status = "-"
             console.print(f"{status} {r['e2e_ms']:.0f}ms")
 
-        # ── 汇总：失败/未验证样本单独归类，不进指标分母 ──
+        # ── 汇总：按题型分层统计，失败/未验证样本单独归类不进分母 ──
         valid = [r for r in results if not r.get("error")]
-        needs_retrieval = [r for r in valid if r["expected_source"]]
-        hits = sum(1 for r in needs_retrieval if r["hit"])
-        recall = hits / len(needs_retrieval) if needs_retrieval else 0.0
-        verified = [r for r in valid if r["is_faithful"] is not None]
+        answerable = [r for r in valid if r["expected_source"]]
+        unanswerable = [
+            r for r in valid
+            if not r["expected_source"] and r["query_type"] != "chitchat"
+        ]
+        # 检索层：chunk 级召回 + MRR（排名质量，能区分检索策略的价值）
+        hits = sum(1 for r in answerable if r["chunk_rank"] > 0)
+        recall = hits / len(answerable) if answerable else 0.0
+        mrr = (
+            sum(1.0 / r["chunk_rank"] for r in answerable if r["chunk_rank"] > 0)
+            / len(answerable)
+        ) if answerable else 0.0
+        # 生成层：可答题忠实度
+        verified = [r for r in answerable if r["is_faithful"] is not None]
         faithful = sum(1 for r in verified if r["is_faithful"] is True)
         faith_rate = faithful / len(verified) if verified else 0.0
+        # 不可答题：拒答行为
+        refusals = sum(1 for r in unanswerable if r.get("refusal_verdict") == "refused")
+        fabrications = sum(
+            1 for r in unanswerable if r.get("refusal_verdict") == "fabricated"
+        )
+        refusal_accuracy = refusals / len(unanswerable) if unanswerable else 0.0
+        fabrication_rate = fabrications / len(unanswerable) if unanswerable else 0.0
 
         summary = metrics.get_summary()
         e2e = summary.get("e2e_latency_ms", {})
@@ -318,10 +376,15 @@ class Evaluator:
             "mode": mode,
             "samples": len(results),
             "errors": sum(1 for r in results if r.get("error")),
-            "unverified": sum(1 for r in valid if r["is_faithful"] is None),
+            "unverified": sum(1 for r in answerable if r["is_faithful"] is None),
+            "answerable_count": len(answerable),
+            "unanswerable_count": len(unanswerable),
             "recall_top5": round(recall, 4),
+            "mrr_at5": round(mrr, 4),
             "hallucination_rate": round(1.0 - faith_rate, 4),
             "faithfulness_rate": round(faith_rate, 4),
+            "refusal_accuracy": round(refusal_accuracy, 4),
+            "fabrication_rate": round(fabrication_rate, 4),
             "latency_p50_ms": e2e.get("p50", 0.0),
             "latency_p95_ms": e2e.get("p95", 0.0),
             "latency_p99_ms": e2e.get("p99", 0.0),
@@ -344,10 +407,12 @@ class Evaluator:
 
     @staticmethod
     def _targets() -> dict:
-        """目标指标门槛（来自规划文档）。"""
+        """目标指标门槛（召回/MRR 针对检索层，幻觉/拒答针对生成层）。"""
         return {
             "recall_top5": 0.90,
+            "mrr_at5": 0.70,
             "hallucination_rate": 0.05,
+            "refusal_accuracy": 0.80,
             "latency_p99_ms": 2000,
             "avg_token": 800,
         }
@@ -360,8 +425,10 @@ class Evaluator:
 
         table = Table(show_lines=True, header_style="bold magenta")
         table.add_column("配置", style="cyan", no_wrap=True)
-        table.add_column("Top-5 召回率", justify="right")
-        table.add_column("幻觉率", justify="right")
+        table.add_column("Recall@5", justify="right")
+        table.add_column("MRR@5", justify="right")
+        table.add_column("幻觉率(可答)", justify="right")
+        table.add_column("拒答准确率", justify="right")
         table.add_column("P99 延迟(ms)", justify="right")
         table.add_column("平均 Token", justify="right")
         table.add_column("错误/未验证", justify="right")
@@ -369,16 +436,20 @@ class Evaluator:
 
         for m in report["modes"]:
             recall_ok = m["recall_top5"] >= targets["recall_top5"]
+            mrr_ok = m["mrr_at5"] >= targets["mrr_at5"]
             halluc_ok = m["hallucination_rate"] <= targets["hallucination_rate"]
+            refusal_ok = m["refusal_accuracy"] >= targets["refusal_accuracy"]
             # 无有效样本（延迟为 0）不视为达标
             p99_ok = 0 < m["latency_p99_ms"] <= targets["latency_p99_ms"]
             token_ok = 0 < m["avg_token"] <= targets["avg_token"]
-            all_ok = recall_ok and halluc_ok and p99_ok and token_ok
+            all_ok = recall_ok and mrr_ok and halluc_ok and refusal_ok and p99_ok and token_ok
 
             table.add_row(
                 m["mode"],
                 self._fmt(m["recall_top5"], recall_ok, percent=True),
+                self._fmt(m["mrr_at5"], mrr_ok, percent=True),
                 self._fmt(m["hallucination_rate"], halluc_ok, percent=True),
+                self._fmt(m["refusal_accuracy"], refusal_ok, percent=True),
                 self._fmt(m["latency_p99_ms"], p99_ok),
                 self._fmt(m["avg_token"], token_ok),
                 f"{m.get('errors', 0)}/{m.get('unverified', 0)}",
@@ -387,7 +458,8 @@ class Evaluator:
 
         console.print(table)
         console.print(
-            "[dim]图例：V 全指标达标 | ~ 部分达标；错误/未验证样本不进召回与忠实度分母[/dim]"
+            "[dim]图例：V 全指标达标 | ~ 部分达标；幻觉率=可答题不忠实占比，"
+            "拒答准确率=不可答题诚实拒答占比，编造率见 JSON 报告[/dim]"
         )
 
     @staticmethod
@@ -415,9 +487,9 @@ class Evaluator:
 
 
 def run_retrieval_only(rebuild: bool = False) -> None:
-    """检索层离线评估：只算各策略的 recall@k，不调用 LLM（免 API key）。
+    """检索层离线评估：chunk 级 Recall@k + MRR@k，不调用 LLM（免 API key）。
 
-    用于修复期间的快速回归验证；完整评估（忠实度/延迟/token）仍需完整模式。
+    用于修复期间的快速回归验证；完整评估（忠实度/拒答/延迟/token）仍需完整模式。
     """
     console.rule("[bold]RAGForge 检索层离线评估（不调用 LLM）[/bold]")
     chunks, vs, bm25 = _build_base_artifacts(rebuild)
@@ -443,23 +515,26 @@ def run_retrieval_only(rebuild: bool = False) -> None:
     table = Table(show_lines=True, header_style="bold magenta")
     table.add_column("检索策略", style="cyan", no_wrap=True)
     table.add_column(f"Recall@{EVAL_K}", justify="right")
+    table.add_column(f"MRR@{EVAL_K}", justify="right")
     table.add_column("命中/样本", justify="right")
 
     modes_report = []
     for name, fn in strategies.items():
         hits = 0
+        rr_sum = 0.0
         for it in items:
             docs = fn(it["query"])
-            sources = [
-                _source_filename(getattr(d, "metadata", {}).get("source", ""))
-                for d in docs
-            ]
-            if any(it["expected_source"] in s for s in sources):
+            rank = _chunk_hit_rank(docs, it["expected_source"], it.get("gold_keywords", []))
+            if rank > 0:
                 hits += 1
+                rr_sum += 1.0 / rank
         recall = hits / len(items)
-        modes_report.append({"mode": name, "recall_top5": round(recall, 4), "hits": hits})
-        table.add_row(name, f"{recall * 100:.1f}%", f"{hits}/{len(items)}")
-        console.print(f"  [{name}] recall={recall * 100:.1f}% ({hits}/{len(items)})")
+        mrr = rr_sum / len(items)
+        modes_report.append(
+            {"mode": name, "recall_top5": round(recall, 4), "mrr_at5": round(mrr, 4), "hits": hits}
+        )
+        table.add_row(name, f"{recall * 100:.1f}%", f"{mrr * 100:.1f}%", f"{hits}/{len(items)}")
+        console.print(f"  [{name}] recall={recall * 100:.1f}% mrr={mrr * 100:.1f}% ({hits}/{len(items)})")
 
     console.print(table)
     report = {

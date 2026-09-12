@@ -1,105 +1,62 @@
-"""Task 4 验证：模块化 RAG 管道
+"""结构与管道构建测试（Task 1-4 传承，离线）
 
-验证项目：
-1. build_rag_pipeline() 返回 (VectorStore, LLMClient)，无报错
-2. 对 3 个示例问题端到端生成回答，内容非空
-3. 端到端延迟 < 5s（量化门槛）
-4. MetricsCollector.get_summary() 返回有效统计
-5. src/main.py 行数 ≤ 60
+覆盖：
+1. build_rag_pipeline() 返回正确类型（LLMClient 构造不发起网络请求）
+2. MetricsCollector 实例独立性与统计有效性（不再依赖全局单例的执行顺序）
+3. src/main.py 行数约束（保持精简入口）
 """
-import os
-import sys
+
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-import warnings
-
-warnings.filterwarnings("ignore")
-os.environ.setdefault("PYTHONIOENCODING", "utf-8")
-
-from src.main import build_rag_pipeline, answer
-from src.retrieval import VectorStore
+from src.config import PROJECT_ROOT
 from src.generation.llm_client import LLMClient
+from src.main import build_rag_pipeline
+from src.retrieval import VectorStore
 from src.utils.metrics import MetricsCollector
 
 
-def test_pipeline_build():
-    print("=" * 60)
-    print("测试 1：build_rag_pipeline 构建管道")
-    print("=" * 60)
+def test_pipeline_build(chroma_dir):
+    """管道构建：类型正确（索引构建在 tmp 目录，不污染真实 chroma_db）。"""
     vs, llm = build_rag_pipeline()
-    assert isinstance(vs, VectorStore), "返回的 vector_store 应为 VectorStore"
-    assert isinstance(llm, LLMClient), "返回的 llm 应为 LLMClient"
-    print("✅ 管道构建成功：VectorStore + LLMClient")
-    return vs, llm
+    assert isinstance(vs, VectorStore)
+    assert isinstance(llm, LLMClient)
+    assert vs.count() > 0, "索引应已构建"
 
 
-def test_e2e(vs, llm):
-    print("\n" + "=" * 60)
-    print("测试 2：端到端问答 + 延迟 < 5s")
-    print("=" * 60)
-    E2E_THRESHOLD_MS = 5000
-    questions = [
-        "Python 的装饰器怎么用？",
-        "什么是过拟合？怎么解决？",
-        "Transformer 的核心组件有哪些？",
-    ]
+def test_metrics_collector_isolated_and_valid():
+    """每个实例独立统计；摘要包含延迟与 token 明细；reset 生效。"""
+    m1, m2 = MetricsCollector(), MetricsCollector()
+    m1.record_retrieval_latency(10.0)
+    m1.record_e2e_latency(100.0)
+    m1.record_token_usage(50, 25)
 
-    metrics = MetricsCollector()
-    metrics.reset()
+    summary = m1.get_summary()
+    assert summary["retrieval_latency_ms"]["count"] == 1
+    assert summary["e2e_latency_ms"]["count"] == 1
+    assert summary["token_usage"]["calls"] == 1
+    assert summary["token_usage"]["total"] == 75
 
-    for q in questions:
-        t0 = time.perf_counter()
-        text, e2e = answer(vs, llm, q)
-        assert text and len(text) > 0, f"回答不应为空：{q}"
-        assert e2e < E2E_THRESHOLD_MS, f"端到端延迟 {e2e:.0f}ms 超过 {E2E_THRESHOLD_MS}ms"
-        print(f"✅ [{e2e:.0f}ms] {q}")
-        print(f"   → {text[:120]}{'...' if len(text) > 120 else ''}")
-    print(f"✅ 全部 {len(questions)} 个问题端到端 < {E2E_THRESHOLD_MS}ms")
+    # 实例隔离：m2 不受 m1 影响
+    assert m2.get_summary()["token_usage"]["calls"] == 0
+
+    # reset 清空（空实例的摘要不含延迟键，count 视为 0）
+    m1.reset()
+    assert m1.get_summary().get("e2e_latency_ms", {}).get("count", 0) == 0
 
 
-def test_metrics():
-    print("\n" + "=" * 60)
-    print("测试 3：MetricsCollector 统计有效")
-    print("=" * 60)
-    summary = MetricsCollector().get_summary()
-    assert "e2e_latency_ms" in summary, "摘要应含 e2e_latency_ms"
-    assert "retrieval_latency_ms" in summary, "摘要应含 retrieval_latency_ms"
-    assert "token_usage" in summary, "摘要应含 token_usage"
-    e2e = summary["e2e_latency_ms"]
-    print(f"   检索延迟 P50/P95/P99: {e2e.get('p50')}/{e2e.get('p95')}/{e2e.get('p99')} ms")
-    print(f"   Token 统计: {summary['token_usage']}")
-    assert e2e["count"] > 0, "应有至少 1 次延迟记录"
-    print("✅ MetricsCollector 统计有效")
+def test_metrics_export_report(tmp_path):
+    m = MetricsCollector()
+    m.record_e2e_latency(42.0)
+    path = m.export_report(tmp_path / "metrics.json", label="unit")
+    assert path.exists()
+    import json
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["label"] == "unit"
+    assert data["summary"]["e2e_latency_ms"]["count"] == 1
 
 
 def test_main_line_count():
-    print("\n" + "=" * 60)
-    print("测试 4：src/main.py 行数 ≤ 90")
-    print("=" * 60)
-    from src.config import PROJECT_ROOT
-
     main_path = PROJECT_ROOT / "src" / "main.py"
-    with open(main_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    n = len(lines)
-    print(f"   src/main.py: {n} 行")
-    # 计划目标 ~50 行；保留 MetricsCollector 收集逻辑后允许 ≤ 90
+    n = len(main_path.read_text(encoding="utf-8").splitlines())
     assert n <= 90, f"src/main.py 应 ≤ 90 行，实际 {n}"
-    print(f"✅ 行数 {n} ≤ 90")
-
-
-if __name__ == "__main__":
-    print("RAGForge Task 4 验证：模块化 RAG 管道\n")
-    vs, llm = test_pipeline_build()
-    test_e2e(vs, llm)
-    test_metrics()
-    test_main_line_count()
-    print("\n" + "=" * 60)
-    print("🎉 Task 4 验证全部通过！")
-    print("=" * 60)

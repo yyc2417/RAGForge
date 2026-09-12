@@ -1,124 +1,117 @@
-"""Task 2 验证：文档处理层（Ingestion）
+"""文档处理层单元测试（Ingestion）——离线，无网络依赖
 
-验证项目：
-1. DocumentParser 解析 data/sample/python_basics.md 返回非空列表
-2. TextChunker 切分后 chunk 数量 ≥ 5（量化门槛）
-3. 每个 chunk 的 page_content 长度 ≤ chunk_size + 合理余量
-4. 切分后 metadata 包含 source 和 chunk_index
-5. EmbeddingService.embed_query("test") 返回 384 维向量
-6. 三步串联无报错：parse → split → embed
+覆盖：
+1. DocumentParser：单文件 / 目录解析，metadata 完整
+2. TextChunker：token 预算（cl100k 计量，非字符）、标题上下文注入、
+   metadata 完整性、切分确定性（确定性 ID 的前提）
+3. EmbeddingService：向量维度、批量一致性、model_name 不一致报错
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import tiktoken
 
-from pathlib import Path
-from dotenv import load_dotenv
-load_dotenv()
+from src.ingestion import DocumentParser, EmbeddingService, TextChunker
+from src.config import settings
 
-import warnings
-warnings.filterwarnings("ignore")
-
-from src.config import PROJECT_ROOT, settings
-from src.ingestion import DocumentParser, TextChunker, EmbeddingService
-
-DATA_DIR = PROJECT_ROOT / settings.data_dir
+_enc = tiktoken.get_encoding("cl100k_base")
 
 
-def test_parser():
-    print("=" * 50)
-    print("测试 1：DocumentParser 解析 Markdown")
-    print("=" * 50)
+def _token_len(text: str) -> int:
+    return len(_enc.encode(text))
+
+
+# ── DocumentParser ────────────────────────────────────────────────
+
+
+def test_parser_single_file(sample_docs):
     parser = DocumentParser()
-
-    # 解析单文件
-    docs = parser.parse(DATA_DIR / "python_basics.md")
+    docs = parser.parse(sample_docs[0].metadata["source"])
     assert len(docs) > 0, "解析结果不应为空"
     assert docs[0].metadata.get("source"), "metadata 应包含 source"
     assert docs[0].metadata.get("file_type") == "markdown", "file_type 应为 markdown"
-    print(f"[OK] python_basics.md -> {len(docs)} docs")
-
-    # 解析目录
-    all_docs = parser.parse_directory(DATA_DIR)
-    assert len(all_docs) >= 2, f"目录应至少含 2 个文件，实际 {len(all_docs)} 段"
-    print(f"[OK] data/sample/ dir -> {len(all_docs)} docs")
-    return all_docs
 
 
-def test_chunker(docs):
-    print("\n" + "=" * 50)
-    print("测试 2：TextChunker 切分")
-    print("=" * 50)
-    chunker = TextChunker()
-    chunks = chunker.split(docs)
+def test_parser_directory(sample_docs):
+    assert len(sample_docs) >= 2, f"目录应至少含 2 个文件，实际 {len(sample_docs)} 段"
 
-    # 量化门槛
-    assert len(chunks) >= 5, f"chunk 数量应 ≥ 5，实际 {len(chunks)}"
-    print(f"[OK] {len(docs)} docs -> {len(chunks)} chunks (>= 5)")
 
-    # 长度检查（允许 10% 余量，因 separators 可能在边界处略超）
-    max_len = max(len(c.page_content) for c in chunks)
-    expected_max = settings.chunk_size * 1.1
-    assert max_len <= expected_max, f"最大 chunk 长度 {max_len} 超过阈值 {expected_max:.0f}"
-    print(f"[OK] max chunk length: {max_len} (threshold: {expected_max:.0f})")
+def test_parser_rejects_unsupported(tmp_path):
+    bad = tmp_path / "a.txt"
+    bad.write_text("hello", encoding="utf-8")
+    try:
+        DocumentParser().parse(bad)
+        raise AssertionError(".txt 应被拒绝")
+    except ValueError as e:
+        assert "不支持的文件格式" in str(e)
 
-    # metadata 检查
+
+# ── TextChunker ───────────────────────────────────────────────────
+
+
+def test_chunker_token_budget(chunks):
+    """每个 chunk 的 token 数不超过 chunk_size + 标题前缀余量。
+
+    标题路径前缀在切分后拼接，额外占用少量 token，余量取 30。
+    （修复前按字符切 500 字符，超出 embedding 模型 256 token 窗口被静默截断。）
+    """
+    for chunk in chunks:
+        tokens = _token_len(chunk.page_content)
+        assert tokens <= settings.chunk_size + 30, (
+            f"chunk token 数 {tokens} 超过预算 {settings.chunk_size}+30: "
+            f"{chunk.page_content[:50]!r}"
+        )
+
+
+def test_chunker_metadata(chunks):
+    from collections import Counter
+
+    counters: dict[str, set[int]] = {}
     for chunk in chunks:
         assert "source" in chunk.metadata, "metadata 缺少 source"
         assert "chunk_index" in chunk.metadata, "metadata 缺少 chunk_index"
-    print(f"[OK] all chunks have source + chunk_index in metadata")
-
-    # 展示 chunk_index 分布
-    from collections import Counter
-    source_counts = Counter(c.metadata["source"] for c in chunks)
-    for source, count in source_counts.items():
-        print(f"   {Path(source).name}: {count} chunks")
-
-    return chunks
+        counters.setdefault(chunk.metadata["source"], set()).add(chunk.metadata["chunk_index"])
+    # chunk_index 在同一 source 内连续编号（确定性 ID 依赖此约定）
+    for source, idx_set in counters.items():
+        assert idx_set == set(range(len(idx_set))), f"{source} 的 chunk_index 不连续"
+    assert sum(len(v) for v in counters.values()) == len(chunks)
 
 
-def test_embedder(chunks):
-    print("\n" + "=" * 50)
-    print("测试 3：EmbeddingService")
-    print("=" * 50)
-    embedder = EmbeddingService()
+def test_chunker_header_context(chunks):
+    """Markdown 语料的 chunk 应携带标题 metadata 并把标题路径拼入正文前缀。"""
+    with_headers = [c for c in chunks if "h1" in c.metadata or "h2" in c.metadata]
+    assert with_headers, "没有 chunk 携带标题 metadata（标题上下文注入失效）"
+    for chunk in with_headers[:5]:
+        prefix = chunk.page_content.split("\n\n", 1)[0]
+        assert " > " in prefix, f"正文前缀应含标题路径: {prefix!r}"
 
-    # 单条查询向量
+
+def test_chunker_deterministic(sample_docs):
+    """两次切分结果完全一致（vector_store 确定性 ID 依赖此性质）。"""
+    c1 = TextChunker().split(sample_docs)
+    c2 = TextChunker().split(sample_docs)
+    assert len(c1) == len(c2)
+    assert [c.page_content for c in c1] == [c.page_content for c in c2]
+    assert [c.metadata for c in c1] == [c.metadata for c in c2]
+
+
+# ── EmbeddingService ──────────────────────────────────────────────
+
+
+def test_embedder_query_dims(embedder):
     vec = embedder.embed_query("test")
     assert len(vec) == 384, f"all-MiniLM-L6-v2 输出应为 384 维，实际 {len(vec)}"
-    print(f"[OK] embed_query('test') -> {len(vec)} dims")
 
-    # 批量文档向量（取前 3 个 chunk 测试）
+
+def test_embedder_batch_consistency(embedder, chunks):
     texts = [c.page_content for c in chunks[:3]]
     vecs = embedder.embed_documents(texts)
-    assert len(vecs) == 3, f"应返回 3 个向量，实际 {len(vecs)}"
+    assert len(vecs) == 3
     assert all(len(v) == 384 for v in vecs), "所有向量应为 384 维"
-    print(f"[OK] embed_documents(3 chunks) -> {len(vecs)} x 384 dims")
 
 
-def test_pipeline():
-    print("\n" + "=" * 50)
-    print("测试 4：三步串联 parse → split → embed")
-    print("=" * 50)
-    parser = DocumentParser()
-    chunker = TextChunker()
-    embedder = EmbeddingService()
-
-    docs = parser.parse_directory(DATA_DIR)
-    chunks = chunker.split(docs)
-    sample_vec = embedder.embed_query(chunks[0].page_content)
-
-    assert len(sample_vec) == 384
-    print(f"[OK] pipeline: {len(docs)} docs -> {len(chunks)} chunks -> 384 dims")
-
-
-if __name__ == "__main__":
-    print("RAGForge Task 2 验证：文档处理层（Ingestion）\n")
-    docs = test_parser()
-    chunks = test_chunker(docs)
-    test_embedder(chunks)
-    test_pipeline()
-    print("\n" + "=" * 50)
-    print("[PASS] Task 2 All Tests Passed!")
-    print("=" * 50)
+def test_embedder_model_mismatch_rejected(embedder):
+    """单例已加载模型后，用不同 model_name 初始化应报错而非静默返回旧模型。"""
+    try:
+        EmbeddingService("some-other-model")
+        raise AssertionError("model_name 不一致应被拒绝")
+    except ValueError as e:
+        assert "拒绝再用" in str(e)

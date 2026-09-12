@@ -1,176 +1,255 @@
-"""Task 5 验证：Agent 决策层（LangGraph 8 节点状态机）
+"""Agent 决策层单元测试——全 mock，离线
 
-验证项目：
-1. 单元：各节点独立行为正确（analyze / evaluate / switch_strategy / reformulate）
-2. 集成：寒暄跳过检索直生成；事实查询完整流程；模糊查询触发 reformulate
-3. 可视化：状态机 mermaid 文本可生成
-4. 安全：max_iterations 兜底生效（不会无限循环）
+覆盖：
+1. 纯规则节点：decide / switch_strategy
+2. 路由矩阵：evaluate（hybrid 短路/达上限）/ reformulate（改写无效短路）/
+   verify（None 不触发循环、双预算终止）
+3. evaluate 节点分数语义：vector 绝对阈值、bm25/hybrid 不套用
+4. 结构化输出：枚举归一化、JSON 提取（嵌套不截断）
+5. 状态机端到端（Fake 组件跑真实图）：正常单轮、hybrid 空转短路、
+   幻觉循环、改写无效短路、最坏路径终止性、mermaid 可视化
 """
-import os
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import json
 
-from dotenv import load_dotenv
+from langchain_core.documents import Document
 
-load_dotenv()
-
-import warnings
-
-warnings.filterwarnings("ignore")
-os.environ.setdefault("PYTHONIOENCODING", "utf-8")
-
-from src.agent import build_agent_graph_from_pipeline, initial_state
-from src.agent.nodes import (
-    analyze_node,
-    decide_node,
-    evaluate_node,
-    reformulate_node,
-    switch_strategy_node,
+from fakes import FakeLLM, FakeRetriever, make_script, scripted_verify
+from src.agent.graph import (
+    build_agent_graph,
+    route_after_evaluate,
+    route_after_reformulate,
+    route_after_verify,
 )
-from src.agent.state import AgentState
-from src.config import PROJECT_ROOT, settings
+from src.agent.nodes import decide_node, evaluate_node, switch_strategy_node
+from src.agent.state import initial_state
 from src.generation.llm_client import LLMClient
+from src.generation.schemas import (
+    AnalyzeResult,
+    EvaluateResult,
+    ReformulateResult,
+    VerifyResult,
+)
 from src.generation.prompts import PromptManager
-from src.ingestion import DocumentParser, TextChunker, EmbeddingService
-from src.retrieval import VectorStore, BM25Retriever
 
-DATA_DIR = PROJECT_ROOT / settings.data_dir
+PROMPTS = PromptManager()
 
 
-def _build_deps():
-    """构建 graph 所需依赖（向量/BM25/LLM/prompts）。"""
-    parser = DocumentParser()
-    docs = parser.parse_directory(DATA_DIR)
-    chunker = TextChunker()
-    chunks = chunker.split(docs)
-    embedder = EmbeddingService()
-    vs = VectorStore.load_or_build(chunks, embedder)
-    bm25 = BM25Retriever()
-    bm25.build_index(chunks)
-    llm = LLMClient()
-    prompts = PromptManager()
-    return vs, bm25, llm, prompts
+# ── 纯规则节点 ────────────────────────────────────────────────────
 
 
-def test_unit_nodes(vs, bm25, llm, prompts):
-    print("=" * 60)
-    print("测试 1：单元节点行为")
-    print("=" * 60)
-
-    # analyze: 事实查询 → needs_retrieval=True
-    out = analyze_node({"query": "什么是过拟合？"}, llm=llm, prompts=prompts)
-    assert out["needs_retrieval"] is True, f"事实查询应 needs_retrieval=True，实际 {out}"
-    print(f"✅ analyze('什么是过拟合') → {out['query_type']}, needs_retrieval={out['needs_retrieval']}")
-
-    # analyze: 寒暄 → needs_retrieval=False
-    out2 = analyze_node({"query": "你好"}, llm=llm, prompts=prompts)
-    assert out2["needs_retrieval"] is False, f"寒暄应 needs_retrieval=False，实际 {out2}"
-    print(f"✅ analyze('你好') → {out2['query_type']}, needs_retrieval={out2['needs_retrieval']}")
-
-    # decide 规则
+def test_decide_rules():
     assert decide_node({"query_type": "chitchat"})["retrieval_strategy"] == "none"
+    assert decide_node({"needs_retrieval": False})["retrieval_strategy"] == "none"
     assert decide_node({"query_type": "factual"})["retrieval_strategy"] == "vector"
     assert decide_node({"query_type": "reasoning"})["retrieval_strategy"] == "bm25"
     assert decide_node({"query_type": "complex"})["retrieval_strategy"] == "hybrid"
-    print("✅ decide 规则映射正确（chitchat→none, factual→vector, reasoning→bm25, complex→hybrid）")
+    assert decide_node({})["retrieval_strategy"] == "vector"  # 未知类型安全默认
 
-    # switch_strategy 规则
+
+def test_switch_strategy_upgrade_chain():
     assert switch_strategy_node({"retrieval_strategy": "vector"})["retrieval_strategy"] == "bm25"
     assert switch_strategy_node({"retrieval_strategy": "bm25"})["retrieval_strategy"] == "hybrid"
     assert switch_strategy_node({"retrieval_strategy": "hybrid"})["retrieval_strategy"] == "hybrid"
-    print("✅ switch_strategy 升级正确（vector→bm25, bm25→hybrid, hybrid→hybrid）")
 
 
-def test_integration_chitchat(graph):
-    print("\n" + "=" * 60)
-    print("测试 2：寒暄查询跳过检索")
-    print("=" * 60)
-    state = graph.invoke(
-        initial_state("你好", max_iterations=3), config={"recursion_limit": 50}
+def test_initial_state_defaults():
+    state = initial_state("q")
+    assert state["iteration_count"] == 0
+    assert state["verify_failures"] == 0
+    assert state["max_iterations"] == 3
+
+
+# ── 路由矩阵 ──────────────────────────────────────────────────────
+
+
+def test_route_after_evaluate():
+    # hybrid 上 switch 无效 → 短路直接 generate
+    assert route_after_evaluate(
+        {"suggested_action": "switch_strategy", "retrieval_strategy": "hybrid",
+         "iteration_count": 1, "max_iterations": 3}
+    ) == "generate"
+    # vector 切换有效
+    assert route_after_evaluate(
+        {"suggested_action": "switch_strategy", "retrieval_strategy": "vector",
+         "iteration_count": 1, "max_iterations": 3}
+    ) == "switch_strategy"
+    # proceed / 达上限
+    assert route_after_evaluate({"suggested_action": "proceed"}) == "generate"
+    assert route_after_evaluate(
+        {"suggested_action": "reformulate", "iteration_count": 3, "max_iterations": 3}
+    ) == "generate"
+
+
+def test_route_after_reformulate():
+    assert route_after_reformulate({"rewrite_effective": True}) == "retrieve"
+    assert route_after_reformulate({"rewrite_effective": False}) == "generate"
+    assert route_after_reformulate({}) == "generate"  # 缺字段安全默认为无效
+
+
+def test_route_after_verify():
+    assert route_after_verify({"is_faithful": True}) == "end"
+    assert route_after_verify({"is_faithful": None}) == "end"  # 未验证不触发循环
+    assert route_after_verify(
+        {"is_faithful": False, "verify_failures": 1, "max_iterations": 3}
+    ) == "reformulate"
+    assert route_after_verify(
+        {"is_faithful": False, "verify_failures": 3, "max_iterations": 3}
+    ) == "end"  # 幻觉重试上限
+    assert route_after_verify(
+        {"is_faithful": False, "verify_failures": 1, "iteration_count": 3, "max_iterations": 3}
+    ) == "end"  # 检索预算耗尽
+
+
+# ── evaluate 节点分数语义 ─────────────────────────────────────────
+
+
+class SufficientLLM:
+    """恒定返回 sufficient 的 LLM stub，用于检验规则层不越权。"""
+
+    def invoke_structured(self, prompt, schema, **kwargs):
+        assert schema is EvaluateResult
+        return EvaluateResult(failure_mode="sufficient", suggested_action="proceed", reason="LLM 认为充足")
+
+
+def test_evaluate_vector_low_score_triggers_switch():
+    """vector 策略 + cosine 低分：即使 LLM 说 sufficient，规则层也覆盖为 switch。"""
+    out = evaluate_node(
+        {"query": "q", "retrieval_strategy": "vector",
+         "documents": [Document(page_content="doc")], "retrieval_scores": [0.1, 0.12]},
+        llm=SufficientLLM(), prompts=PROMPTS,
     )
-    strategy = state.get("retrieval_strategy")
-    assert strategy == "none", f"寒暄应 strategy=none，实际 {strategy}"
-    assert state.get("answer"), "寒暄也应有回答"
-    print(f"✅ '你好' → strategy={strategy}, answer='{state['answer'][:50]}...'")
+    assert out["failure_mode"] == "low_recall"
+    assert out["suggested_action"] == "switch_strategy"
 
 
-def test_integration_factual(graph):
-    print("\n" + "=" * 60)
-    print("测试 3：事实查询完整流程")
-    print("=" * 60)
-    state = graph.invoke(
-        initial_state("Python 装饰器怎么用？", max_iterations=3),
-        config={"recursion_limit": 50},
+def test_evaluate_hybrid_rrf_scores_not_flagged():
+    """hybrid 策略 + RRF 低分（≈0.03）：不得套用 0.3 阈值误判（修复前必空转 3 轮的根因）。"""
+    out = evaluate_node(
+        {"query": "q", "retrieval_strategy": "hybrid",
+         "documents": [Document(page_content="doc")], "retrieval_scores": [0.033, 0.028]},
+        llm=SufficientLLM(), prompts=PROMPTS,
     )
-    assert state.get("answer"), "事实查询应有回答"
-    print(f"✅ 'Python 装饰器怎么用？'")
-    print(f"   strategy={state.get('retrieval_strategy')}, iter={state.get('iteration_count')}")
-    print(f"   failure_mode={state.get('failure_mode')}, is_faithful={state.get('is_faithful')}")
-    print(f"   answer='{state['answer'][:80]}...'")
+    assert out["suggested_action"] == "proceed"
 
 
-def test_integration_overfit(graph):
-    print("\n" + "=" * 60)
-    print("测试 4：'过拟合'查询（验证 Agent 诊断+策略切换）")
-    print("=" * 60)
-    state = graph.invoke(
-        initial_state("什么是过拟合？怎么解决？", max_iterations=3),
-        config={"recursion_limit": 50},
+def test_evaluate_bm25_scores_not_flagged():
+    """bm25 分数无上界：不参与绝对分数规则。"""
+    out = evaluate_node(
+        {"query": "q", "retrieval_strategy": "bm25",
+         "documents": [Document(page_content="doc")], "retrieval_scores": [15.3, 9.2]},
+        llm=SufficientLLM(), prompts=PROMPTS,
     )
-    print(f"✅ '过拟合' 完成")
-    print(f"   最终 strategy={state.get('retrieval_strategy')}, iter={state.get('iteration_count')}")
-    print(f"   failure_mode={state.get('failure_mode')}, is_faithful={state.get('is_faithful')}")
-    print(f"   answer='{(state.get('answer') or '')[:120]}...'")
-    # 决策轨迹
-    print(f"   决策轨迹（最后 6 步）：")
-    for m in state.get("messages", [])[-6:]:
-        print(f"     · {m}")
+    assert out["suggested_action"] == "proceed"
 
 
-def test_safety_max_iterations(graph):
-    print("\n" + "=" * 60)
-    print("测试 5：max_iterations 兜底（不会无限循环）")
-    print("=" * 60)
-    # 用一个检索很难命中的查询，观察 iteration_count ≤ max_iterations
-    state = graph.invoke(
-        initial_state("量子纠缠的贝尔不等式推导", max_iterations=2),
-        config={"recursion_limit": 50},
+def test_evaluate_empty_docs_switch():
+    out = evaluate_node(
+        {"query": "q", "retrieval_strategy": "vector", "documents": [], "retrieval_scores": []},
+        llm=SufficientLLM(), prompts=PROMPTS,
     )
-    iter_count = state.get("iteration_count", 0)
-    assert iter_count <= 2, f"iteration_count 应 ≤ max_iterations=2，实际 {iter_count}"
-    print(f"✅ iteration_count={iter_count} ≤ max_iterations=2（兜底生效）")
+    assert out["failure_mode"] == "low_recall" and out["suggested_action"] == "switch_strategy"
 
 
-def test_graph_visualization(graph):
-    print("\n" + "=" * 60)
-    print("测试 6：状态机可视化（mermaid 文本可生成）")
-    print("=" * 60)
-    try:
-        mermaid = graph.get_graph().draw_mermaid()
-        assert "analyze" in mermaid and "verify" in mermaid
-        print("✅ mermaid 文本生成成功（含 analyze/verify 等节点）")
-        print("   节点摘要：")
-        for node in ["analyze", "decide", "retrieve", "evaluate",
-                     "reformulate", "switch_strategy", "generate", "verify"]:
-            present = node in mermaid
-            print(f"     {'✓' if present else '✗'} {node}")
-    except Exception as e:
-        print(f"⚠️ mermaid 生成失败（非阻塞）：{e}")
+# ── 结构化输出 ────────────────────────────────────────────────────
 
 
-if __name__ == "__main__":
-    print("RAGForge Task 5 验证：Agent 决策层（LangGraph 状态机）\n")
-    vs, bm25, llm, prompts = _build_deps()
-    test_unit_nodes(vs, bm25, llm, prompts)
+def test_schema_enum_normalization():
+    assert AnalyzeResult(query_type="Factual", needs_retrieval=True).query_type == "factual"
+    r = EvaluateResult(failure_mode="低召回", suggested_action="切换策略")
+    assert r.failure_mode == "low_recall" and r.suggested_action == "switch_strategy"
+    assert ReformulateResult(reformulated_query="x", rewrite_strategy="具体化").rewrite_strategy == "specify"
 
-    graph = build_agent_graph_from_pipeline(vs, bm25, llm)
-    test_integration_chitchat(graph)
-    test_integration_factual(graph)
-    test_integration_overfit(graph)
-    test_safety_max_iterations(graph)
-    test_graph_visualization(graph)
 
-    print("\n" + "=" * 60)
-    print("🎉 Task 5 验证全部通过！")
-    print("=" * 60)
+def test_extract_json_nested_and_noisy():
+    extract = LLMClient._extract_json
+    nested = '{"reason": "含 } 花括号", "is_faithful": true}'
+    assert json.loads(extract(f"```json\n{nested}\n```"))["is_faithful"] is True
+    assert json.loads(extract(f"前缀噪声 ```json\n{nested}\n``` 后缀"))["is_faithful"] is True
+    assert json.loads(extract(nested))["is_faithful"] is True
+
+
+# ── 状态机端到端（Fake 组件跑真实图）──────────────────────────────
+
+
+def test_graph_normal_single_round(make_graph):
+    state = make_graph().invoke(initial_state("测试问题"), config={"recursion_limit": 50})
+    assert state["answer"] == "测试回答"
+    assert state["iteration_count"] == 1, f"正常单轮应只检索 1 次: {state['iteration_count']}"
+
+
+def test_graph_hybrid_switch_short_circuit(make_graph):
+    """hybrid 策略 + evaluate 恒建议 switch：应短路生成，而非空转满 3 轮。"""
+    script = make_script(
+        AnalyzeResult=AnalyzeResult(query_type="complex", needs_retrieval=True),
+        EvaluateResult=EvaluateResult(failure_mode="low_recall", suggested_action="switch_strategy"),
+    )
+    state = make_graph(script).invoke(initial_state("测试问题"), config={"recursion_limit": 50})
+    assert state["answer"] == "测试回答"
+    assert state["iteration_count"] == 1, f"hybrid 短路失败: iter={state['iteration_count']}"
+
+
+def test_graph_hallucination_loop_effective_rewrite(make_graph):
+    """verify 首轮判幻觉、改写有效 → 重检索一次后结束。"""
+    script = make_script(VerifyResult=scripted_verify([False, True]))
+    state = make_graph(script).invoke(initial_state("测试问题"), config={"recursion_limit": 50})
+    assert state["answer"] == "测试回答"
+    assert state["is_faithful"] is True
+    assert state["iteration_count"] == 2, f"幻觉循环应重检索 1 次: {state['iteration_count']}"
+
+
+def test_graph_ineffective_rewrite_short_circuit(make_graph):
+    """verify 恒幻觉 + 改写无效 → verify↔generate 循环由 verify_failures 兜底终止，
+    不应产生第二次检索。"""
+    script = make_script(
+        VerifyResult=VerifyResult(is_faithful=False),
+        ReformulateResult=lambda **kw: ReformulateResult(
+            reformulated_query=kw.get("query", "测试问题"), rewrite_strategy="specify"
+        ),
+    )
+    state = make_graph(script).invoke(initial_state("测试问题"), config={"recursion_limit": 50})
+    assert state["answer"] == "测试回答"
+    assert state["iteration_count"] == 1, f"改写无效应短路: iter={state['iteration_count']}"
+    assert state["verify_failures"] == 3, f"幻觉重试上限应为 3: {state['verify_failures']}"
+
+
+def test_graph_worst_path_terminates(make_graph):
+    """最坏路径：恒幻觉 + 恒 switch（vector 起步）→ 双预算强制收敛，无死循环。"""
+    script = make_script(
+        AnalyzeResult=AnalyzeResult(query_type="factual", needs_retrieval=True),
+        EvaluateResult=EvaluateResult(failure_mode="low_recall", suggested_action="switch_strategy"),
+        VerifyResult=VerifyResult(is_faithful=False),
+    )
+    state = make_graph(script).invoke(initial_state("测试问题"), config={"recursion_limit": 50})
+    assert state["answer"] == "测试回答"
+    assert state["iteration_count"] <= 3, f"超出检索上限: {state['iteration_count']}"
+
+
+def test_graph_generate_fallback(make_graph):
+    """LLM 生成彻底失败：generate 节点降级兜底，状态机仍产出答案。"""
+    script = make_script()
+    graph = make_graph(script)
+
+    class BrokenGenerateLLM(FakeLLM):
+        def generate(self, query, context):
+            raise RuntimeError("LLM 宕机")
+
+    # 直接替换图中 generate 节点不可行，改为构造带故障 generate 的图
+    broken = build_agent_graph(
+        vector_store=FakeRetriever(),
+        bm25_retriever=FakeRetriever(),
+        llm_client=BrokenGenerateLLM(script),
+        prompt_manager=PromptManager(),
+        hybrid_retriever=None,
+        reranker=None,
+    )
+    state = broken.invoke(initial_state("测试问题"), config={"recursion_limit": 50})
+    assert state["answer"], "降级兜底应产出非空回答"
+
+
+def test_graph_mermaid_visualization(make_graph):
+    """mermaid 文本可生成且包含全部 8 个节点（不再吞断言）。"""
+    mermaid = make_graph().get_graph().draw_mermaid()
+    for node in ["analyze", "decide", "retrieve", "evaluate",
+                 "reformulate", "switch_strategy", "generate", "verify"]:
+        assert node in mermaid, f"mermaid 缺少节点 {node}"

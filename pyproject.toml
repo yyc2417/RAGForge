@@ -29,7 +29,7 @@ dependencies = [
     "jieba>=0.42.1",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -39,5 +39,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# src 布局未打包安装，pythonpath 指向项目根供测试导入 src 包
+pythonpath = ["."]
 asyncio_mode = "auto"
 addopts = "-v --tb=short"
+markers = [
+    "integration: 集成测试，真实调用 DeepSeek API；需设 RUN_INTEGRATION=1 才运行（默认跳过）",
+]

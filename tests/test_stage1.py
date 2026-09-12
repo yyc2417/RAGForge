@@ -8,15 +8,22 @@
 
 import time
 
-from src.config import PROJECT_ROOT
+from pydantic import SecretStr
+
+from src.config import PROJECT_ROOT, settings
 from src.generation.llm_client import LLMClient
 from src.main import build_rag_pipeline
 from src.retrieval import VectorStore
 from src.utils.metrics import MetricsCollector
 
 
-def test_pipeline_build(chroma_dir):
-    """管道构建：类型正确（索引构建在 tmp 目录，不污染真实 chroma_db）。"""
+def test_pipeline_build(chroma_dir, monkeypatch):
+    """管道构建：类型正确（索引构建在 tmp 目录，不污染真实 chroma_db）。
+
+    用占位 key 替换配置：LLMClient 构造是纯本地操作（不发起网络请求），
+    测试目的在入库管道而非凭据——CI 环境无 .env 也必须能离线通过。
+    """
+    monkeypatch.setattr(settings, "deepseek_api_key", SecretStr("sk-test-placeholder"))
     vs, llm = build_rag_pipeline()
     assert isinstance(vs, VectorStore)
     assert isinstance(llm, LLMClient)

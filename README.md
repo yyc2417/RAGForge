@@ -6,7 +6,7 @@ RAGForge 是一个**会自主决策的 RAG Agent**：基于 LangGraph 8 节点�
 
 ## 架构
 
-8 节点 LangGraph 状态机，含 3 条条件边和 2 个自愈循环（reformulate / switch_strategy）：
+8 节点 LangGraph 状态机，含 4 条条件边和 2 个自愈循环（reformulate / switch_strategy）：
 
 ```mermaid
 flowchart TD
@@ -32,14 +32,14 @@ flowchart TD
 |------|:---:|------|
 | analyze | ✅ | 判断 query_type（factual/reasoning/chitchat/complex）+ needs_retrieval |
 | decide | ❌ | 纯规则路由：chitchat→none, factual→vector, reasoning→bm25, complex→hybrid |
-| retrieve | ❌ | 按 strategy 调用对应检索器，记录延迟 |
-| evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action |
-| reformulate | ✅ | 按 failure_mode 选择改写策略（specify/generalize/synonym_replace） |
-| switch_strategy | ❌ | 纯规则策略升级：vector → bm25 → hybrid |
-| generate | ✅ | 基于检索上下文生成回答 |
-| verify | ✅ | 幻觉检测 + 递增 iteration_count，未忠实则触发 reformulate 重试 |
+| retrieve | ❌ | 按 strategy 调用对应检索器；iteration_count 唯一递增点（每轮真实检索 +1） |
+| evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action；分数规则仅对 vector 策略生效（详见 ADR-006） |
+| reformulate | ✅ | 按 failure_mode 选择改写策略；改写无效（LLM 失败或改写 == 原查询）时路由直接生成，跳过无效重检索 |
+| switch_strategy | ❌ | 纯规则策略升级：vector → bm25 → hybrid；已是 hybrid 时路由短路直达生成 |
+| generate | ✅ | 基于检索上下文生成回答（LLM 失败时降级兜底） |
+| verify | ✅ | 幻觉检测；确认幻觉时递增 verify_failures 并触发 reformulate 重试 |
 
-**安全机制**：`max_iterations=3`（状态机级防死循环，verify/reformulate 均递增计数）+ LangGraph `recursion_limit`（第二道防线）。
+**安全机制**：双预算防死循环——`iteration_count`（检索总次数上限，retrieve 唯一递增）与 `verify_failures`（幻觉重试上限，verify 唯一递增）均默认 3；外加 LangGraph `recursion_limit`（第二道防线）。
 
 ## 技术栈
 
@@ -49,12 +49,13 @@ flowchart TD
 | 包管理 | uv | 极速依赖解析 |
 | Agent 框架 | LangGraph ≥ 1.2.4 | 8 节点状态机、条件边、astream_events |
 | LLM 编排 | LangChain ≥ 1.3.4 | LCEL chain、ChatPromptTemplate |
-| LLM | DeepSeek（OpenAI 兼容） | deepseek-v4-flash，tenacity 重试 |
-| 向量检索 | ChromaDB + langchain-chroma | 持久化、relevance score |
-| 关键词检索 | rank-bm25 | BM25Okapi，jieba/regex 双分词 |
+| LLM | DeepSeek（OpenAI 兼容） | deepseek-v4-flash，60s 超时 + tenacity 瞬时故障重试 |
+| 向量检索 | ChromaDB + langchain-chroma | 持久化、cosine relevance、确定性 ID + 指纹校验 |
+| 关键词检索 | rank-bm25 | BM25Okapi，jieba/regex 双分词（小写归一） |
 | 混合检索 | RRF（自实现） | `score = Σ 1/(k+rank)`，top-2k 候选融合 |
-| 重排序 | sentence-transformers | CrossEncoder bge-reranker-v2-m3，优雅降级 |
+| 重排序 | sentence-transformers | CrossEncoder bge-reranker-v2-m3，优雅降级（600s 冷却重试） |
 | Embedding | langchain-huggingface | all-MiniLM-L6-v2（384 维） |
+| 分块 | tiktoken + MarkdownHeaderTextSplitter | token 预算切分（220/30）+ 标题上下文注入 |
 | API | FastAPI + sse-starlette | /chat + /chat/stream（SSE 逐 token） |
 | 日志 | loguru | 双输出（控制台 + 文件） |
 | 配置 | pydantic-settings | 类型安全 + .env |
@@ -108,7 +109,9 @@ curl -N -X POST http://localhost:8000/chat/stream \
 ### 5. 运行评估
 
 ```bash
-uv run python scripts/eval.py
+uv run python scripts/eval.py                  # 完整评估（4 套模式，需 API key）
+uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM，免 API）
+uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 # 输出：终端对比表 + reports/eval_report.json
 ```
 
@@ -117,7 +120,7 @@ uv run python scripts/eval.py
 ### 1. 诊断式评估（区别于普通打分）
 
 `evaluate` 节点不只输出"相关/不相关"，而是**诊断失败原因**：
-- `low_recall`：召回不足（结果太少或分数低）→ 建议切换策略（向量→BM25→混合）
+- `low_recall`：召回不足（结果太少或向量分数低）→ 建议切换策略（向量→BM25→混合）
 - `irrelevant`：结果无关（关键词不匹配）→ 建议改写查询（specify 限定）
 - `sufficient`：充足 → 直接生成
 
@@ -145,9 +148,10 @@ score(d) = Σ_i  1 / (rrf_k + rank_i(d))
 
 ### 6. 全链路优雅降级
 
-- Reranker 模型不可用 → 自动跳过，退化为纯 RRF 混合
-- DeepSeek 结构化输出失败 → 节点降级到规则默认值
-- 所有外部调用 → tenacity 重试（3 次，指数退避）
+- Reranker 模型不可用 → 自动跳过，退化为纯 RRF 混合（600s 冷却后可重试加载）
+- DeepSeek 结构化输出失败 → 带纠错提示重试 1 次，仍失败则节点降级到规则默认值
+- LLM 生成彻底失败 → generate 节点返回降级文案，状态机总能产出答案
+- LLM 调用 → tenacity 重试（仅连接/超时/限流/5xx 等瞬时故障，3 次指数退避；401/400 等永久错误直接抛出）
 
 ## 项目结构
 
@@ -160,7 +164,7 @@ RAGForge/
 │   ├── cli.py                 # CLI / Server 启动模式（从 main.py 拆分）
 │   ├── ingestion/             # Task 2：文档处理层
 │   │   ├── parser.py          #   DocumentParser（MD/PDF 策略模式）
-│   │   ├── chunker.py         #   TextChunker（递归切分 + chunk_index）
+│   │   ├── chunker.py         #   TextChunker（token 预算切分 + 标题上下文）
 │   │   └── embedder.py        #   EmbeddingService（线程安全单例）
 │   ├── retrieval/             # Task 3/6：检索层
 │   │   ├── vector_store.py    #   VectorStore（ChromaDB）
@@ -180,19 +184,22 @@ RAGForge/
 │   │       ├── reformulate.py / switch_strategy.py
 │   │       └── generate.py / verify.py
 │   ├── api/                   # Task 7：FastAPI + SSE
-│   │   ├── app.py             #   应用工厂 + LangSmith 配置
+│   │   ├── app.py             #   应用工厂 + lifespan 启动预热 + CORS
 │   │   ├── routes.py          #   /health /chat(async) /chat/stream(SSE)
 │   │   ├── schemas.py         #   请求/响应 Pydantic 模型
-│   │   └── dependencies.py    #   graph 单例注入（惰性初始化）
+│   │   └── dependencies.py    #   graph 注入（lifespan 预热，未就绪 503）
 │   └── utils/
-│       ├── logger.py          #   loguru 双输出
-│       └── metrics.py         #   MetricsCollector（线程安全单例，P50/P95/P99）
+│       ├── logger.py          #   loguru 双输出（多 worker 安全）
+│       └── metrics.py         #   MetricsCollector（请求级实例 + ContextVar 注入）
 ├── tests/
-│   ├── test_ingestion.py      # Task 2 测试
-│   ├── test_stage1.py         # Task 4 端到端测试
-│   ├── test_retrieval.py      # Task 3/6 检索测试（含对比实验）
-│   ├── test_agent.py          # Task 5 Agent 状态机测试
-│   └── eval_dataset.json      # Task 8 评估数据集（15 QA）
+│   ├── conftest.py            #   共享 fixtures（临时 Chroma 目录 / Fake 工厂）
+│   ├── fakes.py               #   FakeLLM / FakeRetriever（无网络测试组件）
+│   ├── test_ingestion.py      #   Ingestion 单元测试（离线）
+│   ├── test_retrieval.py      #   检索层测试（离线，含索引一致性回归）
+│   ├── test_agent.py          #   Agent 状态机测试（全 mock，离线）
+│   ├── test_stage1.py         #   结构与管道构建测试（离线）
+│   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
+│   └── eval_dataset.json      #   评估数据集（15 QA）
 ├── scripts/
 │   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
 ├── data/sample/               # 知识库（python_basics.md + machine_learning_faq.md）
@@ -216,15 +223,19 @@ RAGForge/
 
 **目标门槛**：召回率 ≥ 90%、幻觉率 < 5%、P99 < 2s、平均 token < 800。
 
-> ✅ = 达标。完整明细见 `reports/eval_report.json`（每次运行 `scripts/eval.py` 自动更新）。
+> ⚠️ **上表为历史基线数据**（检索 k=3、按字符分块 500、忠实度双口径的旧版本产出），
+> 仅供版本对照，不代表当前代码的现状。当前版本已统一评估口径（检索 k=5、
+> token 化分块 220/30、忠实度统一 LLM 裁决、失败/未验证样本单独归类），
+> 并新增免 API 的离线检索评估（`--retrieval-only`，四策略 recall@5 均 100%）。
+> 完整基线待重跑 `scripts/eval.py` 后更新本表。完整明细见 `reports/eval_report.json`。
 
-### 结果分析
+### 结果分析（基于历史基线）
 
 **召回率**：Agent 模式达到 100%，优于 baseline 的 91.7%。策略切换机制（vector → BM25）能有效补充向量检索未命中的关键词匹配场景。
 
-**幻觉率**：Agent 模式幻觉率 **0.0%**。三层保障：VERIFY_PROMPT 允许合理推理和总结、chitchat 查询跳过 verify 节点、verify/reformulate/switch_strategy 均递增 iteration_count 防止无限循环。
+**幻觉率**：Agent 模式幻觉率 **0.0%**。三层保障：VERIFY_PROMPT 允许合理推理和总结、chitchat 查询跳过 verify 节点、双预算计数（检索次数 / 幻觉重试各自设上限）防止无限循环。
 
-**延迟**：Agent 模式 P99 约 48s，主要因 reformulate 循环（最多 3 轮 × 每轮多个 LLM 调用）。chitchat 查询仅需 3-4s（跳过检索和验证）。生产环境可通过调低 `max_iterations`、缓存、异步流式输出（`/chat/stream`）缓解。
+**延迟**：Agent 模式 P99 约 48s，主要因 reformulate 循环（最多 3 轮 × 每轮多个 LLM 调用）。chitchat 查询仅需 3-4s（跳过检索和验证）。当前版本已通过路由短路（hybrid 无效切换直达生成、改写无效跳过重检索）消除了大部分空转循环，延迟显著下降（待重跑评估确认）。生产环境还可通过调低 `max_iterations`、缓存、异步流式输出（`/chat/stream`）进一步缓解。
 
 **Token**：Agent 模式平均 672 token，低于 baseline 的 882（诊断 prompt 更精简，循环时复用上下文）。
 

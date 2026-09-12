@@ -78,4 +78,4 @@ for rank, doc in enumerate(v_docs, start=1):
 
 - [Cormack et al., "Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods", SIGIR 2009](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)
 - [Elasticsearch RRF 文档](https://www.elastic.co/guide/en/elasticsearch/reference/current/rrf.html)
-- [src/retrieval/hybrid.py](file://src/retrieval/hybrid.py)
+- [src/retrieval/hybrid.py](../../src/retrieval/hybrid.py)

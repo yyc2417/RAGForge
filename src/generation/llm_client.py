@@ -2,18 +2,21 @@
 
 提供：
 - generate(query, context)：基于上下文生成回答（同步，带重试）
-- generate_stream(query, context)：流式生成（供 Task 7 SSE）
-- invoke_with_prompt(prompt, **kwargs)：自定义 prompt 调用（供 Agent 节点）
-- invoke_structured(prompt, schema, **kwargs)：结构化输出（供 Task 5 with_structured_output）
+- invoke_structured(prompt, schema, **kwargs)：结构化输出（供 Agent 节点，
+  prompt 引导 + JSON 解析 + 失败重试，见 ADR-003）
+
+SSE 流式由 API 层经 graph.astream_events 捕获 on_chat_model_stream 实现，
+不经过本类。
 """
 
-from collections.abc import Iterator
 import json
 import re
+from typing import TypeVar
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 from openai import (
     APIConnectionError,
     APITimeoutError,
@@ -31,6 +34,8 @@ from src.config import settings
 from src.generation.prompts import PromptManager
 from src.utils.logger import logger
 from src.utils.metrics import get_current_collector
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class LLMClient:
@@ -83,39 +88,9 @@ class LLMClient:
         self._record_usage(resp)
         return resp.content if hasattr(resp, "content") else str(resp)
 
-    def generate_stream(self, query: str, context: list[Document]) -> Iterator[str]:
-        """流式生成回答（逐 token yield，供 Task 7 SSE）。
-
-        Args:
-            query: 用户问题
-            context: 检索到的文档列表
-
-        Yields:
-            回答文本的每个 token 片段
-        """
-        context_text = self._format_context(context)
-        chain = PromptManager.QA_PROMPT | self._llm
-        for chunk in chain.stream({"context": context_text, "input": query}):
-            content = chunk.content if hasattr(chunk, "content") else str(chunk)
-            if content:
-                yield content
-
-    def invoke_with_prompt(self, prompt: ChatPromptTemplate, **kwargs) -> str:
-        """使用自定义 prompt 调用 LLM（供 Agent 节点使用）。
-
-        Args:
-            prompt: ChatPromptTemplate 实例
-            **kwargs: prompt 变量
-
-        Returns:
-            LLM 回复文本
-        """
-        chain = prompt | self._llm
-        resp = chain.invoke(kwargs)
-        self._record_usage(resp)
-        return resp.content if hasattr(resp, "content") else str(resp)
-
-    def invoke_structured(self, prompt: ChatPromptTemplate, schema: type, **kwargs):
+    def invoke_structured(
+        self, prompt: ChatPromptTemplate, schema: type[T], **kwargs
+    ) -> T:
         """结构化输出：通过 prompt 引导 + JSON 解析返回符合 schema 的对象。
 
         DeepSeek 不支持 response_format=json_schema（会返回 400），因此

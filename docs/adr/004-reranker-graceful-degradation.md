@@ -36,7 +36,7 @@ RAGForge 使用 BGE-Reranker-v2-m3 模型对混合检索结果进行重排序，
 - **优点**：
   - 零依赖，零延迟
 - **缺点**：
-  - 丧失重排序能力，评估数据显示 hybrid 召回率从 100% 降至 70%
+  - 丧失重排序能力，早期评估（12 题旧数据集 + 字符分块版本的历史数据，见修复日志 2026-09）显示 hybrid 召回率从 100% 降至 70%
 - **决定**：不选，质量损失不可接受
 
 ### 方案 D：用轻量 API Reranker（如 Cohere Rerank API）
@@ -87,14 +87,16 @@ class Reranker:
 ```
 
 关键设计：`_load_attempted` 标记确保只尝试加载一次，避免每次请求都触发失败的下载。
+（2026-09 修复后：加载改为加锁的 check-then-act，失败后进入 600s 冷却期，冷却后可自动重试，
+不再「一次失败永不重试」。）
 
 ## 风险与缓解
 
 | 风险 | 可能性 | 缓解措施 |
 |------|--------|----------|
-| 降级后 HybridRetriever 返回纯 RRF 结果，质量下降 | 中 | 评估数据证明 Reranker 可将 hybrid 召回率从 70% 拉回 100% |
-| 首次请求延迟（模型下载） | 中 | 文档提示用户首次使用需等待；可提前 `python -c "from src.retrieval.reranker import Reranker; Reranker()"` 预热 |
-| 多线程首次同时调用 | 低 | `threading.Lock` 保护加载过程 |
+| 降级后 HybridRetriever 返回纯 RRF 结果，质量下降 | 中 | 早期评估数据显示 Reranker 可将 hybrid 召回率从 70% 拉回 100%（12 题旧数据集 + 字符分块版本的历史数据，待新口径评估复核） |
+| 首次请求延迟（模型下载） | 中 | 文档提示用户首次使用需等待；可提前 `python -c "from src.retrieval.reranker import Reranker; Reranker().is_available()"` 预热（`is_available()` 触发 `_ensure_loaded()`，仅构造实例不会加载模型） |
+| 多线程首次同时调用 | 低 | `_ensure_loaded` 内部 `_load_lock` 保护加载过程（2026-09 修复并发 check-then-act） |
 
 ## 参考资料
 

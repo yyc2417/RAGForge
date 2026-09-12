@@ -26,19 +26,27 @@ search_with_scores(query: str, k: int | None = None) -> tuple[list[Document], li
 class VectorStore:
     def __init__(self, embedding_service: EmbeddingService) -> None:
         """注入 Embedding 服务。"""
-        
+
     def build_index(self, documents: list[Document]) -> None:
-        """从文档列表构建向量索引（写入持久化目录）。"""
-        
+        """从文档列表构建向量索引（先删旧 collection，写入确定性 ID）。"""
+
+    def count(self) -> int:
+        """返回当前 collection 的文档数量。"""
+
     def search_with_scores(self, query: str, k: int | None = None) -> tuple[list[Document], list[float]]:
-        """返回 relevance score ∈ [0, 1]。"""
-        
+        """返回 cosine relevance score ∈ [0, 1]（显式声明 hnsw:space=cosine）。"""
+
     @classmethod
-    def load_or_build(cls, documents: list[Document], embedding_service: EmbeddingService) -> "VectorStore":
-        """持久化加载：目录存在且非空则复用，否则重新构建。"""
+    def load_or_build(cls, documents: list[Document], embedding_service: EmbeddingService,
+                      force_rebuild: bool = False) -> "VectorStore":
+        """持久化加载：count 与 embedding 指纹均匹配才复用，否则删除重建。"""
 ```
 
-**持久化策略**：`load_or_build()` 检查 `chroma_db/` 目录，非空则直接加载，避免重复索引。
+**索引一致性（详见 ADR-006）**：
+- build_index 写入前删除同名 collection——`from_documents` 对已存在 collection 只追加不去重
+- 确定性 ID：`uuid5(source:chunk_index)`，同语料重复构建幂等
+- collection metadata 记录 `embedding_model` 指纹，`load_or_build` 复用前校验 count + 指纹，不匹配即重建（防陈旧索引静默复用）
+- 显式声明 `hnsw:space=cosine`：Chroma 默认 l2 下 relevance score 可能为负，无法与评估阈值比较
 
 ### BM25Retriever：关键词检索
 
@@ -48,16 +56,19 @@ class VectorStore:
 class BM25Retriever:
     def __init__(self) -> None:
         """初始化空索引。"""
-        
+
     def build_index(self, documents: list[Document]) -> None:
         """构建 BM25 倒排索引。"""
-        
+
+    def search_with_scores(self, query: str, k: int | None = None) -> tuple[list[Document], list[float]]:
+        """带分数检索；零分文档（与查询无词汇交集）过滤后再取 top-k。"""
+
     @staticmethod
-    def _top_k_indices(scores: list[float], k: int) -> list[int]:
-        """按分数降序取前 k 个索引。"""
+    def _top_k_indices(scores: list[float], k: int, candidates: list[int] | None = None) -> list[int]:
+        """按分数降序取前 k 个索引（可传候选子集）。"""
 ```
 
-**分词器**：`_tokenize()` 优先使用 `jieba.lcut()`，未安装时 fallback 到正则（中文按单字、英文按连续字母）。
+**分词器**：`_tokenize()` 统一小写归一后，优先使用 `jieba.lcut()`（正式依赖），未安装时 fallback 到正则（中文按单字、英文按连续字母）。**零分过滤**：查询与语料无词汇交集时不返回"完全无关"的填充文档，避免污染 RRF 融合。
 
 ### HybridRetriever：RRF 融合
 
@@ -96,17 +107,17 @@ class Reranker:
         """懒加载单例，__new__ 内不加载模型。"""
         
     def _ensure_loaded(self) -> None:
-        """首次调用时尝试加载，失败后不再重试。"""
-        
+        """加锁的懒加载；失败后进入 600s 冷却期，冷却后可重试。"""
+
     def is_available(self) -> bool:
-        """查询模型是否可用。"""
+        """查询模型是否可用（触发懒加载）。"""
         
     def rerank(self, query: str, documents: list[Document], top_n: int | None = None) -> list[Document]:
         """CrossEncoder 对 (query, doc) pair 打分，按分数降序重排。"""
 ```
 
 **优雅降级**：
-- 加载失败 → `_model=None` + `logger.warning`
+- 加载失败 → `_model=None` + `logger.warning`（600s 冷却后自动重试加载）
 - `rerank()` 不可用时 → 直接返回原列表前 `top_n`
 - 推理失败 → 捕获异常，降级为原顺序截断
 

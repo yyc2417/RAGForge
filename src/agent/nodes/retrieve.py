@@ -9,6 +9,8 @@ Task 6：新增 hybrid 策略（HybridRetriever + Reranker），通过 hybrid_re
 
 import time
 
+from langchain_core.documents import Document
+
 from src.agent.state import AgentState
 from src.retrieval import VectorStore, BM25Retriever
 from src.utils.metrics import get_current_collector
@@ -86,8 +88,13 @@ def retrieve_node(
     }
 
 
-def _merge_dedupe(v_docs, v_scores, b_docs, b_scores):
-    """简单合并去重（fallback，非 RRF）。Task 6 用真正的 HybridRetriever 替代。"""
+def _merge_dedupe(
+    v_docs: list[Document],
+    v_scores: list[float],
+    b_docs: list[Document],
+    b_scores: list[float],
+) -> tuple[list[Document], list[float]]:
+    """简单合并去重（fallback，非 RRF）。hybrid_retriever 未注入时的退化路径。"""
     seen = set()
     docs, scores = [], []
     for doc, score in zip(v_docs, v_scores):

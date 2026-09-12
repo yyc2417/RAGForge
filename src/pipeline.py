@@ -6,6 +6,8 @@
 
 import time
 
+from langgraph.graph.state import CompiledStateGraph
+
 from src.agent import build_agent_graph_from_pipeline, initial_state
 from src.config import PROJECT_ROOT, settings
 from src.generation.llm_client import LLMClient
@@ -17,7 +19,7 @@ from src.utils.metrics import MetricsCollector, reset_current_collector, set_cur
 DATA_DIR = PROJECT_ROOT / settings.data_dir
 
 
-def build_agent_pipeline():
+def build_agent_pipeline() -> CompiledStateGraph:
     """构建完整 Agent 状态机管道：ingestion → retrieval(vector+bm25+hybrid) → agent graph。"""
     parser = DocumentParser()
     docs = parser.parse_directory(DATA_DIR)

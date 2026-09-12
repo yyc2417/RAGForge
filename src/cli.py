@@ -50,8 +50,9 @@ def run_server(host: str | None = None, port: int | None = None) -> None:
 
     from src.api import create_app
 
-    host = host or settings.api_host
-    port = port or settings.api_port
+    # 用 is not None 判断：显式传入的端口 0 等合法值不被默认值静默覆盖
+    host = host if host is not None else settings.api_host
+    port = port if port is not None else settings.api_port
 
     logger.info("=" * 60)
     logger.info("  RAGForge — Agentic RAG [API 服务模式]")

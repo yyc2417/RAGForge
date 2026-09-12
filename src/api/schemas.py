@@ -4,14 +4,25 @@
 所有模型字段类型严格，便于 OpenAPI 文档自动生成。
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from src import __version__
 
 
 class ChatRequest(BaseModel):
     """对话请求。"""
 
-    query: str = Field(..., min_length=1, description="用户问题")
+    query: str = Field(..., min_length=1, max_length=4000, description="用户问题（1~4000 字符）")
     session_id: str | None = Field(None, description="会话 ID（可选，用于追踪）")
+
+    @field_validator("query")
+    @classmethod
+    def _strip_query(cls, value: str) -> str:
+        """去除首尾空白；纯空白输入直接拒绝（避免空查询触发无效检索）。"""
+        value = value.strip()
+        if not value:
+            raise ValueError("query 不能为空白字符")
+        return value
 
 
 class SourceDoc(BaseModel):
@@ -43,5 +54,5 @@ class ChatResponse(BaseModel):
 class HealthResponse(BaseModel):
     """健康检查响应。"""
 
-    status: str = Field("ok", description="服务状态")
-    version: str = Field("0.1.0", description="服务版本")
+    status: str = Field("ok", description="服务状态：ok=就绪，starting=构建中")
+    version: str = Field(__version__, description="服务版本")

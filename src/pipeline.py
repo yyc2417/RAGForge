@@ -12,7 +12,7 @@ from src.generation.llm_client import LLMClient
 from src.ingestion import DocumentParser, TextChunker, EmbeddingService
 from src.retrieval import VectorStore, BM25Retriever, HybridRetriever, Reranker
 from src.utils.logger import logger
-from src.utils.metrics import MetricsCollector
+from src.utils.metrics import MetricsCollector, reset_current_collector, set_current_collector
 
 DATA_DIR = PROJECT_ROOT / settings.data_dir
 
@@ -41,16 +41,19 @@ def build_agent_pipeline():
 
 def ask_agent(graph, question: str, max_iterations: int = 3) -> tuple[str, dict]:
     """对单个问题执行 Agent 状态机，返回 (回答, 完整最终状态)。"""
+    # 独立收集器注入当前上下文：节点内 token/延迟记录都落到本实例
     metrics = MetricsCollector()
-    metrics.reset()
-    t0 = time.perf_counter()
+    context_token = set_current_collector(metrics)
+    try:
+        t0 = time.perf_counter()
+        final_state = graph.invoke(
+            initial_state(question, max_iterations=max_iterations),
+            config={"recursion_limit": 50},
+        )
+        e2e = (time.perf_counter() - t0) * 1000
+    finally:
+        reset_current_collector(context_token)
 
-    final_state = graph.invoke(
-        initial_state(question, max_iterations=max_iterations),
-        config={"recursion_limit": 50},
-    )
-
-    e2e = (time.perf_counter() - t0) * 1000
     metrics.record_e2e_latency(e2e)
     answer_text = final_state.get("answer", "")
     logger.info(f"[agent] 完成 | e2e={e2e:.0f}ms | iter={final_state.get('iteration_count', 0)}")

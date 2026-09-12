@@ -11,7 +11,7 @@ import time
 
 from src.agent.state import AgentState
 from src.retrieval import VectorStore, BM25Retriever
-from src.utils.metrics import MetricsCollector
+from src.utils.metrics import get_current_collector
 from src.utils.logger import logger
 
 
@@ -66,7 +66,7 @@ def retrieve_node(
         docs, scores = [], []
 
     latency_ms = (time.perf_counter() - t0) * 1000
-    MetricsCollector().record_retrieval_latency(latency_ms)
+    get_current_collector().record_retrieval_latency(latency_ms)
 
     msg = (
         f"retrieve: strategy={strategy}, query='{query}', "

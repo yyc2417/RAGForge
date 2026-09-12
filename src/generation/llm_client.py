@@ -30,7 +30,7 @@ from tenacity import (
 from src.config import settings
 from src.generation.prompts import PromptManager
 from src.utils.logger import logger
-from src.utils.metrics import MetricsCollector
+from src.utils.metrics import get_current_collector
 
 
 class LLMClient:
@@ -180,12 +180,15 @@ class LLMClient:
 
     @staticmethod
     def _record_usage(resp) -> None:
-        """从响应中提取 token 使用量并记录到 MetricsCollector。"""
+        """从响应中提取 token 使用量并记录到当前上下文的指标收集器。
+
+        API 场景为请求级实例（经 ContextVar 注入），eval/CLI 为进程级默认实例。
+        """
         try:
             usage = getattr(resp, "usage_metadata", None) or getattr(resp, "response_metadata", {}).get("token_usage")
             if usage:
                 pt = usage.get("prompt_tokens") or usage.get("input_tokens") or 0
                 ct = usage.get("completion_tokens") or usage.get("output_tokens") or 0
-                MetricsCollector().record_token_usage(int(pt), int(ct))
+                get_current_collector().record_token_usage(int(pt), int(ct))
         except Exception as e:  # noqa: BLE001 - 指标记录失败不应影响主流程
             logger.debug(f"[llm] token 记录失败（可忽略）：{e}")

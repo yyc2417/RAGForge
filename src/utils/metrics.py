@@ -1,52 +1,48 @@
 """指标统计：延迟、token 消耗、命中率
 
-MetricsCollector 为进程内单例，记录检索延迟、端到端延迟、token 消耗，
-并通过 get_summary() 返回 P50/P95/P99 统计摘要。
-export_report() 将统计摘要导出为带时间戳的 JSON 报告文件。
+MetricsCollector 为普通实例类（非全局单例）：
+- API 场景：每个请求创建独立实例，经 ContextVar（set_current_collector）
+  注入请求上下文，LangGraph 在 executor 线程中以 copy_context 执行同步节点，
+  因此节点内的 get_current_collector() 能取到请求级实例，并发请求互不污染
+- 评估/CLI 场景：单线程，直接使用 get_current_collector() 返回的进程级默认实例
+
+record/reset/get_summary 均为实例级线程安全。
 """
 
 import json
 import statistics
 import threading
 from collections import defaultdict
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
 
 class MetricsCollector:
-    """性能指标收集器（单例）。
+    """性能指标收集器（每请求/每评估实例化使用）。"""
 
-    单例设计：一次评估/会话内全局共享同一份统计数据，
-    reset() 可在测试间清空状态。线程安全（double-check locking）。
-    """
-
-    _instance: "MetricsCollector | None" = None
-    _lock: threading.Lock = threading.Lock()
-
-    def __new__(cls) -> "MetricsCollector":
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:  # double-check locking
-                    instance = super().__new__(cls)
-                    instance._data = defaultdict(list)
-                    instance._token_totals = {"prompt": 0, "completion": 0, "calls": 0}
-                    cls._instance = instance
-        return cls._instance
+    def __init__(self) -> None:
+        self._data: defaultdict[str, list[float]] = defaultdict(list)
+        self._token_totals: dict[str, int] = {"prompt": 0, "completion": 0, "calls": 0}
+        self._lock = threading.Lock()
 
     # ── 记录 ───────────────────────────────────────────────────────
     def record_retrieval_latency(self, latency_ms: float) -> None:
         """记录单次检索延迟（毫秒）。"""
-        self._data["retrieval_latency_ms"].append(float(latency_ms))
+        with self._lock:
+            self._data["retrieval_latency_ms"].append(float(latency_ms))
 
     def record_e2e_latency(self, latency_ms: float) -> None:
         """记录单次端到端延迟（毫秒）。"""
-        self._data["e2e_latency_ms"].append(float(latency_ms))
+        with self._lock:
+            self._data["e2e_latency_ms"].append(float(latency_ms))
 
     def record_token_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
         """记录单次 LLM 调用的 token 消耗。"""
-        self._token_totals["prompt"] += int(prompt_tokens)
-        self._token_totals["completion"] += int(completion_tokens)
-        self._token_totals["calls"] += 1
+        with self._lock:
+            self._token_totals["prompt"] += int(prompt_tokens)
+            self._token_totals["completion"] += int(completion_tokens)
+            self._token_totals["calls"] += 1
 
     # ── 摘要 ───────────────────────────────────────────────────────
     @staticmethod
@@ -78,10 +74,12 @@ class MetricsCollector:
 
     def get_summary(self) -> dict:
         """返回所有指标的统计摘要。"""
+        with self._lock:
+            data_snapshot = {key: list(values) for key, values in self._data.items()}
+            token = dict(self._token_totals)
         summary: dict = {}
-        for key, values in self._data.items():
+        for key, values in data_snapshot.items():
             summary[key] = self._percentiles(values)
-        token = self._token_totals
         summary["token_usage"] = {
             "total_prompt": token["prompt"],
             "total_completion": token["completion"],
@@ -94,9 +92,10 @@ class MetricsCollector:
         return summary
 
     def reset(self) -> None:
-        """清空所有统计数据（用于新一轮评估）。"""
-        self._data = defaultdict(list)
-        self._token_totals = {"prompt": 0, "completion": 0, "calls": 0}
+        """清空本实例的所有统计数据（用于新一轮评估）。"""
+        with self._lock:
+            self._data = defaultdict(list)
+            self._token_totals = {"prompt": 0, "completion": 0, "calls": 0}
 
     def export_report(self, path: str | Path, label: str = "") -> Path:
         """导出统计摘要为 JSON 报告文件。
@@ -117,3 +116,28 @@ class MetricsCollector:
         }
         path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return path
+
+
+# ── 请求级注入（ContextVar）──────────────────────────────────────
+_current: ContextVar["MetricsCollector | None"] = ContextVar("ragforge_metrics", default=None)
+_default_collector = MetricsCollector()
+
+
+def get_current_collector() -> "MetricsCollector":
+    """获取当前上下文的指标收集器。
+
+    - API 请求上下文：返回请求级实例（routes.py 经 set_current_collector 注入）
+    - 其余场景（eval/CLI 单线程）：返回进程级默认实例
+    """
+    collector = _current.get()
+    return collector if collector is not None else _default_collector
+
+
+def set_current_collector(collector: "MetricsCollector"):
+    """设置当前上下文的请求级收集器，返回 token 供 reset_current_collector 恢复。"""
+    return _current.set(collector)
+
+
+def reset_current_collector(token) -> None:
+    """恢复 ContextVar 到 set_current_collector 之前的状态。"""
+    _current.reset(token)

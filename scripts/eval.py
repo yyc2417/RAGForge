@@ -49,7 +49,7 @@ from src.generation.schemas import VerifyResult  # noqa: E402
 from src.ingestion import DocumentParser, EmbeddingService, TextChunker  # noqa: E402
 from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore  # noqa: E402
 from src.utils.logger import logger  # noqa: E402
-from src.utils.metrics import MetricsCollector  # noqa: E402
+from src.utils.metrics import get_current_collector  # noqa: E402
 
 console = Console()
 DATA_DIR = CFG_ROOT / settings.data_dir
@@ -141,7 +141,8 @@ class Evaluator:
     def _ensure_llm(self) -> LLMClient:
         """惰性创建 LLM 客户端（首次使用时校验 API key）。"""
         if self._llm is None:
-            if not settings.deepseek_api_key or settings.deepseek_api_key.startswith("sk-your"):
+            key = settings.deepseek_key_value()
+            if not key or key.startswith("sk-your"):
                 console.print("[red]x DEEPSEEK_API_KEY 未配置（请在 .env 中填入有效 key）[/red]")
                 console.print("  完整评估需真实调用 DeepSeek；离线检索评估请用 --retrieval-only。")
                 sys.exit(1)
@@ -251,9 +252,9 @@ class Evaluator:
             answer_text = f"[ERROR] {e}"
 
         e2e_ms = (time.perf_counter() - t0) * 1000
-        # 统一记录 e2e 延迟到 MetricsCollector（仅成功样本，失败样本不污染分位统计）
+        # 统一记录 e2e 延迟（仅成功样本，失败样本不污染分位统计）
         if error is None:
-            MetricsCollector().record_e2e_latency(e2e_ms)
+            get_current_collector().record_e2e_latency(e2e_ms)
 
         # 召回判定：chitchat 无 expected_source，视为跳过
         hit = False
@@ -283,7 +284,8 @@ class Evaluator:
     def evaluate_mode(self, mode: str) -> dict:
         """对单套模式跑全部数据集，返回汇总指标。"""
         console.print(f"\n[bold cyan]> 运行模式：{mode}[/bold cyan]")
-        metrics = MetricsCollector()
+        # 评估为单线程进程，直接使用进程级默认收集器
+        metrics = get_current_collector()
         metrics.reset()
 
         results = []

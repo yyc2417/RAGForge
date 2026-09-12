@@ -272,6 +272,15 @@ RAGForge/
 
 **延迟**：Agent 模式 P50 约 15s（多轮 LLM 调用），P99 长尾 27~33s；较旧基线（Agent P99 47.5s）大幅下降。优化方向：调低 `max_iterations`、缓存、流式输出。
 
+## 未来工作
+
+- **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，评估显示
+  vector-only 检索在中文语料上 recall 仅 73.3%（混合检索已兜底）。切换 BGE 系列
+  或 bge-m3 预期可显著提升向量单路召回；需同步重建索引并重跑评估。
+- **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
+  （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
+  检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
+
 ## License
 
 MIT

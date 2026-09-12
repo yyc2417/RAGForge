@@ -68,14 +68,20 @@ def retrieve_node(
     latency_ms = (time.perf_counter() - t0) * 1000
     get_current_collector().record_retrieval_latency(latency_ms)
 
+    # 迭代计数唯一递增点：每轮真实检索 +1（含首次）。
+    # 终止性：任何循环路径（switch/reformulate/幻觉重试）必经本节点，
+    # 计数单调递增，达 max_iterations 后路由层强制 generate/END
+    iteration_count = state.get("iteration_count", 0) + 1
+
     msg = (
         f"retrieve: strategy={strategy}, query='{query}', "
-        f"hits={len(docs)}, latency={latency_ms:.1f}ms"
+        f"hits={len(docs)}, latency={latency_ms:.1f}ms, iter={iteration_count}"
     )
     logger.info(f"[retrieve] {msg}")
     return {
         "documents": docs,
         "retrieval_scores": scores,
+        "iteration_count": iteration_count,
         "messages": [msg],
     }
 

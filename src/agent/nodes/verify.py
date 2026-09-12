@@ -46,18 +46,17 @@ def verify_node(
         is_faithful = None
         reason = "校验失败，未验证"
 
-    # 幻觉检测不通过时递增迭代计数，确保 max_iterations 防线生效
-    # （防止 verify→reformulate 回退循环中计数不增长导致无限循环）
+    # 幻觉重试计数唯一递增点：改写无效短路后 verify→reformulate→generate
+    # 循环不经过 retrieve，需要独立计数器保证终止（与检索计数解耦）
+    verify_failures = state.get("verify_failures", 0)
     if is_faithful is False:
-        iteration_count = state.get("iteration_count", 0) + 1
-    else:
-        iteration_count = state.get("iteration_count", 0)
+        verify_failures += 1
 
-    msg = f"verify: is_faithful={is_faithful} | iter={iteration_count} | {reason}"
+    msg = f"verify: is_faithful={is_faithful} | verify_failures={verify_failures} | {reason}"
     logger.info(f"[verify] {msg}")
     return {
         "is_faithful": is_faithful,
         "verification_reason": reason,
-        "iteration_count": iteration_count,
+        "verify_failures": verify_failures,
         "messages": [msg],
     }

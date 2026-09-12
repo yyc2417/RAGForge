@@ -1,12 +1,15 @@
 """查询改写节点：根据 failure_mode 用对应策略改写查询
 
 输入状态：query, failure_mode, documents
-输出状态：reformulated_query, rewrite_strategy, iteration_count, messages
+输出状态：reformulated_query, rewrite_effective, messages
 
-改写策略选择（规则提示 LLM）：
+改写策略选择（规则提示 LLM，仅作日志参考）：
 - irrelevant → specify（具体化，把模糊查询变明确）
 - low_recall → synonym_replace（同义替换，换关键词）
-（LLM 最终决定 rewrite_strategy 字段）
+
+rewrite_effective 语义：LLM 失败或改写结果与原查询相同时为 False，
+路由层据此直接进入 generate，跳过「相同查询 + 相同策略 = 相同结果」的
+无效重检索循环。
 """
 
 from src.agent.state import AgentState
@@ -22,7 +25,7 @@ def reformulate_node(
     llm: LLMClient,
     prompts: PromptManager,
 ) -> dict:
-    """改写查询并递增 iteration_count。
+    """改写查询；改写无效时标记 rewrite_effective=False 供路由短路。
 
     Args:
         state: 全局状态（读 query, failure_mode, documents）
@@ -30,7 +33,7 @@ def reformulate_node(
         prompts: Prompt 管理器
 
     Returns:
-        部分状态更新：reformulated_query, rewrite_strategy, iteration_count, messages
+        部分状态更新：reformulated_query, rewrite_effective, messages
     """
     query = state["query"]
     failure_mode = state.get("failure_mode", "irrelevant")
@@ -61,18 +64,17 @@ def reformulate_node(
         new_query = query
         rewrite_strategy = "specify"
 
-    # 递增迭代计数（防死循环的关键状态）
-    iteration_count = state.get("iteration_count", 0) + 1
+    # 改写有效性：与原查询相同（含 LLM 失败兜底）视为无效
+    rewrite_effective = new_query != query
 
     msg = (
         f"reformulate: '{query}' → '{new_query}' "
-        f"(strategy={rewrite_strategy}, iter={iteration_count})"
+        f"(strategy={rewrite_strategy}, effective={rewrite_effective})"
     )
     logger.info(f"[reformulate] {msg}")
     return {
         "reformulated_query": new_query,
-        "rewrite_strategy": rewrite_strategy,
-        "iteration_count": iteration_count,
+        "rewrite_effective": rewrite_effective,
         "messages": [msg],
     }
 

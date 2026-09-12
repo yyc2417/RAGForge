@@ -19,7 +19,7 @@ QueryType = Literal["factual", "reasoning", "chitchat", "complex"]
 RetrievalStrategy = Literal["vector", "bm25", "hybrid", "none"]
 FailureMode = Literal["low_recall", "irrelevant", "sufficient"]
 SuggestedAction = Literal["reformulate", "switch_strategy", "proceed"]
-RewriteStrategy = Literal["specify", "generalize", "synonym_replace"]
+RewriteStrategy = Literal["specify", "generalize", "synonym_replace"]  # 仅供 reformulate 节点日志使用
 
 
 class AgentState(TypedDict, total=False):
@@ -46,7 +46,9 @@ class AgentState(TypedDict, total=False):
 
     # ── reformulate 节点输出 ──
     reformulated_query: str
-    rewrite_strategy: RewriteStrategy
+    # 改写是否有效（False = LLM 失败或改写结果与原查询相同）：
+    # False 时路由直接进入 generate，跳过注定重复检索的无效循环
+    rewrite_effective: bool
 
     # ── generate 节点输出 ──
     answer: str
@@ -57,11 +59,14 @@ class AgentState(TypedDict, total=False):
     is_faithful: bool | None
     verification_reason: str
 
-    # ── 策略切换辅助 ──
-    previous_strategy: RetrievalStrategy
-
     # ── 流程控制 ──
+    # 已执行的检索次数（含首次）：retrieve 节点每执行一次 +1（唯一递增点）。
+    # max_iterations=3 表示最多 3 次检索（首次 + 2 轮重检索）
     iteration_count: int
+    # 幻觉重试次数：verify 判定不忠实时 +1（唯一递增点）。
+    # 改写无效短路后 verify→reformulate→generate 循环不经过 retrieve，
+    # 必须由独立计数器保证终止
+    verify_failures: int
     max_iterations: int
     messages: Annotated[list[str], add]
 
@@ -71,7 +76,7 @@ def initial_state(query: str, max_iterations: int = 3) -> AgentState:
 
     Args:
         query: 用户原始查询
-        max_iterations: 最大重检索轮数（默认 3）
+        max_iterations: 最大检索次数上限（默认 3，含首次检索）
 
     Returns:
         初始化后的 AgentState
@@ -79,6 +84,7 @@ def initial_state(query: str, max_iterations: int = 3) -> AgentState:
     return {
         "query": query,
         "iteration_count": 0,
+        "verify_failures": 0,
         "max_iterations": max_iterations,
         "messages": [],
     }

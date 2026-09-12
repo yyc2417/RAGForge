@@ -8,8 +8,11 @@ import time
 
 from src.agent.state import AgentState
 from src.generation.llm_client import LLMClient
-from src.utils.metrics import MetricsCollector
 from src.utils.logger import logger
+
+# LLM 生成彻底失败时的降级文案（本节点是全链路唯一无前置兜底的 LLM 调用，
+# 不能让异常炸穿整个图作废此前所有轮次的检索与诊断成果）
+_FALLBACK_ANSWER = "抱歉，回答生成过程中出现问题，请稍后重试或换个问法。"
 
 
 def generate_node(
@@ -18,7 +21,7 @@ def generate_node(
     llm: LLMClient,
     prompts=None,
 ) -> dict:
-    """基于检索上下文生成回答。
+    """基于检索上下文生成回答（LLM 失败时返回降级文案）。
 
     Args:
         state: 全局状态（读 query, documents）
@@ -32,7 +35,11 @@ def generate_node(
     documents = state.get("documents", [])
 
     t0 = time.perf_counter()
-    answer_text = llm.generate(query, documents)
+    try:
+        answer_text = llm.generate(query, documents)
+    except Exception as e:  # noqa: BLE001 - 降级兜底，保证状态机总能产出答案
+        logger.warning(f"[generate] LLM 生成失败，返回降级文案：{e}")
+        answer_text = _FALLBACK_ANSWER
     latency_ms = (time.perf_counter() - t0) * 1000
 
     # 端到端延迟在最终汇总处记录，这里只记录生成耗时（不入指标，避免与 e2e 重复）

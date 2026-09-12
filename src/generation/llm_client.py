@@ -47,6 +47,16 @@ class LLMClient:
             # 内置重试关闭，重试统一交给下方 tenacity 管理（避免双重重试叠加）
             max_retries=0,
         )
+        # 结构化输出专用实例：分类/抽取任务不需要创造性，temperature=0
+        # 显著降低 JSON 解析失败率与枚举值漂移
+        self._llm_structured = ChatOpenAI(
+            model=settings.deepseek_model,
+            base_url=settings.deepseek_base_url,
+            api_key=settings.deepseek_api_key,
+            temperature=0,
+            timeout=settings.llm_timeout,
+            max_retries=0,
+        )
 
     @retry(
         stop=stop_after_attempt(3),
@@ -109,8 +119,10 @@ class LLMClient:
         """结构化输出：通过 prompt 引导 + JSON 解析返回符合 schema 的对象。
 
         DeepSeek 不支持 response_format=json_schema（会返回 400），因此
-        不使用 with_structured_output，改为在 prompt 末尾要求纯 JSON 输出，
-        再用 Pydantic 解析校验。
+        不使用 with_structured_output，改为在 prompt 末尾追加一条独立的
+        human 消息要求纯 JSON 输出，再用 Pydantic 解析校验。
+        解析失败时携带纠错提示重试 1 次（temperature=0 下重试主要覆盖
+        偶发的输出截断/格式漂移）。
 
         供 Task 5 Agent 节点使用（analyze/evaluate/reformulate/verify）。
 
@@ -121,49 +133,67 @@ class LLMClient:
 
         Returns:
             schema 实例
+
+        Raises:
+            Exception: 重试后仍解析失败时抛出最后一次的解析异常
         """
-        # 在 prompt 末尾追加 JSON 输出要求（基于 schema 字段描述）
+        # 在消息末尾显式追加 JSON 输出要求（独立 human 消息，不依赖
+        # 模板对象的运算符拼接行为）
         field_hints = ", ".join(
             f'"{name}"' for name in schema.model_fields  # type: ignore[attr-defined]
         )
         json_suffix = (
-            f"\n\n请仅输出一个合法 JSON 对象（不要 markdown 代码块、不要多余文字），"
+            f"请仅输出一个合法 JSON 对象（不要 markdown 代码块、不要多余文字），"
             f"包含字段：{field_hints}。"
         )
-
-        # 用 partial 修改 messages 末尾的 system/human 模板追加固 JSON 指令
-        original_messages = prompt.messages
-        last_msg = original_messages[-1]
-        last_msg = last_msg + json_suffix
-        new_prompt = ChatPromptTemplate.from_messages(
-            [*original_messages[:-1], last_msg]
+        retry_suffix = (
+            "上一次输出无法解析为合法 JSON。"
+            "请严格只输出一个合法 JSON 对象，不要任何解释文字。"
         )
+        messages = [*prompt.messages, ("human", json_suffix)]
+        last_error: Exception | None = None
 
-        chain = new_prompt | self._llm
-        resp = chain.invoke(kwargs)
-        content = resp.content if hasattr(resp, "content") else str(resp)
-        self._record_usage(resp)
-
-        # 从回复中提取 JSON（容错：去除可能的 markdown 代码块包裹）
-        try:
-            cleaned = self._extract_json(content)
-            data = json.loads(cleaned)
-            return schema.model_validate(data)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"[llm] 结构化输出解析失败：{e} | 原始回复: {content[:200]}")
-            raise
+        for attempt in range(2):
+            if attempt > 0:
+                messages = [*messages, ("human", retry_suffix)]
+            chain = ChatPromptTemplate.from_messages(messages) | self._llm_structured
+            resp = chain.invoke(kwargs)
+            content = resp.content if hasattr(resp, "content") else str(resp)
+            self._record_usage(resp)
+            try:
+                data = json.loads(self._extract_json(content))
+                return schema.model_validate(data)
+            except Exception as e:  # noqa: BLE001 - 记录后重试一次
+                last_error = e
+                logger.warning(
+                    f"[llm] 结构化输出解析失败（第 {attempt + 1} 次）：{e} "
+                    f"| 原始回复: {content[:200]}"
+                )
+        assert last_error is not None
+        raise last_error
 
     @staticmethod
     def _extract_json(text: str) -> str:
-        """从可能含 markdown 代码块或前后多余文字的文本中提取 JSON 对象。"""
-        # 优先匹配 ```json ... ``` 或 ``` ... ``` 代码块
-        m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+        """从可能含 markdown 代码块或前后多余文字的文本中提取 JSON 对象。
+
+        依次尝试：代码围栏整体内容（非贪婪截断会破坏嵌套 JSON，因此取
+        整段并校验）→ 最外层花括号块 → 原文。返回第一个能通过 json.loads
+        校验的候选；全部失败时返回原文交由上层报错。
+        """
+        candidates: list[str] = []
+        m = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL)
         if m:
-            return m.group(1)
-        # 否则匹配第一个 {...} 块
+            candidates.append(m.group(1).strip())
         m = re.search(r"\{.*\}", text, re.DOTALL)
         if m:
-            return m.group(0)
+            candidates.append(m.group(0))
+        candidates.append(text.strip())
+        for candidate in candidates:
+            try:
+                json.loads(candidate)
+                return candidate
+            except Exception:  # noqa: BLE001 - 尝试下一个候选
+                continue
         return text.strip()
 
     @property

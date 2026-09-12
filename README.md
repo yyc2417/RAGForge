@@ -1,5 +1,7 @@
 # RAGForge
 
+[![CI](https://github.com/yyc2417/RAGForge/actions/workflows/ci.yml/badge.svg)](https://github.com/yyc2417/RAGForge/actions/workflows/ci.yml)
+
 > Agentic RAG —— LangGraph 状态机驱动的自适应检索增强生成系统
 
 RAGForge 是一个**会自主决策的 RAG Agent**：基于 LangGraph 8 节点状态机分析查询意图，按需选择检索策略（向量 / BM25 / 混合 RRF / 重排序），对检索结果做**诊断式评估**（区分“召回不足”还是“结果无关”），不达标时自动改写查询或切换策略并重新检索，最后生成答案并做**幻觉检测**——一旦发现答案未忠实于上下文，会触发新一轮改写检索，直到通过验证或达到迭代上限。

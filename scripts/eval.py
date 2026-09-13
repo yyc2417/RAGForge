@@ -42,7 +42,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.agent import build_agent_graph_from_pipeline, initial_state  # noqa: E402
-from src.config import PROJECT_ROOT as CFG_ROOT, settings  # noqa: E402
+from src.config import PROJECT_ROOT as CFG_ROOT  # noqa: E402
+from src.config import settings  # noqa: E402
 from src.generation.llm_client import LLMClient  # noqa: E402
 from src.generation.prompts import PromptManager  # noqa: E402
 from src.generation.schemas import RefusalJudgeResult, VerifyResult  # noqa: E402

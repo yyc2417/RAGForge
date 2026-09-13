@@ -12,9 +12,9 @@
     search_with_scores(query, k=None) -> tuple[list[Document], list[float]]
 """
 
-from src.retrieval.vector_store import VectorStore
 from src.retrieval.bm25 import BM25Retriever
 from src.retrieval.hybrid import HybridRetriever
 from src.retrieval.reranker import Reranker
+from src.retrieval.vector_store import VectorStore
 
 __all__ = ["VectorStore", "BM25Retriever", "HybridRetriever", "Reranker"]

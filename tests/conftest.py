@@ -12,14 +12,13 @@ from pathlib import Path
 import pytest
 from langchain_core.documents import Document
 
+# pytest 以 prepend 模式将本目录加入 sys.path，可直接导入 fakes
+from fakes import FakeLLM, FakeRetriever, make_script  # noqa: F401
 from src.agent.graph import build_agent_graph
 from src.config import settings
 from src.generation.prompts import PromptManager
 from src.ingestion import DocumentParser, EmbeddingService, TextChunker
 from src.retrieval import BM25Retriever, VectorStore
-
-# pytest 以 prepend 模式将本目录加入 sys.path，可直接导入 fakes
-from fakes import FakeLLM, FakeRetriever, make_script  # noqa: F401
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

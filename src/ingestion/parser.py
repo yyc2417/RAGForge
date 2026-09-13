@@ -1,8 +1,9 @@
 """文档解析器：策略模式，Markdown + PDF"""
 
 from pathlib import Path
-from langchain_core.documents import Document
+
 from langchain_community.document_loaders import TextLoader
+from langchain_core.documents import Document
 
 from src.utils.logger import logger
 

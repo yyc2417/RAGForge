@@ -10,7 +10,6 @@ from types import SimpleNamespace
 
 from src.ui.event_view import DONE, PENDING, RUNNING, EventView
 
-
 # ── 合成事件工厂 ───────────────────────────────────────────────────
 
 

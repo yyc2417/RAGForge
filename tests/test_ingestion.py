@@ -9,8 +9,8 @@
 
 import tiktoken
 
-from src.ingestion import DocumentParser, EmbeddingService, TextChunker
 from src.config import settings
+from src.ingestion import DocumentParser, EmbeddingService, TextChunker
 
 _enc = tiktoken.get_encoding("cl100k_base")
 
@@ -62,7 +62,6 @@ def test_chunker_token_budget(chunks):
 
 
 def test_chunker_metadata(chunks):
-    from collections import Counter
 
     counters: dict[str, set[int]] = {}
     for chunk in chunks:

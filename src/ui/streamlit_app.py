@@ -14,7 +14,7 @@ import streamlit as st
 from src.agent.state import initial_state
 from src.config import settings
 from src.pipeline import build_agent_pipeline
-from src.ui.event_view import DONE, NODES, PENDING, RUNNING, EventView
+from src.ui.event_view import DONE, NODES, RUNNING, EventView
 
 # ── 页面配置 ───────────────────────────────────────────────────────
 st.set_page_config(page_title="RAGForge", page_icon=" forge", layout="wide")
@@ -88,7 +88,7 @@ def _run_query_and_render(query: str) -> EventView:
 def _render_nodes(ph, view: EventView) -> None:
     """8 节点流水线：三态卡片 + 循环计数（自愈最直观的证据）。"""
     cols = st.columns(len(NODES))
-    for col, name in zip(cols, NODES):
+    for col, name in zip(cols, NODES, strict=False):
         state = view.node_status[name]
         runs = view.node_runs[name]
         if state == RUNNING:
@@ -169,7 +169,7 @@ query = st.text_input(
 
 preset_cols = st.columns(len(_PRESETS))
 clicked = None
-for col, (label, preset_query) in zip(preset_cols, _PRESETS.items()):
+for col, (label, preset_query) in zip(preset_cols, _PRESETS.items(), strict=False):
     if col.button(label):
         clicked = preset_query
 

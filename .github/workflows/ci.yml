@@ -20,6 +20,9 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Lint (ruff)
+        run: uv run ruff check src/ tests/ scripts/
+
       - name: Run offline tests
         # 离线单元套件（集成测试需 RUN_INTEGRATION=1 与 API key，默认跳过）
         run: uv run pytest -q

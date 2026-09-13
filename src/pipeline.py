@@ -11,8 +11,8 @@ from langgraph.graph.state import CompiledStateGraph
 from src.agent import build_agent_graph_from_pipeline, initial_state
 from src.config import PROJECT_ROOT, settings
 from src.generation.llm_client import LLMClient
-from src.ingestion import DocumentParser, TextChunker, EmbeddingService
-from src.retrieval import VectorStore, BM25Retriever, HybridRetriever, Reranker
+from src.ingestion import DocumentParser, EmbeddingService, TextChunker
+from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore
 from src.utils.logger import logger
 from src.utils.metrics import MetricsCollector, reset_current_collector, set_current_collector
 

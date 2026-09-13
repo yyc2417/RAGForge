@@ -50,7 +50,7 @@ class Reranker:
 
                 logger.info(f"[reranker] 尝试加载模型: {self._model_name}")
                 self._model = CrossEncoder(self._model_name)
-                logger.info(f"[reranker] 模型加载成功，重排序可用")
+                logger.info("[reranker] 模型加载成功，重排序可用")
             except Exception as e:  # noqa: BLE001 - 下载/导入失败均降级
                 self._last_failure = time.monotonic()
                 logger.warning(
@@ -98,7 +98,7 @@ class Reranker:
 
         # 按分数降序排序取 top_n
         ranked = sorted(
-            zip(documents, scores), key=lambda x: x[1], reverse=True
+            zip(documents, scores, strict=False), key=lambda x: x[1], reverse=True
         )[:top_n]
         result = [doc for doc, _ in ranked]
         logger.info(

@@ -12,9 +12,9 @@ import time
 from langchain_core.documents import Document
 
 from src.agent.state import AgentState
-from src.retrieval import VectorStore, BM25Retriever
-from src.utils.metrics import get_current_collector
+from src.retrieval import BM25Retriever, VectorStore
 from src.utils.logger import logger
+from src.utils.metrics import get_current_collector
 
 
 def retrieve_node(
@@ -60,7 +60,7 @@ def retrieve_node(
             if reranker is not None and getattr(reranker, "is_available", lambda: False)():
                 # rerank 会重排顺序但返回同一批 Document 对象，
                 # 按对象身份回映射原 RRF 分数（置 0 会误导下游展示与评估）
-                score_by_doc = {id(doc): s for doc, s in zip(docs, scores)}
+                score_by_doc = {id(doc): s for doc, s in zip(docs, scores, strict=False)}
                 docs = reranker.rerank(query, docs)
                 scores = [score_by_doc.get(id(doc), 0.0) for doc in docs]
     else:
@@ -97,13 +97,13 @@ def _merge_dedupe(
     """简单合并去重（fallback，非 RRF）。hybrid_retriever 未注入时的退化路径。"""
     seen = set()
     docs, scores = [], []
-    for doc, score in zip(v_docs, v_scores):
+    for doc, score in zip(v_docs, v_scores, strict=False):
         key = doc.page_content[:50]
         if key not in seen:
             seen.add(key)
             docs.append(doc)
             scores.append(score)
-    for doc, score in zip(b_docs, b_scores):
+    for doc, score in zip(b_docs, b_scores, strict=False):
         key = doc.page_content[:50]
         if key not in seen:
             seen.add(key)

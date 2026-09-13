@@ -10,8 +10,8 @@
 
 import time
 
-from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore
 from src.config import settings
+from src.retrieval import HybridRetriever, Reranker, VectorStore
 
 SOURCE_NAME = lambda d: d.metadata.get("source", "").split("/")[-1].split("\\")[-1]  # noqa: E731
 

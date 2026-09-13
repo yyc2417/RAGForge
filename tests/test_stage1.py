@@ -6,7 +6,6 @@
 3. src/main.py 行数约束（保持精简入口）
 """
 
-import time
 
 from pydantic import SecretStr
 

@@ -45,7 +45,6 @@ def answer(
     """Task 4 线性管道的单问题回答（检索→生成），返回 (回答, 端到端延迟ms)。"""
     import time
 
-    from src.utils.logger import logger
     from src.utils.metrics import MetricsCollector
 
     metrics = MetricsCollector()

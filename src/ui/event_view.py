@@ -12,8 +12,6 @@
 
 from typing import Any
 
-from src.agent.state import AgentState
-
 # 8 个业务节点（顺序即主流程拓扑）
 NODES = ["analyze", "decide", "retrieve", "evaluate",
          "reformulate", "switch_strategy", "generate", "verify"]

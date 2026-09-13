@@ -12,8 +12,8 @@ import uuid
 from pathlib import Path
 
 import chromadb
-from langchain_core.documents import Document
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 
 from src.config import PROJECT_ROOT, settings
 from src.ingestion.embedder import EmbeddingService

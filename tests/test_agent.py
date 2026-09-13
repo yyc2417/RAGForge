@@ -24,13 +24,13 @@ from src.agent.graph import (
 from src.agent.nodes import decide_node, evaluate_node, switch_strategy_node
 from src.agent.state import initial_state
 from src.generation.llm_client import LLMClient
+from src.generation.prompts import PromptManager
 from src.generation.schemas import (
     AnalyzeResult,
     EvaluateResult,
     ReformulateResult,
     VerifyResult,
 )
-from src.generation.prompts import PromptManager
 
 PROMPTS = PromptManager()
 
@@ -228,7 +228,6 @@ def test_graph_worst_path_terminates(make_graph):
 def test_graph_generate_fallback(make_graph):
     """LLM 生成彻底失败：generate 节点降级兜底，状态机仍产出答案。"""
     script = make_script()
-    graph = make_graph(script)
 
     class BrokenGenerateLLM(FakeLLM):
         def generate(self, query, context):

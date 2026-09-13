@@ -5,10 +5,12 @@
 """
 
 from src.agent.state import AgentState
+from src.config import settings
 from src.generation.llm_client import LLMClient
 from src.generation.prompts import PromptManager
 from src.generation.schemas import VerifyResult
 from src.utils.logger import logger
+from src.utils.token_budget import fit_to_budget
 
 
 def verify_node(
@@ -30,6 +32,9 @@ def verify_node(
     query = state["query"]
     answer = state.get("answer", "")
     documents = state.get("documents", [])
+    documents = fit_to_budget(
+        documents, settings.context_token_budget, scores=state.get("retrieval_scores")
+    )
     context = "\n\n".join(doc.page_content for doc in documents) if documents else "（无检索文档）"
 
     try:

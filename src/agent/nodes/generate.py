@@ -36,7 +36,9 @@ def generate_node(
 
     t0 = time.perf_counter()
     try:
-        answer_text = llm.generate(query, documents)
+        answer_text = llm.generate(
+            query, documents, scores=state.get("retrieval_scores")
+        )
     except Exception as e:  # noqa: BLE001 - 降级兜底，保证状态机总能产出答案
         logger.warning(f"[generate] LLM 生成失败，返回降级文案：{e}")
         answer_text = _FALLBACK_ANSWER

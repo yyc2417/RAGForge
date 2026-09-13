@@ -4,7 +4,8 @@
 - FakeRetriever：固定返回文档的检索器 stub
 """
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from langchain_core.documents import Document
 
@@ -26,16 +27,20 @@ class FakeLLM:
     def __init__(self, script: dict[str, Any] | None = None) -> None:
         self.script: dict[str, Any] = dict(script or {})
         self.structured_calls: list[str] = []
+        self.structured_kwargs: list[dict[str, Any]] = []
         self.generate_calls: list[tuple[str, int]] = []
 
     def invoke_structured(self, prompt, schema, **kwargs):
         self.structured_calls.append(schema.__name__)
+        self.structured_kwargs.append(kwargs)
         factory = self.script.get(schema.__name__)
         if factory is None:
             raise AssertionError(f"FakeLLM 未配置 {schema.__name__} 的返回脚本")
         return factory(**kwargs) if callable(factory) else factory
 
-    def generate(self, query: str, context: list[Document]) -> str:
+    def generate(
+        self, query: str, context: list[Document], scores: list[float] | None = None
+    ) -> str:
         self.generate_calls.append((query, len(context)))
         return "测试回答"
 

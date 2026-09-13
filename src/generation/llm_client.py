@@ -16,13 +16,13 @@ from typing import TypeVar
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
 from openai import (
     APIConnectionError,
     APITimeoutError,
     InternalServerError,
     RateLimitError,
 )
+from pydantic import BaseModel
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -34,6 +34,7 @@ from src.config import settings
 from src.generation.prompts import PromptManager
 from src.utils.logger import logger
 from src.utils.metrics import get_current_collector
+from src.utils.token_budget import fit_to_budget
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -72,16 +73,21 @@ class LLMClient:
         ),
         reraise=True,
     )
-    def generate(self, query: str, context: list[Document]) -> str:
+    def generate(
+        self, query: str, context: list[Document], scores: list[float] | None = None
+    ) -> str:
         """基于检索上下文生成回答（带重试）。
 
         Args:
             query: 用户问题
             context: 检索到的文档列表
+            scores: 与 context 平行的检索分数（可选）；提供时按分数从高到低
+                装入 token 预算，缺省按原序裁剪
 
         Returns:
             生成的回答文本
         """
+        context = fit_to_budget(context, settings.context_token_budget, scores=scores)
         context_text = self._format_context(context)
         chain = PromptManager.QA_PROMPT | self._llm
         resp = chain.invoke({"context": context_text, "input": query})

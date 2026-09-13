@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-flash"  # 官方推荐模型名（deepseek-v4-flash 已下线，为兼容别名）
     llm_timeout: int = Field(60, gt=0)  # 单次 LLM 请求超时（秒），防止挂起阻塞状态机
+    # 拼 prompt 的检索文档 token 上限：超限按检索分从高到低截断，至少保留 1 篇
+    # （典型场景 k=3 × chunk 220 token ≈ 700，默认 3000 留足余量）
+    context_token_budget: int = Field(3000, gt=0)
 
     # ── Embedding ──────────────────────────────────────────────────
     embedding_model: str = "all-MiniLM-L6-v2"

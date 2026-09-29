@@ -64,3 +64,7 @@ extend-immutable-calls = ["pydantic.Field", "fastapi.Depends"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src", "fakes"]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest 须在导入 src.* 前设置 HF 离线环境变量（见该文件顶部说明），import 分块不可避免
+"tests/conftest.py" = ["E402"]

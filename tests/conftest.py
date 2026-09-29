@@ -2,10 +2,21 @@
 
 测试分层约定：
 - 单元测试（默认全部）：LLM 用 FakeLLM stub、Chroma 索引写入 pytest 临时目录，
-  无网络依赖、可重复运行（reranker/embedding 为本地模型）
+  零网络、可重复运行（HF 离线模式强制，embedding 模型走本地缓存）
 - 集成测试（tests/test_integration.py，integration marker）：真实调用 DeepSeek
   API，由环境变量 RUN_INTEGRATION=1 门控，默认跳过
 """
+
+import os
+
+# 真·零网络铁律：强制 HF 离线，杜绝套件隐性访问 huggingface.co。
+# 必须在导入 src.*（间接导入 transformers）之前设置——huggingface_hub
+# 在 import 时读取该开关。
+# 首次在新环境运行测试前，一次性预缓存 embedding 模型（约 90MB）：
+#   uv run python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+# 需要联网调试时，显式导出 HF_HUB_OFFLINE=0 即可绕过。
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 from pathlib import Path
 

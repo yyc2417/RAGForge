@@ -134,6 +134,22 @@ uv run --extra ui streamlit run src/ui/streamlit_app.py
 
 内置三个示例问题，其中「触发自愈」预设会演示策略切换的完整过程。
 
+### 7. 运行测试
+
+```bash
+uv run pytest -q    # 离线单元套件（65 用例，强制 HF 离线，零网络）
+```
+
+测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
+一次性预下载模型（约 90MB）：
+
+```bash
+uv run python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+```
+
+集成测试真实调用 DeepSeek API，由 `RUN_INTEGRATION=1` 门控，默认跳过。
+GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型。
+
 ## 设计亮点
 
 ### 1. 诊断式评估（区别于普通打分）

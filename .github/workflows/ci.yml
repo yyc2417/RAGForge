@@ -23,6 +23,17 @@ jobs:
       - name: Lint (ruff)
         run: uv run ruff check src/ tests/ scripts/
 
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-embed-all-MiniLM-L6-v2-v1
+
+      - name: Prefetch embedding model
+        # 测试套件强制 HF 离线（见 tests/conftest.py），模型须先入缓存：
+        # 首跑下载约 90MB 并写入上方 cache，之后命中缓存仅做快速校验
+        run: uv run python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
       - name: Run offline tests
         # 离线单元套件（集成测试需 RUN_INTEGRATION=1 与 API key，默认跳过）
         run: uv run pytest -q

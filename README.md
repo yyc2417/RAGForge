@@ -225,9 +225,9 @@ RAGForge/
 │   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
 ├── scripts/
 │   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
-├── data/sample/               # 知识库（python_basics.md + machine_learning_faq.md）
+├── data/sample/               # 知识库（8 个语料 md：python_basics、machine_learning_faq、rag_techniques 等）
 ├── docs/
-│   ├── adr/                   # 架构决策记录（5 篇 ADR）
+│   ├── adr/                   # 架构决策记录（6 篇 ADR）
 │   ├── modules/               # 模块设计文档（5 篇）
 │   ├── learning/              # 学习笔记（8 篇，按 Task 拆分）
 │   └── planning/              # 规划文档（.gitignore 排除，不提交）

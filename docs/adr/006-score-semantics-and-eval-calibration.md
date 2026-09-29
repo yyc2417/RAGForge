@@ -87,10 +87,10 @@
 - 状态机最坏路径（恒幻觉 + 恒 switch）在双预算内收敛（iter=3）
 - 索引重复构建幂等（count 稳定），指纹不匹配自动重建
 - 离线 recall@5（12 样本）：vector/bm25/hybrid/reranker 四策略全部 100%
-- 完整基线待新口径下重跑 `scripts/eval.py` 更新（见 README 评估表注记）
+- 完整基线已于同日（2026-09-12）在 45 题数据集上重跑完成，结果见 README 评估表与 `reports/eval_report.json`
 
 ## 参考资料
 
 - [Cormack et al., RRF, SIGIR 2009](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)（RRF 分数的排名信号本质）
 - [sentence-transformers all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)（max_seq_length=256）
-- 内部：`docs/planning/fix-log-2026-09.md`（2026-09 六阶段修复日志）
+- 内部：`docs/planning/fix-log-2026-09.md`（2026-09 六阶段修复日志；本地私有文档，`.gitignore` 排除不入库）

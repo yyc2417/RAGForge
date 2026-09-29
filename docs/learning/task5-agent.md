@@ -1,3 +1,7 @@
+> ⚠️ **历史快照（2026-06）**：本文为学习笔记，记录写作当时的机制与数字，部分已被 2026-09 修复取代（双预算终止、LANGSMITH_* 环境变量、45 题数据集、token 化分块等）。现行设计以 `docs/modules/` 与 `docs/adr/`（尤其 006）为准；逐项修复记录见本地 `docs/planning/fix-log-2026-09.md`（私有文档，不入库）。
+>
+> **本文具体过时点**：计数与终止机制已重构：iteration_count 由 retrieve 节点唯一递增，verify_failures 独立计数（双预算）；本文单一 max_iterations=3 的描述已过时，为 8 篇中失真最大的一篇。
+
 # Task 5：Agent 状态机（LangGraph）
 
 ## 阶段概述

@@ -1,3 +1,7 @@
+> ⚠️ **历史快照（2026-06）**：本文为学习笔记，记录写作当时的机制与数字，部分已被 2026-09 修复取代（双预算终止、LANGSMITH_* 环境变量、45 题数据集、token 化分块等）。现行设计以 `docs/modules/` 与 `docs/adr/`（尤其 006）为准；逐项修复记录见本地 `docs/planning/fix-log-2026-09.md`（私有文档，不入库）。
+>
+> **本文具体过时点**：get_graph 惰性单例已改为 lifespan 预热 + 未就绪 503；LANGCHAIN_* 环境变量已改名 LANGSMITH_*；sources 事件改在 retrieve 节点完成时推送。
+
 # Task 7：API 服务（FastAPI + SSE）
 
 ## 阶段概述

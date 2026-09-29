@@ -1,3 +1,7 @@
+> ⚠️ **历史快照（2026-06）**：本文为学习笔记，记录写作当时的机制与数字，部分已被 2026-09 修复取代（双预算终止、LANGSMITH_* 环境变量、45 题数据集、token 化分块等）。现行设计以 `docs/modules/` 与 `docs/adr/`（尤其 006）为准；逐项修复记录见本地 `docs/planning/fix-log-2026-09.md`（私有文档，不入库）。
+>
+> **本文具体过时点**：MetricsCollector 已从全局单例改为请求级实例 + ContextVar 注入；invoke_structured 改为显式追加独立 human 消息。
+
 # Task 4：模块化 RAG 与基础管道
 
 ## 阶段概述

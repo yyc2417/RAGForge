@@ -73,6 +73,8 @@ async def chat_stream(query: str):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 ```
 
+> **2026-09 补记**：上图示例为决策期示意代码。生产实现（`src/api/routes.py`）已演进为：`sse-starlette` 的 `EventSourceResponse`（替代裸 `StreamingResponse`）、`POST` + JSON body（`ChatRequest`）而非 query 参数、结束事件为携带 `session_id` 与 `e2e_latency_ms` 的 JSON `done` 事件（替代 `[DONE]` 标记）、节点事件按 8 个业务节点**白名单**过滤（替代内部链路黑名单）。详见 [api.md](../modules/api.md)。
+
 ## 风险与缓解
 
 | 风险 | 可能性 | 缓解措施 |

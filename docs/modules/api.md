@@ -47,7 +47,7 @@ POST /chat/stream  (async + SSE)     → EventSourceResponse
 def get_graph(request: Request) -> CompiledGraph  # FastAPI Depends 注入
 ```
 
-graph 由 **lifespan 启动时构建**并存放在 `app.state.graph`，`get_graph` 直接读取；若 lifespan 尚未完成（极端情况），返回 503 提示「服务尚未就绪」。相比惰性初始化，启动预热把首请求延迟从分钟级降为 0，且构建失败在启动阶段即暴露。
+graph 由 **lifespan 启动时构建**并存放在 `app.state.graph`，`get_graph` 直接读取；若 lifespan 尚未完成（极端情况），返回 503 提示「服务尚未就绪」。相比惰性初始化，启动预热把秒级的索引构建移出首请求路径，且构建失败在启动阶段即暴露。
 
 ### 2.4 请求级指标注入 — MetricsCollector + ContextVar
 

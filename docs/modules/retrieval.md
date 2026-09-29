@@ -117,7 +117,7 @@ class Reranker:
 ```
 
 **优雅降级**：
-- 加载失败 → `_model=None` + `logger.warning`（600s 冷却后自动重试加载）
+- 加载失败 → `_model=None` + `logger.warning`（600s 冷却后可重试加载）
 - `rerank()` 不可用时 → 直接返回原列表前 `top_n`
 - 推理失败 → 捕获异常，降级为原顺序截断
 
@@ -163,15 +163,19 @@ graph TD
 
 ```python
 def _ensure_loaded(self) -> None:
-    if self._load_attempted:
-        return
-    self._load_attempted = True
-    try:
-        from sentence_transformers import CrossEncoder
-        self._model = CrossEncoder(self._model_name)
-    except Exception as e:
-        logger.warning(f"[reranker] 模型加载失败，已降级：{e}")
-        self._model = None
+    """懒加载模型（加锁的 check-then-act；失败后冷却期内不重试）。"""
+    with self._load_lock:
+        if self._model is not None:
+            return
+        if time.monotonic() - self._last_failure < _LOAD_RETRY_COOLDOWN_SEC:
+            return  # 600s 冷却期内，跳过本次尝试
+        try:
+            from sentence_transformers import CrossEncoder
+            self._model = CrossEncoder(self._model_name)
+        except Exception as e:
+            self._last_failure = time.monotonic()
+            logger.warning(f"[reranker] 模型加载失败，已降级（600s 后可重试）：{e}")
+            self._model = None
 ```
 
 **设计哲学**：核心功能（向量/BM25/混合）必须可用，增强功能（重排序）失败时透明降级。
@@ -180,8 +184,8 @@ def _ensure_loaded(self) -> None:
 
 `Reranker` 采用懒加载策略，仅在首次调用 `is_available()` 或 `rerank()` 时尝试加载模型：
 - **动机**：模型体积大（560MB），启动时加载会拖慢冷启动
-- **实现**：`_ensure_loaded()` 检查 `_load_attempted` 标志，失败后不重试
-- **线程安全**：`_lock` 保护单例创建
+- **实现**：`_ensure_loaded()` 加锁 check-then-act；失败记录时间戳进入 600s 冷却期，冷却后可重试加载（2026-09 修复：原"一次失败永不重试"在瞬时网络故障下会永久失去精排能力）
+- **线程安全**：`_lock` 保护单例创建，`_load_lock` 保护加载过程
 
 ## 配置项
 

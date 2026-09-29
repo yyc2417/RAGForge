@@ -8,7 +8,7 @@ RAGForge 是一个**会自主决策的 RAG Agent**：基于 LangGraph 8 节点�
 
 ## 架构
 
-8 节点 LangGraph 状态机，含 4 条条件边和 2 个自愈循环（reformulate / switch_strategy）：
+8 节点 LangGraph 状态机，含 5 条条件边和 2 个自愈循环（reformulate / switch_strategy）：
 
 ```mermaid
 flowchart TD
@@ -22,8 +22,8 @@ flowchart TD
     evaluate -->|switch_strategy| switch[switch_strategy<br/>策略升级]
     reformulate --> retrieve
     switch --> retrieve
-    generate -->|有检索文档| verify{verify<br/>幻觉检测}
-    generate -->|chitchat 无文档| END([END])
+    generate -->|strategy≠none| verify{verify<br/>幻觉检测}
+    generate -->|chitchat（strategy=none）| END([END])
     verify -->|忠实| END
     verify -->|幻觉 & 未达上限| reformulate
 ```
@@ -194,7 +194,7 @@ score(d) = Σ_i  1 / (rrf_k + rank_i(d))
 RAGForge/
 ├── src/
 │   ├── config.py              # pydantic-settings 配置单例
-│   ├── main.py                # 精简入口（58 行）+ 向后兼容 re-export
+│   ├── main.py                # 精简入口（64 行）+ 向后兼容 re-export
 │   ├── pipeline.py            # Agent 管道构建与执行（从 main.py 拆分）
 │   ├── cli.py                 # CLI / Server 启动模式（从 main.py 拆分）
 │   ├── ingestion/             # Task 2：文档处理层
@@ -208,7 +208,7 @@ RAGForge/
 │   │   └── reranker.py        #   Reranker（CrossEncoder 优雅降级）
 │   ├── generation/            # Task 4/5：生成层
 │   │   ├── llm_client.py      #   LLMClient（tenacity 重试 + 结构化输出）
-│   │   ├── prompts.py         #   PromptManager（5 个 Prompt 模板）
+│   │   ├── prompts.py         #   PromptManager（6 个 Prompt 模板）
 │   │   └── schemas.py         #   结构化输出 Pydantic schema
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
@@ -236,6 +236,7 @@ RAGForge/
 │   ├── test_retrieval.py      #   检索层测试（离线，含索引一致性回归）
 │   ├── test_agent.py          #   Agent 状态机测试（全 mock，离线）
 │   ├── test_stage1.py         #   结构与管道构建测试（离线）
+│   ├── test_token_budget.py   #   上下文 token 预算测试（离线）
 │   ├── test_ui.py             #   事件蒸馏器测试（离线）
 │   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
 │   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
@@ -259,8 +260,8 @@ RAGForge/
 |------|:----------:|:-----:|:-------:|:-------:|:-------:|:---------:|
 | baseline（线性 RAG） | 73.3% | 61.7% | 3.3% | 100% ✅ | 12291ms | 1138 |
 | + Agent（状态机） | 96.7% | 84.4% | **0.0%** ✅ | 100% ✅ | 32900ms | 1085 |
-| + Hybrid（RRF 融合） | **100.0%** ✅ | 95.8% | **0.0%** ✅ | 100% ✅ | 33411ms | 988 |
-| + Reranker（重排序） | 96.7% | **95.0%** | **0.0%** ✅ | 100% ✅ | 27645ms | **947** |
+| + Hybrid（RRF 融合） | **100.0%** ✅ | **95.8%** | **0.0%** ✅ | 100% ✅ | 33411ms | 988 |
+| + Reranker（重排序） | 96.7% | 95.0% | **0.0%** ✅ | 100% ✅ | 27645ms | **947** |
 
 **目标门槛**：召回率 ≥ 90%、MRR ≥ 70%、幻觉率 < 5%、拒答准确率 ≥ 80%。
 
@@ -277,7 +278,7 @@ RAGForge/
 - **vector-only baseline 只有 73.3%**：all-MiniLM 是英文向量化模型，中文语料召回乏力（8 题 chunk 级未命中）；
 - **Agent 状态机把 73.3% 拉到 96.7%**：evaluate 诊断 low_recall → switch_strategy 切到 BM25 的自愈闭环，直接贡献 +23.4 个百分点——这是状态机价值的最直接证据；
 - **hybrid 拿到 100%**：RRF 融合两路互补；
-- **MRR 上 reranker 现身**：离线对照中 hybrid 粗排 MRR 仅 76.3%，reranker 精排拉到 96.7%（MRR 是排序质量指标，reranker 的价值体现在这里而非召回）；
+- **MRR 上 reranker 现身（两套口径）**：离线检索对照（`--retrieval-only`，30 可答题、不调 LLM）中 hybrid 粗排 MRR 仅 76.3%，reranker 精排拉到 96.7%（见 `reports/eval_retrieval_report.json`）；45 题全量端到端评估中两者已接近（hybrid 95.8% vs reranker 95.0%，见上表）——hybrid 粗排质量提升后精排增益收窄。MRR 是排序质量指标，reranker 的价值体现在这里而非召回；
 - 真实失败案例：reranker 模式丢了「令牌桶限流」一题——CrossEncoder 精排把 gold chunk 挤出 top-5（hybrid 100% 命中），说明精排模型与标注的判断存在不一致，这正是评估体系该暴露的问题。
 
 **幻觉率**：可答题 30 题中 baseline 3.3%（1 题不忠实，恰是它检索未命中的那题——检索失败导致回答偏离，逻辑自洽），三种 Agent 模式全部 **0.0%**：verify → reformulate 自愈闭环实测有效。

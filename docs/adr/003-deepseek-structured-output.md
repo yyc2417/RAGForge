@@ -72,6 +72,8 @@ except Exception:
     result = AnalysisSchema(query_type="factual", needs_retrieval=True)
 ```
 
+> **2026-09 补记**：现行实现已从本快照的两候选正则版演进为**多候选解析**——依次尝试代码围栏整体内容（非贪婪正则会在第一个 `}` 处截断嵌套 JSON，故取整段再校验）→ 最外层 `{...}` 块 → 原文，返回第一个能通过 `json.loads` 的候选；并增加「解析失败带纠错提示重试 1 次」。以 `src/generation/llm_client.py` 的 `_extract_json` 与 [generation.md](../modules/generation.md) 为准。
+
 ## 风险与缓解
 
 | 风险 | 可能性 | 缓解措施 |

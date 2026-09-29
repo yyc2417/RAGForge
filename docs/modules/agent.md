@@ -139,6 +139,8 @@ def route_after_verify(state: AgentState) -> str:
 - `retrieve_node`：每轮真实检索时 `iteration_count += 1`（含首次）
 - `verify_node`：确认幻觉时 `verify_failures += 1`
 
+**最坏路径推演（按现行路由条件）**：理论最坏为 **18 次节点执行**——analyze、decide、3×(retrieve→evaluate)、4×reformulate（2 次改写有效耗满检索预算 + 2 次改写无效消耗幻觉预算）、3×generate、3×verify，`iteration_count` 与 `verify_failures` 恰好同时耗尽后强制 END（可证上界：检索 ≤3、评估 ≤3、改写 ≤4、生成 ≤3、验证 ≤3）。恒幻觉 + 恒 switch 场景为 12 次（检索预算耗尽后首次幻觉验证即终止）。两者均远低于 `recursion_limit=50`，余量充足。
+
 ## 依赖注入
 
 `build_agent_graph()` 通过 `functools.partial` 将外部依赖注入到各节点函数：

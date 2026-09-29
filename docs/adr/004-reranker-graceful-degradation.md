@@ -94,7 +94,7 @@ class Reranker:
 
 | 风险 | 可能性 | 缓解措施 |
 |------|--------|----------|
-| 降级后 HybridRetriever 返回纯 RRF 结果，质量下降 | 中 | 早期评估数据显示 Reranker 可将 hybrid 召回率从 70% 拉回 100%（12 题旧数据集 + 字符分块版本的历史数据，待新口径评估复核） |
+| 降级后 HybridRetriever 返回纯 RRF 结果，质量下降 | 中 | 早期评估数据显示 Reranker 可将 hybrid 召回率从 70% 拉回 100%（12 题旧数据集 + 字符分块版本的历史数据）。**新口径已复核（2026-09-12，45 题）**：token 化分块与检索修复后，hybrid 不带 reranker 已 recall 100% / MRR 95.8%，reranker recall 96.7% / MRR 95.0%——reranker 的定位从「救回召回」修正为「排序质量精排」，旧失效场景源于字符分块时代；详见 README 评估表 |
 | 首次请求延迟（模型下载） | 中 | 文档提示用户首次使用需等待；可提前 `python -c "from src.retrieval.reranker import Reranker; Reranker().is_available()"` 预热（`is_available()` 触发 `_ensure_loaded()`，仅构造实例不会加载模型） |
 | 多线程首次同时调用 | 低 | `_ensure_loaded` 内部 `_load_lock` 保护加载过程（2026-09 修复并发 check-then-act） |
 

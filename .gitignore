@@ -35,3 +35,8 @@ logs/
 
 # External review reports
 reports/code_review_report.md
+
+# Local AI-session & memory files (never publish)
+.zcode/
+.zcodeignore
+项目记忆.md

@@ -33,6 +33,9 @@ reusable-project-template.md
 # Logs
 logs/
 
+# 本地验证截图产物（浏览器/手动测试生成，勿提交）
+screenshot_*.png
+
 # External review reports
 reports/code_review_report.md
 

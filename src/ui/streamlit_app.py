@@ -1,34 +1,61 @@
 """Streamlit 可视化演示界面
 
-进程内直调 LangGraph（不依赖 FastAPI），实时展示 8 节点状态机的
-决策与自愈过程：节点三态流转、循环计数、诊断字段、流式答案、来源与收尾指标。
+进程内直调 LangGraph（不依赖 FastAPI），实时展示 8 节点状态机的决策与自愈过程：
+流程轨道 → 分组诊断 → 轮次时间线 → 流式回答 → 折叠来源 → 运行摘要。
 
 启动：
     uv run --extra ui streamlit run src/ui/streamlit_app.py
+
+呈现层两条硬约束（历史版本因违反它们导致流程条重复渲染 2665 次、区块标题消失）：
+1. 动态区块各占一个 st.empty()，每轮只写入**一个**元素（多次写入会互相顶掉）；
+2. st.columns 等容器化组件不得写在 placeholder 之外（会往页面追加元素而非原地更新）。
+因此动态内容统一由 html_view 装配成单个 HTML 片段写入，区块标题在流式循环之外一次性写入。
 """
 
 import asyncio
+import sys
+from pathlib import Path
 
-import streamlit as st
+# 路径引导：streamlit run 只把脚本所在目录（src/ui）加入 sys.path，项目根不在其中，
+# src 布局下 import src.* 会报 ModuleNotFoundError。tests 靠 pytest 的 pythonpath 配置解决，
+# Streamlit 没有对应机制，故在入口先补上项目根，其后的导入因此需标注 noqa: E402。
+_ROOT = Path(__file__).resolve().parents[2]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-from src.agent.state import initial_state
-from src.config import settings
-from src.pipeline import build_agent_pipeline
-from src.ui.event_view import DONE, NODES, RUNNING, EventView
+import streamlit as st  # noqa: E402
+
+from src.agent.state import initial_state  # noqa: E402
+from src.config import settings  # noqa: E402
+from src.pipeline import build_agent_pipeline  # noqa: E402
+from src.ui import html_view  # noqa: E402
+from src.ui.event_view import LEVEL_ANSWER, LEVEL_FULL, EventView  # noqa: E402
 
 # ── 页面配置 ───────────────────────────────────────────────────────
-st.set_page_config(page_title="RAGForge", page_icon=" forge", layout="wide")
-st.title("RAGForge — Agentic RAG 状态机可视化")
+st.set_page_config(page_title="RAGForge", page_icon="⚒️", layout="wide")
 
-# 触发自愈循环的演示问题（评估日志证实会触发 vector → bm25 切换）
+# 预设问题：标签只标注实测路径（探针脚本跑出的真实轨迹）。
+# 实际走哪条分支由运行时的诊断结论决定，同一问题多次运行可能不经过相同节点。
 _PRESETS = {
-    "寒暄（跳过检索）": "你好",
-    "普通事实题": "Python 的 GIL 是什么？",
-    "触发自愈（策略切换）": "什么是过拟合？怎么解决？",
+    "寒暄（不检索）": "你好",
+    "向量单轮命中": "Python 的 GIL 是什么？",
+    "策略升级链": "Docker 多阶段构建怎么写？",
+    "语料外拒答": "K8s 怎么做滚动升级？",
 }
 
-# 自愈动作节点的高亮标记
-_SELF_HEAL = {"reformulate", "switch_strategy"}
+_PRESET_NOTES = {
+    "寒暄（不检索）": "analyze 判 chitchat → decide 给 strategy=none，retrieve / verify 均不执行",
+    "向量单轮命中": "典型 factual 路径，一轮检索即判 sufficient",
+    "策略升级链": "实测完整走出 vector → bm25 → hybrid 三轮升级，每轮诊断 low_recall",
+    "语料外拒答": "实测 irrelevant → 两轮改写后跑满预算，最终诚实拒答（不编造）",
+}
+
+st.markdown(html_view.CSS, unsafe_allow_html=True)
+st.title("RAGForge — Agentic RAG 状态机可视化")
+st.caption(
+    "提问后观察状态机如何自主决策：诊断检索质量，不达标时改写查询或升级策略重新检索，"
+    "生成答案后做幻觉检测。节点重复执行（徽章显示次数）即自愈的证据。"
+)
 
 
 @st.cache_resource(show_spinner="正在构建 Agent 管道（加载 embedding 模型与向量库）...")
@@ -49,138 +76,153 @@ except Exception as e:  # noqa: BLE001 - 管道构建失败给可读错误而非
     st.stop()
 
 
-# ── 事件消费：asyncio 包 astream_events，边收边刷占位符 ────────────
-def _run_query_and_render(query: str) -> EventView:
-    """执行一次查询，实时渲染事件视图，返回最终 EventView。"""
-    view = EventView()
-    status = st.empty()
+# ── 侧边栏：读图说明 + 字段释义 + 运行参数（把「这是什么」就地答掉）──
+def _render_sidebar() -> int:
+    """渲染侧边栏说明与参数，返回本次运行的 max_iterations。"""
+    with st.sidebar:
+        st.header("读图说明")
+        st.markdown(
+            "**流程轨道**：8 个节点的状态卡片，灰色待执行、琥珀色执行中、绿色已完成、"
+            "紫色为自愈动作（reformulate / switch_strategy）。卡片徽章只在被执行两次"
+            "及以上时显示次数。"
+        )
+        st.markdown("**轮次时间线**：每执行一次检索就记一行，能看到「这轮用什么查询、"
+                    "什么策略、命中几篇、诊断结论是什么、下一步做什么」——"
+                    "自愈循环的因果链在这里完整呈现。")
+        st.markdown("**检索来源**：按轮次分组折叠，点开读 chunk 全文。分数语义随策略而变"
+                    "（向量 cosine 可比较，BM25 与 RRF 只能轮内比序），故条形按本轮最高归一。")
 
-    # 各区域的占位符（先建后刷，保证页面自上而下的稳定布局）
-    nodes_ph = st.empty()
-    diag_ph = st.empty()
-    heal_ph = st.empty()
-    answer_ph = st.empty()
-    sources_ph = st.empty()
-    metrics_ph = st.empty()
+        st.header("示例问题演示什么")
+        for label, note in _PRESET_NOTES.items():
+            st.markdown(f"- **{label}** — {note}")
 
-    def _render() -> None:
-        _render_nodes(nodes_ph, view)
-        _render_diagnostic(diag_ph, view)
-        _render_self_heal(heal_ph, view)
-        _render_answer(answer_ph, view)
-        _render_sources(sources_ph, view)
-        _render_metrics(metrics_ph, view)
+        st.header("8 个节点职责")
+        st.markdown(
+            "\n".join(
+                f"- **`{name}`** {cn} — {hint}"
+                for name, (cn, hint) in html_view.NODE_META.items()
+            )
+        )
 
-    async def _consume() -> None:
-        async for event in graph.astream_events(
-            initial_state(query),
-            config={"recursion_limit": 50},
-            version="v2",
-        ):
-            view.consume(event)
-            _render()
+        st.header("诊断字段含义")
+        for title, subtitle, fields in html_view.DIAGNOSIS_GROUPS:
+            st.markdown(f"**{title}** · {subtitle}")
+            st.markdown(
+                "\n".join(
+                    f"- `{key}` {label} — {hint}" for key, label, hint in fields
+                )
+            )
 
-    asyncio.run(_consume())
-    status.empty()
-    return view
-
-
-def _render_nodes(ph, view: EventView) -> None:
-    """8 节点流水线：三态卡片 + 循环计数（自愈最直观的证据）。"""
-    cols = st.columns(len(NODES))
-    for col, name in zip(cols, NODES, strict=False):
-        state = view.node_status[name]
-        runs = view.node_runs[name]
-        if state == RUNNING:
-            icon, color = "⏳", "orange"
-        elif state == DONE:
-            icon, color = "✅", "green"
-        else:
-            icon, color = "·", "gray"
-        label = name if runs <= 1 else f"{name} ×{runs}"
-        col.markdown(
-            f":{color}[**{icon} {label}**]",
-            unsafe_allow_html=True,
+        st.header("本次运行参数")
+        st.caption(
+            f"LLM `{settings.deepseek_model}` · embedding `{settings.embedding_model}`\n\n"
+            f"chunk `{settings.chunk_size}`/`{settings.chunk_overlap}` tokens · "
+            f"检索 `top_k={settings.retrieval_k}` · RRF `k={settings.rrf_k}`\n\n"
+            f"上下文预算 `{settings.context_token_budget}` tokens · "
+            f"reranker `{settings.reranker_model}`（模型缺失时自动降级为纯 RRF）"
+        )
+        return st.slider(
+            "最大检索轮次 max_iterations",
+            min_value=1,
+            max_value=3,
+            value=3,
+            help="检索次数上限（防死循环的第一道预算）。调小到 1 可观察自愈被强制截断的行为。",
         )
 
 
-def _render_diagnostic(ph, view: EventView) -> None:
-    """诊断面板：诊断式评估的核心字段逐项实时刷新。"""
-    diag = view.diagnostic
-    if not diag:
-        ph.info("等待 analyze / evaluate 节点的诊断输出...")
-        return
-    lines = []
-    for field, value in diag.items():
-        if value is None or value == "":
-            continue
-        lines.append(f"- `{field}`: **{value}**")
-    ph.markdown("\n".join(lines))
-
-
-def _render_self_heal(ph, view: EventView) -> None:
-    """自愈高亮：reformulate / switch_strategy 被执行时醒目提示。"""
-    triggered = [n for n in ("reformulate", "switch_strategy") if view.node_runs[n] > 0]
-    if not triggered:
-        ph.empty()
-        return
-    actions = "、".join(triggered)
-    ph.warning(f"🔁 触发自愈：{actions} —— 系统在自我修正，注意上方节点的循环计数。")
-
-
-def _render_answer(ph, view: EventView) -> None:
-    ph.subheader("回答")
-    text = view.answer
-    ph.markdown(text if text else "_（生成中...）_")
-
-
-def _render_sources(ph, view: EventView) -> None:
-    if not view.sources:
-        ph.empty()
-        return
-    ph.subheader("来源文档")
-    ph.table(view.sources)
-
-
-def _render_metrics(ph, view: EventView) -> None:
-    summary = view.summary()
-    if not view.final_state:
-        ph.empty()
-        return
-    faithful = summary["is_faithful"]
-    faithful_text = {True: "✅ 忠实", False: "❌ 检出幻觉", None: "⚠️ 未验证"}.get(
-        faithful, str(faithful)
-    )
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("端到端状态", "完成")
-    m2.metric("检索轮次", summary["iteration_count"])
-    m3.metric("幻觉重试", summary["verify_failures"])
-    m4.metric("幻觉检测", faithful_text)
-    if summary["verification_reason"]:
-        ph.caption(f"校验说明：{summary['verification_reason']}")
+max_iterations = _render_sidebar()
 
 
 # ── 输入区 ─────────────────────────────────────────────────────────
 query = st.text_input(
     "输入问题",
     value="",
-    placeholder="试试下面的问题，或输入任何想问的",
+    placeholder="试试下面的问题，或输入任何想问的（语料外问题可验证拒答行为）",
 )
 
 preset_cols = st.columns(len(_PRESETS))
 clicked = None
 for col, (label, preset_query) in zip(preset_cols, _PRESETS.items(), strict=False):
-    if col.button(label):
+    if col.button(label, use_container_width=True):
         clicked = preset_query
+
+st.caption(
+    "按钮标签是实测路径；LLM 判定存在不确定性，同一问题多次运行可能走不同分支，"
+    "实际路径以「轮次时间线」为准。"
+)
 
 if clicked:
     query = clicked
 
-if query:
-    st.divider()
-    with st.spinner("状态机执行中..."):
-        view = _run_query_and_render(str(query))
+
+# ── 事件消费与渲染 ─────────────────────────────────────────────────
+def _set(ph, html: str) -> None:
+    """把一个 HTML 片段写入占位符（单次写入 = 原地替换）。"""
+    ph.markdown(html_view.wrap(html), unsafe_allow_html=True)
+
+
+def _render_query(query: str) -> EventView:
+    """执行一次查询：先搭好区块骨架，再按事件流逐块刷新。"""
+    view = EventView()
+
+    # 骨架：标题写入页面主体（一次性），动态内容各占一个 placeholder
+    def _section(num: str, title: str, hint: str):
+        st.markdown(html_view.wrap(html_view.render_section_title(num, title, hint)),
+                    unsafe_allow_html=True)
+        return st.empty()
+
+    track_ph = _section("①", "执行流程", "8 节点状态机实时流转；徽章显示次数即重复执行")
+    diag_ph = _section("②", "决策诊断", "各节点结论按归属分组，hover 查看字段含义")
+    rounds_ph = _section("③", "轮次时间线", "每轮检索的查询、策略、命中与诊断——自愈因果在此")
+    heal_ph = st.empty()
+    answer_ph = _section("④", "回答", "generate 节点逐 token 流式输出")
+    sources_ph = _section("⑤", "检索来源", "按轮次分组，点开阅读 chunk 全文")
+    summary_ph = _section("⑥", "运行摘要", "端到端结果，hover 查看统计口径")
+
+    def _render_answer() -> None:
+        text = view.answer
+        answer_ph.markdown(text if text else "_（生成中…）_")
+
+    def _render_heal() -> None:
+        """自愈提示：列出实际触发的动作与内容（方向指引依赖具体文案，不写「上方/下方」）。"""
+        actions = [
+            f"{name}（{detail}）" for rnd in view.rounds for name, detail in rnd.actions
+        ]
+        if not actions:
+            heal_ph.empty()
+            return
+        heal_ph.warning("🔁 触发自愈：" + "；".join(actions) + " —— 系统在自我修正。")
+
+    def _render_full() -> None:
+        _set(track_ph, html_view.render_track(view))
+        _set(diag_ph, html_view.render_diagnosis(view))
+        _set(rounds_ph, html_view.render_rounds(view))
+        _set(sources_ph, html_view.render_sources(view))
+        _set(summary_ph, html_view.render_summary(view))
+        _render_heal()
+
+    async def _consume() -> None:
+        async for event in graph.astream_events(
+            initial_state(query, max_iterations=max_iterations),
+            config={"recursion_limit": 50},
+            version="v2",
+        ):
+            # 按变更级别重画：token 只刷答案，节点事件才重画全页
+            level = view.consume(event)
+            if level == LEVEL_ANSWER:
+                _render_answer()
+            elif level == LEVEL_FULL:
+                _render_full()
+                _render_answer()
+
+    with st.spinner("状态机执行中…"):
+        asyncio.run(_consume())
     if view.error:
         st.error(f"执行过程中出现错误：{view.error}")
+    return view
+
+
+if query:
+    _render_query(str(query))
 else:
-    st.info("输入问题或点击上方示例按钮，观察 8 节点状态机的决策与自愈过程。")
+    st.info("输入问题或点击上方示例按钮，观察状态机的决策与自愈过程。")

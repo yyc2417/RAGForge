@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-10-18T16:51:59.466725+00:00",
+  "commit": "114ffd5",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "base_url": "http://127.0.0.1:1919/v1",
+  "mode": "multiturn",
+  "multiturn": {
+    "conversations": 2,
+    "turns": 6,
+    "turn_hit_rate": 1.0,
+    "conversation_success_rate": 1.0,
+    "details": [
+      {
+        "conversation_id": "c1-travel",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      },
+      {
+        "conversation_id": "c2-policy",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      }
+    ]
+  }
+}

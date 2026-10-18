@@ -445,9 +445,10 @@ RAGForge/
 ### 本地模型 smoke（Qwen3.6-35B-A3B-NVFP4）
 
 - **clarify**：16 例（11 歧义 + 5 清晰/寒暄），澄清准确率 93.8%，过度澄清率 20.0%，问题关键词命中率 100%（`reports/local_clarify_report.json`）；
+- **多轮**：2 会话 × 3 轮 smoke，轮级来源命中 100%，会话成功率 100%（`reports/local_multiturn_smoke.json`）；
 - **CRUD-RAG e2e**：agent 模式前 2 题，Recall@5 / MRR@5 100%，忠实度 100%，answer F1 76.0%，P50 130.6s、max 184.6s（`reports/local_e2e_crud_smoke.json`）。
 
-两组都是小样本链路验证，不作为模型效果结论；全量 120 题 × 4 模式与 30 轮多轮待跑。
+三组都是小样本链路验证，不作为模型效果结论；全量 120 题 × 4 模式与 30 轮多轮待跑。
 
 ## 未来工作
 

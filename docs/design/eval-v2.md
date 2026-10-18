@@ -175,8 +175,10 @@ uv run python scripts/eval.py --rebuild
 
 本地 `Qwen3.6-35B-A3B-NVFP4`（OpenAI 兼容 endpoint）+ agent 模式，CRUD-RAG
 前 2 题：Recall@5 / MRR@5 100%，忠实度 100%，answer F1 76.0%，P50 130.6s，
-max 184.6s。样本仅用于验证 v2 e2e harness 与本地链路，不作为模型结论。
-报告：`reports/local_e2e_crud_smoke.json`。
+max 184.6s。多轮 2 会话 × 3 轮 smoke：轮级命中 100%，会话成功率 100%。
+样本仅用于验证 v2 e2e harness、clarify 与多轮链路，不作为模型结论。
+报告：`reports/local_e2e_crud_smoke.json`、`reports/local_clarify_report.json`、
+`reports/local_multiturn_smoke.json`。
 
 ## 8. 待办
 

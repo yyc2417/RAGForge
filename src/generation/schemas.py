@@ -13,6 +13,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, BeforeValidator, Field
 
 from src.agent.state import (
+    AmbiguityType,
     FailureMode,
     QueryType,
     RewriteStrategy,
@@ -28,6 +29,11 @@ _ENUM_ALIASES: dict[str, str] = {
     "闲聊": "chitchat",
     "复杂": "complex",
     "复杂查询": "complex",
+    "缺槽位": "missing_slot",
+    "缺失槽位": "missing_slot",
+    "多解释": "multiple_interpretations",
+    "多种解释": "multiple_interpretations",
+    "约束冲突": "conflicting_constraints",
     "低召回": "low_recall",
     "召回不足": "low_recall",
     "不相关": "irrelevant",
@@ -62,6 +68,7 @@ def _normalize_enum(value: object) -> object:
 
 
 NormalizedQueryType = Annotated[QueryType, BeforeValidator(_normalize_enum)]
+NormalizedAmbiguityType = Annotated[AmbiguityType, BeforeValidator(_normalize_enum)]
 NormalizedFailureMode = Annotated[FailureMode, BeforeValidator(_normalize_enum)]
 NormalizedSuggestedAction = Annotated[SuggestedAction, BeforeValidator(_normalize_enum)]
 NormalizedRewriteStrategy = Annotated[RewriteStrategy, BeforeValidator(_normalize_enum)]
@@ -75,6 +82,22 @@ class AnalyzeResult(BaseModel):
     )
     needs_retrieval: bool = Field(
         ..., description="是否需要检索知识库"
+    )
+    needs_clarification: bool = Field(
+        default=False,
+        description="是否需要先向用户澄清（缺槽位 / 多解释 / 约束冲突）",
+    )
+    ambiguity_type: NormalizedAmbiguityType | None = Field(
+        default=None,
+        description=(
+            "歧义类型：missing_slot(缺槽位) / "
+            "multiple_interpretations(多解释) / "
+            "conflicting_constraints(约束冲突)"
+        ),
+    )
+    clarification_question: str | None = Field(
+        default=None,
+        description="需要澄清时向用户提出的一个具体问题；不需要时为空",
     )
     reason: str = Field(default="", description="判断理由（简要）")
 
@@ -103,6 +126,13 @@ class EvaluateResult(BaseModel):
         ),
     )
     reason: str = Field(default="", description="诊断理由")
+
+
+class CondenseResult(BaseModel):
+    """多轮会话层输出：把追问改写成独立问题。"""
+
+    standalone_query: str = Field(..., description="不依赖上下文、可独立检索的问题")
+    reason: str = Field(default="", description="改写理由（简要）")
 
 
 class ReformulateResult(BaseModel):

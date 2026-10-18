@@ -42,6 +42,15 @@ class Settings(BaseSettings):
 
     # ── 数据路径 ────────────────────────────────────────────────────
     data_dir: str = "data/sample"
+    session_dir: str = "data/sessions"
+
+    # ── 会话与澄清 ──────────────────────────────────────────────────
+    # 多轮改写注入的历史轮数（一轮 = user + assistant）
+    conversation_history_turns: int = Field(6, gt=0)
+    # 注入历史文本的 token 预算（cl100k 口径）
+    conversation_token_budget: int = Field(1200, gt=0)
+    # clarify 终止分支开关；用于开启/关闭对照
+    clarify_enabled: bool = True
 
     # ── 检索参数（chunk 单位为 token，cl100k 估算；需小于 embedding 窗口）──
     chunk_size: int = Field(220, gt=0)

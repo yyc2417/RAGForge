@@ -18,7 +18,8 @@ from src.ui.event_view import DONE, NODES, PENDING, RUNNING, EventView, Round
 
 # ── 节点元信息：中文职责名 + 悬浮释义（与 graph.py 的节点一一对应）────
 NODE_META: dict[str, tuple[str, str]] = {
-    "analyze": ("意图分析", "LLM 判断查询类型与是否需要检索"),
+    "analyze": ("意图分析", "LLM 判断查询类型、是否需要检索、是否需要澄清"),
+    "clarify": ("澄清追问", "需要澄清时终止本轮，向用户提一个问题"),
     "decide": ("检索决策", "规则路由：chitchat / 不需要检索→none，其余→hybrid"),
     "retrieve": ("执行检索", "固定 hybrid：向量 + BM25 + RRF；检索次数的唯一递增点"),
     "evaluate": ("质量诊断", "LLM 诊断式评估：区分召回不足与结果无关，给出 proceed / reformulate"),
@@ -39,6 +40,9 @@ DIAGNOSIS_GROUPS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] 
         (
             ("query_type", "查询意图", "LLM 判定的问题类型"),
             ("needs_retrieval", "需要检索", "是否进入检索分支"),
+            ("needs_clarification", "需要澄清", "是否需要先向用户确认"),
+            ("ambiguity_type", "歧义类型", "缺槽位 / 多解释 / 约束冲突"),
+            ("clarification_question", "澄清问题", "本轮向用户提出的问题"),
             ("retrieval_strategy", "检索策略", "本轮实际使用的检索器"),
         ),
     ),
@@ -70,6 +74,11 @@ _VALUE_LABELS: dict[str, dict[Any, str]] = {
     },
     "retrieval_strategy": {
         "hybrid": "混合 RRF", "none": "不检索",
+    },
+    "ambiguity_type": {
+        "missing_slot": "缺槽位",
+        "multiple_interpretations": "多解释",
+        "conflicting_constraints": "约束冲突",
     },
     "failure_mode": {
         "low_recall": "召回不足", "irrelevant": "结果无关", "sufficient": "信息充足",

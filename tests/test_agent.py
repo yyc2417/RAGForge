@@ -17,11 +17,12 @@ from langchain_core.documents import Document
 from fakes import FakeLLM, FakeRetriever, make_script, scripted_verify
 from src.agent.graph import (
     build_agent_graph,
+    route_after_analyze,
     route_after_evaluate,
     route_after_reformulate,
     route_after_verify,
 )
-from src.agent.nodes import decide_node, evaluate_node
+from src.agent.nodes import analyze_node, clarify_node, decide_node, evaluate_node
 from src.agent.state import initial_state
 from src.generation.llm_client import LLMClient
 from src.generation.prompts import PromptManager
@@ -52,6 +53,58 @@ def test_initial_state_defaults():
     assert state["iteration_count"] == 0
     assert state["verify_failures"] == 0
     assert state["max_iterations"] == 3
+
+
+# ── clarify 终止分支 ──────────────────────────────────────────────
+
+
+def test_route_after_analyze():
+    assert route_after_analyze({"needs_clarification": True}) == "clarify"
+    assert route_after_analyze({"needs_clarification": False}) == "decide"
+    assert route_after_analyze({}) == "decide"
+
+
+def test_analyze_clarification_fields():
+    llm = FakeLLM(make_script(
+        AnalyzeResult=AnalyzeResult(
+            query_type="complex",
+            needs_retrieval=True,
+            needs_clarification=True,
+            ambiguity_type="multiple_interpretations",
+            clarification_question="你指的是 Python 的 GIL，还是 Java 的 GC？",
+        )
+    ))
+    out = analyze_node({"query": "它怎么配置？"}, llm=llm, prompts=PROMPTS)
+    assert out["needs_clarification"] is True
+    assert out["ambiguity_type"] == "multiple_interpretations"
+    assert "GIL" in out["clarification_question"]
+
+
+def test_clarify_node_output():
+    out = clarify_node({
+        "clarification_question": "你指的是哪个对象？",
+        "ambiguity_type": "missing_slot",
+    })
+    assert out["answer"] == ""
+    assert out["clarification_question"] == "你指的是哪个对象？"
+    assert "clarify" in out["messages"][0]
+
+
+def test_graph_clarify_terminates(make_graph):
+    script = make_script(
+        AnalyzeResult=AnalyzeResult(
+            query_type="complex",
+            needs_retrieval=True,
+            needs_clarification=True,
+            ambiguity_type="missing_slot",
+            clarification_question="你指的是哪个对象？",
+        )
+    )
+    state = make_graph(script).invoke(initial_state("它怎么用？"), config={"recursion_limit": 50})
+    assert state["answer"] == ""
+    assert state["clarification_question"] == "你指的是哪个对象？"
+    assert state["iteration_count"] == 0
+    assert any(m.startswith("clarify:") for m in state.get("messages", []))
 
 
 # ── 路由矩阵 ──────────────────────────────────────────────────────
@@ -231,9 +284,9 @@ def test_graph_generate_fallback(make_graph):
 
 
 def test_graph_mermaid_visualization(make_graph):
-    """mermaid 文本可生成且包含 7 节点主链路（不再吞断言）。"""
+    """mermaid 文本可生成且包含 7 主链路 + clarify 终止分支。"""
     mermaid = make_graph().get_graph().draw_mermaid()
-    for node in ["analyze", "decide", "retrieve", "evaluate",
+    for node in ["analyze", "clarify", "decide", "retrieve", "evaluate",
                  "reformulate", "generate", "verify"]:
         assert node in mermaid, f"mermaid 缺少节点 {node}"
     assert "switch_strategy" not in mermaid

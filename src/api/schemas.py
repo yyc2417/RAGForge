@@ -25,6 +25,13 @@ class ChatRequest(BaseModel):
         return value
 
 
+class Clarification(BaseModel):
+    """clarify 终止分支的响应：本轮只返回澄清问题。"""
+
+    question: str = Field(..., description="向用户提出的澄清问题")
+    ambiguity_type: str | None = Field(None, description="歧义类型")
+
+
 class SourceDoc(BaseModel):
     """检索到的来源文档。"""
 
@@ -44,7 +51,8 @@ class ResponseMetrics(BaseModel):
 class ChatResponse(BaseModel):
     """对话响应（同步端点）。"""
 
-    answer: str = Field(..., description="生成的回答")
+    answer: str = Field("", description="生成的回答；clarify 时为空")
+    clarification: Clarification | None = Field(None, description="需要澄清时的问题")
     sources: list[SourceDoc] = Field(default_factory=list, description="检索到的来源文档")
     agent_trace: list[str] = Field(default_factory=list, description="Agent 决策轨迹")
     metrics: ResponseMetrics = Field(default_factory=ResponseMetrics, description="性能指标")

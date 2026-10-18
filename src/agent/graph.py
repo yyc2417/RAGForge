@@ -1,7 +1,8 @@
-"""LangGraph 状态机组装：7 节点主链路 + 条件边
+"""LangGraph 状态机组装：7 节点主链路 + clarify 终止分支
 
-状态机拓扑（固定 hybrid）：
-  START → analyze → decide
+状态机拓扑（固定 hybrid + clarify）：
+  START → analyze ─(needs_clarification)→ clarify → END
+                   └(else)→ decide
   decide ─(strategy=none)──→ generate ──→ END（chitchat 跳过 verify）
   decide ─(strategy=hybrid)──→ retrieve → evaluate
   evaluate ──(proceed)──→ generate → verify
@@ -17,8 +18,7 @@
   后不经过 retrieve 的 verify→reformulate→generate 循环提供独立终止保证
 - 调用方需传 recursion_limit（第二道防线）
 
-拓扑口径：旧 8 节点含 switch_strategy；本文件为固定 hybrid 后的 7 节点主链路。
-Phase 1 的 clarify 终止分支见后续 ADR-008。
+拓扑口径：旧 8 节点含 switch_strategy；当前 8 节点含 clarify（7 主链路 + 1 终止分支）。
 """
 
 from functools import partial
@@ -27,6 +27,7 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agent.nodes import (
     analyze_node,
+    clarify_node,
     decide_node,
     evaluate_node,
     generate_node,
@@ -35,6 +36,7 @@ from src.agent.nodes import (
     verify_node,
 )
 from src.agent.state import AgentState
+from src.config import settings
 from src.generation.llm_client import LLMClient
 from src.generation.prompts import PromptManager
 from src.retrieval import BM25Retriever, VectorStore
@@ -42,6 +44,13 @@ from src.utils.logger import logger
 
 
 # ── 路由函数 ──────────────────────────────────────────────────────
+def route_after_analyze(state: AgentState) -> str:
+    """analyze 后：需要澄清走 clarify，否则进入 decide。"""
+    if settings.clarify_enabled and state.get("needs_clarification", False):
+        return "clarify"
+    return "decide"
+
+
 def route_after_decide(state: AgentState) -> str:
     """decide 后：strategy=none 跳过检索直接生成，否则检索。"""
     return "generate" if state.get("retrieval_strategy") == "none" else "retrieve"
@@ -129,6 +138,7 @@ def build_agent_graph(
 
     # ── 添加节点（partial 注入依赖）──
     graph.add_node("analyze", partial(analyze_node, llm=llm_client, prompts=prompt_manager))
+    graph.add_node("clarify", clarify_node)
     graph.add_node("decide", decide_node)
     graph.add_node(
         "retrieve",
@@ -147,7 +157,14 @@ def build_agent_graph(
 
     # ── 边定义 ──
     graph.add_edge(START, "analyze")
-    graph.add_edge("analyze", "decide")
+
+    # 条件边 0：analyze 后 clarify / decide
+    graph.add_conditional_edges(
+        "analyze",
+        route_after_analyze,
+        {"clarify": "clarify", "decide": "decide"},
+    )
+    graph.add_edge("clarify", END)
 
     # 条件边 1：decide 后是否检索
     graph.add_conditional_edges(
@@ -185,7 +202,7 @@ def build_agent_graph(
     )
 
     compiled = graph.compile()
-    logger.info("[graph] LangGraph 状态机构建完成（7 节点主链路，固定 hybrid）")
+    logger.info("[graph] LangGraph 状态机构建完成（7 节点主链路 + clarify 终止分支，固定 hybrid）")
     return compiled
 
 

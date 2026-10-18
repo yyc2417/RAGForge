@@ -1,6 +1,6 @@
 """Streamlit 可视化演示界面
 
-进程内直调 LangGraph（不依赖 FastAPI），实时展示 7 节点主链路的决策与自愈过程：
+进程内直调 LangGraph（不依赖 FastAPI），实时展示 7 节点主链路 + clarify 终止分支的决策与自愈过程：
 流程轨道 → 分组诊断 → 轮次时间线 → 流式回答 → 折叠来源 → 运行摘要。
 
 启动：
@@ -82,8 +82,9 @@ def _render_sidebar() -> int:
     with st.sidebar:
         st.header("读图说明")
         st.markdown(
-            "**流程轨道**：7 个节点的状态卡片，灰色待执行、琥珀色执行中、绿色已完成、"
-            "紫色为自愈动作（reformulate）。卡片徽章只在被执行两次及以上时显示次数。"
+            "**流程轨道**：8 个节点（7 主链路 + clarify 终止分支）的状态卡片，灰色待执行、"
+            "琥珀色执行中、绿色已完成、紫色为自愈动作（reformulate）。"
+            "卡片徽章只在被执行两次及以上时显示次数。"
         )
         st.markdown("**轮次时间线**：每执行一次检索就记一行，能看到「这轮用什么查询、"
                     "什么策略、命中几篇、诊断结论是什么、下一步做什么」——"
@@ -95,7 +96,7 @@ def _render_sidebar() -> int:
         for label, note in _PRESET_NOTES.items():
             st.markdown(f"- **{label}** — {note}")
 
-        st.header("7 个节点职责")
+        st.header("8 个节点职责")
         st.markdown(
             "\n".join(
                 f"- **`{name}`** {cn} — {hint}"
@@ -170,7 +171,7 @@ def _render_query(query: str) -> EventView:
                     unsafe_allow_html=True)
         return st.empty()
 
-    track_ph = _section("①", "执行流程", "7 节点主链路实时流转；徽章显示次数即重复执行")
+    track_ph = _section("①", "执行流程", "7 主链路 + clarify 分支实时流转；徽章显示次数即重复执行")
     diag_ph = _section("②", "决策诊断", "各节点结论按归属分组，hover 查看字段含义")
     rounds_ph = _section("③", "轮次时间线", "每轮检索的查询、策略、命中与诊断——自愈因果在此")
     heal_ph = st.empty()

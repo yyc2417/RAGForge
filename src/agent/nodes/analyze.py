@@ -5,6 +5,7 @@
 """
 
 from src.agent.state import AgentState
+from src.config import settings
 from src.generation.llm_client import LLMClient
 from src.generation.prompts import PromptManager
 from src.generation.schemas import AnalyzeResult
@@ -36,15 +37,31 @@ def analyze_node(
         )
         query_type = result.query_type
         needs_retrieval = result.needs_retrieval
+        clarification_question = (result.clarification_question or "").strip() or None
+        needs_clarification = bool(
+            settings.clarify_enabled
+            and result.needs_clarification
+            and clarification_question
+        )
+        ambiguity_type = result.ambiguity_type if needs_clarification else None
     except Exception as e:  # noqa: BLE001 - LLM 失败时降级为需要检索的事实查询
         logger.warning(f"[analyze] LLM 分析失败，降级为 factual+需检索：{e}")
         query_type = "factual"
         needs_retrieval = True
+        needs_clarification = False
+        ambiguity_type = None
+        clarification_question = None
 
-    msg = f"analyze: query_type={query_type}, needs_retrieval={needs_retrieval}"
+    msg = (
+        f"analyze: query_type={query_type}, needs_retrieval={needs_retrieval}, "
+        f"needs_clarification={needs_clarification}, ambiguity_type={ambiguity_type}"
+    )
     logger.info(f"[analyze] → {msg}")
     return {
         "query_type": query_type,
         "needs_retrieval": needs_retrieval,
+        "needs_clarification": needs_clarification,
+        "ambiguity_type": ambiguity_type,
+        "clarification_question": clarification_question,
         "messages": [msg],
     }

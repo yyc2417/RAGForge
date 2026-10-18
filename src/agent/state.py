@@ -16,6 +16,7 @@ from langchain_core.documents import Document
 
 # ── 字面量类型（与各节点输出严格对应）────────────────────────────
 QueryType = Literal["factual", "reasoning", "chitchat", "complex"]
+AmbiguityType = Literal["missing_slot", "multiple_interpretations", "conflicting_constraints"]
 # 固定 hybrid：需要检索时只走 hybrid，不检索为 none
 RetrievalStrategy = Literal["hybrid", "none"]
 FailureMode = Literal["low_recall", "irrelevant", "sufficient"]
@@ -33,6 +34,10 @@ class AgentState(TypedDict, total=False):
     # ── analyze 节点输出 ──
     query_type: QueryType
     needs_retrieval: bool
+    # clarify 终止分支（Phase 1）
+    needs_clarification: bool
+    ambiguity_type: AmbiguityType | None
+    clarification_question: str | None
 
     # ── decide 节点输出 ──
     retrieval_strategy: RetrievalStrategy

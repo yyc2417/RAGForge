@@ -343,7 +343,7 @@ def test_render_track_badges_and_self_heal_class():
     assert "执行检索" in html and "retrieve" in html  # 中文职责名 + 原节点名双标
     assert "2 次" in html                              # 循环计数徽章
     assert 'class="rf-node is-heal"' in html           # 自愈节点独立配色
-    assert html.count("rf-node ") == 7                 # 7 张节点卡片齐备
+    assert html.count("rf-node ") == 8                 # 8 张节点卡片齐备（7 主链路 + clarify）
 
 
 def test_render_diagnosis_groups_values_in_chinese():

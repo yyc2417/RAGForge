@@ -3,7 +3,7 @@
 纯逻辑实现，不依赖 Streamlit——与 UI 框架解耦，可离线单测。
 
 消费 graph.astream_events(version="v2") 产出的事件 dict：
-- on_chain_start / on_chain_end（name ∈ 7 业务节点）：节点三态与执行次数
+- on_chain_start / on_chain_end（name ∈ 8 业务节点）：节点三态与执行次数
 - 节点 output（on_chain_end 的 data.output）：诊断字段提取
 - on_chain_start 的 data.input（已实测确认携带节点入参状态）：逐轮归集的策略与查询
 - on_chat_model_stream：流式 token 缓冲——**必须过滤 langgraph_node == "generate"**，
@@ -19,8 +19,8 @@ start/end 为轮次边界，把每轮的查询、策略、命中、诊断结论�
 from dataclasses import dataclass, field
 from typing import Any
 
-# 7 个业务节点（固定 hybrid 主链路；clarify 在 Phase 1 加入）
-NODES = ["analyze", "decide", "retrieve", "evaluate",
+# 8 个业务节点（7 节点主链路 + clarify 终止分支）
+NODES = ["analyze", "clarify", "decide", "retrieve", "evaluate",
          "reformulate", "generate", "verify"]
 _NODE_SET = set(NODES)
 
@@ -33,6 +33,9 @@ DONE = "done"
 _DIAGNOSTIC_FIELDS = (
     "query_type",
     "needs_retrieval",
+    "needs_clarification",
+    "ambiguity_type",
+    "clarification_question",
     "retrieval_strategy",
     "failure_mode",
     "suggested_action",

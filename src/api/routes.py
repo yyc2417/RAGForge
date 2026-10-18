@@ -25,14 +25,21 @@ from sse_starlette.sse import EventSourceResponse
 from src import __version__
 from src.agent.state import initial_state
 from src.api.dependencies import get_graph
-from src.api.schemas import ChatRequest, ChatResponse, HealthResponse, ResponseMetrics, SourceDoc
+from src.api.schemas import (
+    ChatRequest,
+    ChatResponse,
+    Clarification,
+    HealthResponse,
+    ResponseMetrics,
+    SourceDoc,
+)
 from src.utils.logger import logger
 from src.utils.metrics import MetricsCollector, reset_current_collector, set_current_collector
 
 router = APIRouter()
 
 # 7 个 Agent 主链路节点名（用于过滤 on_chain_end 事件，只推送业务节点）
-_AGENT_NODES = {"analyze", "decide", "retrieve", "evaluate",
+_AGENT_NODES = {"analyze", "clarify", "decide", "retrieve", "evaluate",
                 "reformulate", "generate", "verify"}
 
 
@@ -57,6 +64,17 @@ def _extract_sources(state: dict) -> list[SourceDoc]:
             score=float(score) if score is not None else 0.0,
         ))
     return sources
+
+
+def _extract_clarification(state: dict) -> Clarification | None:
+    """从状态提取 clarify 结果；无澄清返回 None。"""
+    question = str(state.get("clarification_question") or "").strip()
+    if not question:
+        return None
+    return Clarification(
+        question=question,
+        ambiguity_type=state.get("ambiguity_type"),
+    )
 
 
 def _extract_metrics(metrics: MetricsCollector, e2e_ms: float) -> ResponseMetrics:
@@ -117,6 +135,7 @@ async def chat(request: ChatRequest, graph=Depends(get_graph)) -> ChatResponse:
 
     return ChatResponse(
         answer=answer_text,
+        clarification=_extract_clarification(final_state),
         sources=sources,
         agent_trace=final_state.get("messages", []),
         metrics=resp_metrics,
@@ -216,6 +235,8 @@ async def chat_stream(request: ChatRequest, graph=Depends(get_graph)):
                 "data": json.dumps({
                     "session_id": session_id,
                     "e2e_latency_ms": round(e2e_ms, 2),
+                    "clarification_question": final_state.get("clarification_question"),
+                    "ambiguity_type": final_state.get("ambiguity_type"),
                 }, ensure_ascii=False),
             }
         except Exception as e:  # noqa: BLE001 - 流中断以 error 事件收尾

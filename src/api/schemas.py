@@ -57,6 +57,7 @@ class ChatResponse(BaseModel):
     agent_trace: list[str] = Field(default_factory=list, description="Agent 决策轨迹")
     metrics: ResponseMetrics = Field(default_factory=ResponseMetrics, description="性能指标")
     session_id: str | None = Field(None, description="会话 ID（回传）")
+    request_id: str | None = Field(None, description="请求链路 ID")
 
 
 class HealthResponse(BaseModel):
@@ -64,3 +65,4 @@ class HealthResponse(BaseModel):
 
     status: str = Field("ok", description="服务状态：ok=就绪，starting=构建中")
     version: str = Field(__version__, description="服务版本")
+    components: dict = Field(default_factory=dict, description="分组件状态")

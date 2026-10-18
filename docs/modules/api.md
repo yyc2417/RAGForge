@@ -39,6 +39,14 @@ POST /chat/stream  (async + SSE)     → EventSourceResponse
 
 **clarify 响应**：当状态机走 clarify 终止分支时，`answer` 为空，`clarification` 字段返回 `{question, ambiguity_type}`；SSE `done` 事件也携带 `clarification_question` 与 `ambiguity_type`。多轮会话续接目前只在 Streamlit UI 中实现，API 仍是无状态单轮接口。
 
+**横切能力**：
+
+- `X-Request-ID`：请求头透传或服务端生成，响应头与 `/chat`/`done` 响应体回传；
+- `X-API-Key`：设置 `API_AUTH_TOKEN` 后 `/chat`/`/chat/stream` 需要鉴权，`/health` 豁免；
+- 限流：`API_RATE_LIMIT_PER_MINUTE` 进程内滑动窗口，超限 429；
+- 超时：`API_REQUEST_TIMEOUT` 控制 `/chat` 总超时（504），流式端点超时发送 error 事件；
+- 健康检查：`components` 返回 graph / auth / rate_limit / llm_model / embedding_model / collection。
+
 **关键设计取舍**：`/chat` 使用 `ainvoke` 而非 `invoke`，避免阻塞 FastAPI 的事件循环。`/chat/stream` 使用 `astream_events(version="v2")` 而非 `astream()`——后者只返回节点级状态快照，无法捕获 `on_chat_model_stream` 事件，无法实现真正的逐 token 推送。
 
 **请求校验**：`query` 限长 1~4000 字符且拒绝纯空白；`session_id` 缺省时生成完整 uuid4。

@@ -114,6 +114,26 @@ curl -N -X POST http://localhost:8000/chat/stream \
   -d '{"query": "什么是过拟合？"}'
 ```
 
+鉴权 / 限流 / 超时（可选）：
+
+```bash
+# .env
+API_AUTH_TOKEN=change-me
+API_RATE_LIMIT_PER_MINUTE=120
+API_REQUEST_TIMEOUT=120
+```
+
+设置 `API_AUTH_TOKEN` 后，`/chat` 与 `/chat/stream` 需要 `X-API-Key`；
+`/health` 仍开放。响应头与响应体都带 `X-Request-ID` / `request_id`。
+
+容器化启动：
+
+```bash
+docker build -t ragforge .
+docker run --rm -p 8000:8000 --env-file .env \
+  -v "$PWD/chroma_db:/app/chroma_db" ragforge
+```
+
 ### 5. 运行评估
 
 ```bash
@@ -313,6 +333,7 @@ RAGForge/
 │   ├── modules/               # 模块设计文档（5 篇）
 │   ├── learning/              # 学习笔记（8 篇，按 Task 拆分）
 │   └── planning/              # 规划文档（.gitignore 排除，不提交）
+├── Dockerfile / .dockerignore # 容器化启动
 ├── pyproject.toml
 └── .env.example
 ```

@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"  # 默认仅监听本机；对外部署时显式改为 0.0.0.0 并配合鉴权
     api_port: int = Field(8000, ge=1, le=65535)  # FastAPI 监听端口
     api_cors_origins: list[str] = Field(default_factory=lambda: ["*"])  # 浏览器跨域白名单
+    # 可选鉴权：为空表示本地演示不启用；设置后 /chat 需要 X-API-Key
+    api_auth_token: SecretStr = SecretStr("")
+    # 每客户端每分钟请求上限；0 表示关闭
+    api_rate_limit_per_minute: int = Field(120, ge=0)
+    # 单次 /chat 请求总超时（秒）
+    api_request_timeout: int = Field(120, gt=0)
 
     # ── LangSmith 追踪（Task 7，可选）──────────────────────────────
     # 零代码改动即可自动记录 trace；填入 key 并置 tracing=true 即启用
@@ -108,6 +114,10 @@ class Settings(BaseSettings):
     def langsmith_key_value(self) -> str:
         """解包 LangSmith API key（SecretStr → str）。"""
         return self.langsmith_api_key.get_secret_value()
+
+    def api_auth_token_value(self) -> str:
+        """解包 API 鉴权 token（空字符串表示不启用）。"""
+        return self.api_auth_token.get_secret_value()
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

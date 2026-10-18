@@ -2,7 +2,9 @@
 
 ## 模块职责
 
-检索层提供 4 种检索策略（向量检索 / BM25 关键词检索 / 混合 RRF 融合 / 重排序），所有检索器实现统一的鸭子类型接口，无需继承基类。
+检索层固定使用 hybrid：向量检索 + BM25 关键词检索 + RRF 融合，reranker 可用时精排。向量与 BM25 是 hybrid 的内部召回通道，不再作为 Agent 顶层策略逐级切换；所有检索器实现统一的鸭子类型接口，无需继承基类。
+
+> 旧 8 节点（含 `switch_strategy`）的 `vector → bm25 → hybrid` 升级链已删除，详见 ADR-007。
 
 ## 统一接口
 
@@ -125,37 +127,30 @@ class Reranker:
 
 ```mermaid
 graph TD
-    Query[用户查询] --> Strategy[策略选择]
-    Strategy -->|vector| VS[VectorStore]
-    Strategy -->|bm25| BM25[BM25Retriever]
-    Strategy -->|hybrid| HR[HybridRetriever]
-    
-    VS --> Docs[Documents + Scores]
-    BM25 --> Docs
-    HR --> Rerank{Reranker 可用?}
-    
+    Query[用户查询] --> HR[HybridRetriever]
+    HR --> VS[VectorStore]
+    HR --> BM25[BM25Retriever]
+    VS --> RRF[RRF 融合]
+    BM25 --> RRF
+    RRF --> Rerank{Reranker 可用?}
     Rerank -->|是| RR[Reranker 重排序]
-    Rerank -->|否| Docs
+    Rerank -->|否| Docs[Documents + Scores]
     RR --> Docs
-    
     Docs --> Eval[Evaluate 节点]
-    
     VS -.ChromaDB.-> VDB[(向量索引)]
     BM25 -.rank-bm25.-> IDX[(倒排索引)]
-    HR -.RRF 融合.-> VS
-    HR -.RRF 融合.-> BM25
 ```
 
 ## 设计模式
 
 ### 鸭子类型（统一接口）
 
-所有检索器实现 `build_index` / `search` / `search_with_scores` 三个方法，无需继承抽象基类。Agent 层通过 `retrieval_strategy` 字段动态选择检索器，只要接口一致即可替换。
+所有检索器实现 `build_index` / `search` / `search_with_scores` 三个方法，无需继承抽象基类。固定 hybrid 后，`retrieve_node` 只调用 HybridRetriever；统一接口仍用于单测注入与组件替换。
 
 **优势**：
 - 松耦合：新增检索器无需修改基类
 - 易测试：Mock 对象只需实现三个方法
-- 运行时切换：`retrieve_node` 根据策略字段动态分发
+- 固定路径：`retrieve_node` 只走 hybrid，不再按策略动态分发
 
 ### 优雅降级（Reranker）
 

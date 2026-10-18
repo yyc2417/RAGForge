@@ -7,7 +7,7 @@
 
 ## 模块结构
 
-- `src/agent` — LangGraph 8 节点状态机（analyze → decide → retrieve → evaluate → generate → verify + reformulate / switch_strategy）
+- `src/agent` — LangGraph 7 节点主链路（固定 hybrid：analyze → decide → retrieve → evaluate → reformulate → generate → verify）；旧 8 节点（含 `switch_strategy`）为历史口径，Phase 1 计划新增 clarify 终止分支
 - `src/api` — FastAPI 服务，SSE 流式输出
 - `src/generation` — LLMClient（DeepSeek / OpenAI 兼容）
 - `src/ingestion` — 文档解析 / 分块 / 嵌入

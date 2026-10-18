@@ -4,24 +4,22 @@
 
 > Agentic RAG —— LangGraph 状态机驱动的自适应检索增强生成系统
 
-RAGForge 是一个**会自主决策的 RAG Agent**：基于 LangGraph 8 节点状态机分析查询意图，按需选择检索策略（向量 / BM25 / 混合 RRF / 重排序），对检索结果做**诊断式评估**（区分“召回不足”还是“结果无关”），不达标时自动改写查询或切换策略并重新检索，最后生成答案并做**幻觉检测**——一旦发现答案未忠实于上下文，会触发新一轮改写检索，直到通过验证或达到迭代上限。
+RAGForge 是一个**基于 LangGraph 的可控 Agentic RAG 系统**：7 节点主链路分析查询意图，需要检索时固定使用 **hybrid**（向量 + BM25 + RRF，可选重排），对检索结果做**诊断式评估**（区分“召回不足”还是“结果无关”），不达标时自动改写查询并重新检索，最后生成答案并做**幻觉检测**——一旦发现答案未忠实于上下文，会触发新一轮改写检索，直到通过验证或达到迭代上限。
 
 ## 架构
 
-8 节点 LangGraph 状态机，含 5 条条件边和 2 个自愈循环（reformulate / switch_strategy）：
+7 节点主链路，固定 hybrid 检索；旧 8 节点（含 `switch_strategy`）为历史口径：
 
 ```mermaid
 flowchart TD
     START([START]) --> analyze[analyze<br/>意图分析]
-    analyze --> decide{decide<br/>策略决策}
+    analyze --> decide{decide<br/>检索决策}
     decide -->|chitchat / 无需检索| generate[generate<br/>答案生成]
-    decide -->|factual / reasoning / complex| retrieve[retrieve<br/>执行检索]
+    decide -->|需要检索| retrieve[retrieve<br/>固定 hybrid 检索]
     retrieve --> evaluate{evaluate<br/>诊断式评估}
     evaluate -->|proceed / 达上限| generate
     evaluate -->|reformulate| reformulate[reformulate<br/>查询改写]
-    evaluate -->|switch_strategy| switch[switch_strategy<br/>策略升级]
     reformulate --> retrieve
-    switch --> retrieve
     generate -->|strategy≠none| verify{verify<br/>幻觉检测}
     generate -->|chitchat（strategy=none）| END([END])
     verify -->|忠实| END
@@ -33,15 +31,16 @@ flowchart TD
 | 节点 | LLM | 职责 |
 |------|:---:|------|
 | analyze | ✅ | 判断 query_type（factual/reasoning/chitchat/complex）+ needs_retrieval |
-| decide | ❌ | 纯规则路由：chitchat→none, factual→vector, reasoning→bm25, complex→hybrid |
-| retrieve | ❌ | 按 strategy 调用对应检索器；iteration_count 唯一递增点（每轮真实检索 +1） |
-| evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action；分数规则仅对 vector 策略生效（详见 ADR-006） |
+| decide | ❌ | 纯规则路由：chitchat / 无需检索 → none，其余 → hybrid |
+| retrieve | ❌ | 固定调用 HybridRetriever；iteration_count 唯一递增点（每轮真实检索 +1） |
+| evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action（proceed / reformulate）；RRF 分不进绝对阈值 |
 | reformulate | ✅ | 按 failure_mode 选择改写策略；改写无效（LLM 失败或改写 == 原查询）时路由直接生成，跳过无效重检索 |
-| switch_strategy | ❌ | 纯规则策略升级：vector → bm25 → hybrid；已是 hybrid 时路由短路直达生成 |
 | generate | ✅ | 基于检索上下文生成回答（LLM 失败时降级兜底） |
 | verify | ✅ | 幻觉检测；确认幻觉时递增 verify_failures 并触发 reformulate 重试 |
 
 **安全机制**：双预算防死循环——`iteration_count`（检索总次数上限，retrieve 唯一递增）与 `verify_failures`（幻觉重试上限，verify 唯一递增）均默认 3；外加 LangGraph `recursion_limit`（第二道防线）。
+
+> 拓扑口径：旧 8 节点含 `switch_strategy`；当前为 7 节点主链路。Phase 1 计划新增 clarify 终止分支后为 8 节点（含 clarify，不含 switch）。
 
 ## 技术栈
 
@@ -49,7 +48,7 @@ flowchart TD
 |----|------|------|
 | 语言 | Python ≥ 3.11 | 类型注解、TypedDict 状态 |
 | 包管理 | uv | 极速依赖解析 |
-| Agent 框架 | LangGraph ≥ 1.2.4 | 8 节点状态机、条件边、astream_events |
+| Agent 框架 | LangGraph ≥ 1.2.4 | 7 节点主链路、条件边、astream_events |
 | LLM 编排 | LangChain ≥ 1.3.4 | LCEL chain、ChatPromptTemplate |
 | LLM | DeepSeek（OpenAI 兼容） | deepseek-flash，60s 超时 + tenacity 瞬时故障重试 |
 | 向量检索 | ChromaDB + langchain-chroma | 持久化、cosine relevance、确定性 ID + 指纹校验 |
@@ -129,7 +128,7 @@ uv run --extra ui streamlit run src/ui/streamlit_app.py
 
 自上而下六个区块：
 
-- **① 执行流程**：8 节点状态卡片（中文职责名 + 原节点名），四态配色
+- **① 执行流程**：7 节点状态卡片（中文职责名 + 原节点名），四态配色
   待执行 / 执行中 / 已完成 / 自愈动作，徽章显示重复执行次数——
   `retrieve 3 次` 即自愈循环最直观的证据
 - **② 决策诊断**：按节点归属分组的三张卡片（意图与策略 / 检索质量诊断 / 改写与校验），
@@ -175,9 +174,9 @@ GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型。
 
 不同 failure_mode 触发不同的自愈动作，而非盲目重试。
 
-### 2. 策略自动升级
+### 2. 固定混合检索
 
-`switch_strategy` 节点实现单向策略升级链：`vector → bm25 → hybrid`。当向量检索召回不足时自动补充关键词检索，混合检索是兜底方案。
+需要检索的查询直接使用 hybrid：向量 + BM25 + RRF，reranker 可用时再精排。固定单档策略省掉了 `vector → bm25 → hybrid` 的逐级试错，链路更短、基线更强；旧 8 节点（含 `switch_strategy`）只作为历史对照。
 
 ### 3. RRF 混合检索（无需调参）
 
@@ -193,7 +192,7 @@ score(d) = Σ_i  1 / (rrf_k + rank_i(d))
 
 ### 5. SSE 真正的逐 token 流
 
-`/chat/stream` 使用 `graph.astream_events(version="v2")`（而非 `astream`），捕获 `on_chat_model_stream` 事件实现真正的 LLM 逐 token 推送，同时推送 8 节点的执行进度事件。
+`/chat/stream` 使用 `graph.astream_events(version="v2")`（而非 `astream`），捕获 `on_chat_model_stream` 事件实现真正的 LLM 逐 token 推送，同时推送 7 节点主链路的执行进度事件。
 
 ### 6. 全链路优雅降级
 
@@ -226,11 +225,11 @@ RAGForge/
 │   │   └── schemas.py         #   结构化输出 Pydantic schema
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
-│   │   ├── graph.py           #   LangGraph 状态机组装（8 节点 + 条件边）
-│   │   └── nodes/             #   8 个节点实现
+│   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + 条件边）
+│   │   └── nodes/             #   7 个节点实现
 │   │       ├── analyze.py / decide.py
 │   │       ├── retrieve.py / evaluate.py
-│   │       ├── reformulate.py / switch_strategy.py
+│   │       ├── reformulate.py
 │   │       └── generate.py / verify.py
 │   ├── api/                   # Task 7：FastAPI + SSE
 │   │   ├── app.py             #   应用工厂 + lifespan 启动预热 + CORS
@@ -269,6 +268,8 @@ RAGForge/
 
 ## 评估指标对比
 
+> **历史口径（旧 8 节点拓扑）**：下表来自含 `switch_strategy` 的旧 8 节点版本，固定 hybrid 后尚未重跑全量 LLM 评测；旧数字只能作历史对照，不能当作当前现状。新的评测矩阵（baseline / linear_hybrid / agent / agent_reranker）与 v2 数据集正在按升级方案推进。
+
 运行 `uv run python scripts/eval.py --rebuild` 生成（数据集：45 题 = 30 可答 + 10 语料外不可答 + 5 寒暄；语料 8 文档 49 chunks；模型 deepseek-flash）：
 
 | 配置 | Recall@5 | MRR@5 | 幻觉率(可答) | 拒答准确率 | P99 延迟 | 平均 Token |
@@ -291,7 +292,7 @@ RAGForge/
 
 **检索层区分度（本轮改造的核心目标）**：指标不再"人人 100%"——
 - **vector-only baseline 只有 73.3%**：all-MiniLM 是英文向量化模型，中文语料召回乏力（8 题 chunk 级未命中）；
-- **Agent 状态机把 73.3% 拉到 96.7%**：evaluate 诊断 low_recall → switch_strategy 切到 BM25 的自愈闭环，直接贡献 +23.4 个百分点——这是状态机价值的最直接证据；
+- **旧 8 节点拓扑把 73.3% 拉到 96.7%**：evaluate 诊断 low_recall → switch_strategy 切到 BM25 的自愈闭环，直接贡献 +23.4 个百分点；这是旧拓扑的历史结果，固定 hybrid 后已不可直接复用；
 - **hybrid 拿到 100%**：RRF 融合两路互补；
 - **MRR 上 reranker 现身（两套口径）**：离线检索对照（`--retrieval-only`，30 可答题、不调 LLM）中 hybrid 粗排 MRR 仅 76.3%，reranker 精排拉到 96.7%（见 `reports/eval_retrieval_report.json`）；45 题全量端到端评估中两者已接近（hybrid 95.8% vs reranker 95.0%，见上表）——hybrid 粗排质量提升后精排增益收窄。MRR 是排序质量指标，reranker 的价值体现在这里而非召回；
 - 真实失败案例：reranker 模式丢了「令牌桶限流」一题——CrossEncoder 精排把 gold chunk 挤出 top-5（hybrid 100% 命中），说明精排模型与标注的判断存在不一致，这正是评估体系该暴露的问题。

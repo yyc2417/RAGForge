@@ -2,7 +2,7 @@
 
 ## 1. 模块定位与设计动机
 
-API 服务层（`src/api/`）是 RAGForge 的**唯一对外边界**，将 LangGraph 8 节点状态机封装为 HTTP 接口。其核心设计动机：
+API 服务层（`src/api/`）是 RAGForge 的**唯一对外边界**，将 LangGraph 7 节点主链路封装为 HTTP 接口（旧 8 节点含 `switch_strategy`，当前固定 hybrid 后为 7 节点）。其核心设计动机：
 
 > Agent 状态机的构建成本极高（解析文档 → 切分 → 嵌入 → 组装图），必须在**启动阶段（lifespan）预热构建并 fail-fast**，而非在首个请求内惰性构建；同时需要同时支持同步请求和 SSE 流式两种交互模式。
 

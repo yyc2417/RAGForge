@@ -2,6 +2,8 @@
 >
 > **本文具体过时点**：MetricsCollector 已从全局单例改为请求级实例 + ContextVar 注入；invoke_structured 改为显式追加独立 human 消息。
 
+> **2026-10 拓扑更新**：固定 hybrid（7 主链路 + clarify 终止分支，共 8 节点）、多格式入库与评测 v2 schema 已落地；本文仍是 2026-06 学习快照，现行设计以 `docs/modules/` 与 ADR-007/008 为准。
+
 # Task 4：模块化 RAG 与基础管道
 
 ## 阶段概述

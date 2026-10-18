@@ -2,6 +2,8 @@
 >
 > **本文具体过时点**：计数与终止机制已重构：iteration_count 由 retrieve 节点唯一递增，verify_failures 独立计数（双预算）；本文单一 max_iterations=3 的描述已过时，为 8 篇中失真最大的一篇。
 
+> **2026-10 拓扑更新**：固定 hybrid（7 主链路 + clarify 终止分支，共 8 节点）、多格式入库与评测 v2 schema 已落地；本文仍是 2026-06 学习快照，现行设计以 `docs/modules/` 与 ADR-007/008 为准。
+
 # Task 5：Agent 状态机（LangGraph）
 
 ## 阶段概述

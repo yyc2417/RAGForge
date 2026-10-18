@@ -1,6 +1,7 @@
 """评测 v2 schema 与校验测试（离线）"""
 
 import json
+import math
 from pathlib import Path
 
 from src.evaluation import EvalItem, dataset_hash, load_dataset, validate_dataset
@@ -65,11 +66,39 @@ def test_multiturn_and_clarify_fixtures():
     root = Path(__file__).parent
     multiturn = json.loads((root / "eval_multiturn.json").read_text(encoding="utf-8"))
     clarify = json.loads((root / "eval_clarify.json").read_text(encoding="utf-8"))
-    assert len(multiturn) >= 5
-    assert all(len(conv["turns"]) >= 2 for conv in multiturn)
+    assert len(multiturn) >= 10
+    assert all(len(conv["turns"]) >= 3 for conv in multiturn)
     assert all("resolved_query" in turn for conv in multiturn for turn in conv["turns"])
-    assert len(clarify) >= 8
-    assert all(item["expected_behavior"] == "clarify" for item in clarify)
+    assert len(clarify) >= 10
+    behaviors = {item["expected_behavior"] for item in clarify}
+    assert {"clarify", "answer"} <= behaviors
+    assert all(
+        item.get("clarification_keywords")
+        for item in clarify
+        if item["expected_behavior"] == "clarify"
+    )
+
+
+def test_eval_clarify_aggregates_clear_and_ambiguous():
+    from types import SimpleNamespace
+
+    from scripts.eval_interaction import eval_clarify
+    from src.generation.schemas import AnalyzeResult
+    from tests.fakes import FakeLLM
+
+    llm = FakeLLM({
+        "AnalyzeResult": AnalyzeResult(
+            query_type="factual", needs_retrieval=True, needs_clarification=False
+        )
+    })
+    result = eval_clarify(SimpleNamespace(llm=llm))
+    assert result["samples"] == 16
+    assert result["clarify_cases"] == 11
+    assert result["clear_cases"] == 5
+    assert result["clarify_accuracy"] == round(5 / 16, 4)
+    assert result["over_clarification_rate"] == 0.0
+    assert result["followup_resolution_rate"] is None
+    assert len(result["details"]) == 16
 
 
 def test_crud_rag_read_import(tmp_path):
@@ -132,6 +161,38 @@ def test_multiformat_fixture_covers_demo_sources():
     }
     assert sum("multi-hop" in item.tags for item in items) >= 4
     assert sum("cross-lingual" in item.tags for item in items) >= 8
+
+
+def test_ndcg_at_k_uses_unique_documents():
+    from langchain_core.documents import Document
+
+    from scripts.eval_v2 import _ndcg_at_k
+
+    docs = [
+        Document(page_content="x", metadata={"source": "a.md"}),
+        Document(page_content="x", metadata={"source": "a.md"}),
+        Document(page_content="x", metadata={"source": "b.md"}),
+        Document(page_content="x", metadata={"source": "c.md"}),
+    ]
+    assert _ndcg_at_k(docs, ["a.md"], 5) == 1.0
+    assert abs(_ndcg_at_k(docs, ["b.md"], 5) - 1 / math.log2(3)) < 1e-12
+    assert _ndcg_at_k(docs, ["z.md"], 5) == 0.0
+
+
+def test_retrieval_gate_thresholds():
+    from scripts.eval_v2 import _gate_failures
+
+    modes = [{"mode": "hybrid", "hit_any": 0.9, "mrr_any": 0.75}]
+    assert _gate_failures(
+        modes, mode="hybrid", min_hit_any=0.85, min_mrr=0.7
+    ) == []
+    failures = _gate_failures(
+        modes, mode="hybrid", min_hit_any=0.95, min_mrr=0.8
+    )
+    assert len(failures) == 2
+    assert _gate_failures(
+        modes, mode="missing", min_hit_any=0.1, min_mrr=None
+    ) == ["没有找到模式 missing"]
 
 
 def test_dataset_hash_stable():

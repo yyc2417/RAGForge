@@ -69,7 +69,7 @@ START → analyze ─(needs_clarification)→ clarify → END
 
 - 状态机多一个终止分支，节点数从 7 变 8；
 - UI/API 需要区分“澄清”与“最终回答”；
-- 新增 clarify 评测集（10–20 case），指标包括澄清准确率、过度澄清率、问题质量、补充后解决率；
+- 新增 clarify 评测集（现 16 例：11 歧义 + 5 清晰/寒暄负例），脚本统计澄清准确率、过度澄清率、问题关键词命中率；`--with-followup` 额外统计补充后解决率；
 - 过度澄清是主要风险，需要 `clarify_enabled` 与评测控制。
 
 ## 关联文档

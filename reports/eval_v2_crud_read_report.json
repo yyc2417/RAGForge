@@ -1,14 +1,20 @@
 {
   "dataset": "data\\public_eval\\crud_read_eval.json",
+  "dataset_name": "CRUD-RAG-Read",
+  "dataset_version": "crud_split_2024",
+  "dataset_license": "Apache-2.0",
   "dataset_hash": "2b087ab38af08ad2",
   "corpus_dir": "data\\public_eval\\crud_corpus",
   "samples": 120,
+  "k": 5,
+  "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",
   "modes": [
     {
       "mode": "vector",
       "hit_any": 0.6,
       "hit_all": 0.3,
       "mrr_any": 0.5047222222222222,
+      "ndcg_at5": 0.42557040615357367,
       "hit_any_count": 72,
       "hit_all_count": 36
     },
@@ -17,6 +23,7 @@
       "hit_any": 0.9916666666666667,
       "hit_all": 0.9,
       "mrr_any": 0.9694444444444444,
+      "ndcg_at5": 0.946566156992164,
       "hit_any_count": 119,
       "hit_all_count": 108
     },
@@ -25,6 +32,7 @@
       "hit_any": 0.9916666666666667,
       "hit_all": 0.6583333333333333,
       "mrr_any": 0.804861111111111,
+      "ndcg_at5": 0.7680219868550189,
       "hit_any_count": 119,
       "hit_all_count": 79
     },
@@ -33,9 +41,10 @@
       "hit_any": 0.9916666666666667,
       "hit_all": 0.8916666666666667,
       "mrr_any": 0.9791666666666666,
+      "ndcg_at5": 0.9541929788526143,
       "hit_any_count": 119,
       "hit_all_count": 107
     }
   ],
-  "elapsed_ms": 377115.2
+  "elapsed_ms": 303224.4
 }

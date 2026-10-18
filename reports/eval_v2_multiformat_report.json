@@ -1,14 +1,20 @@
 {
   "dataset": "tests\\eval_dataset_multiformat.json",
+  "dataset_name": "multiformat-demo",
+  "dataset_version": "2026-10-18",
+  "dataset_license": "internal",
   "dataset_hash": "5846bc120a9cce7c",
   "corpus_dir": "data\\demo",
   "samples": 45,
+  "k": 5,
+  "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",
   "modes": [
     {
       "mode": "vector",
       "hit_any": 0.8,
       "hit_all": 0.8,
       "mrr_any": 0.61,
+      "ndcg_at5": 0.6802009853381448,
       "hit_any_count": 36,
       "hit_all_count": 36
     },
@@ -17,6 +23,7 @@
       "hit_any": 0.9333333333333333,
       "hit_all": 0.9111111111111111,
       "mrr_any": 0.8740740740740741,
+      "ndcg_at5": 0.8808192490455843,
       "hit_any_count": 42,
       "hit_all_count": 41
     },
@@ -25,6 +32,7 @@
       "hit_any": 0.9111111111111111,
       "hit_all": 0.8888888888888888,
       "mrr_any": 0.7685185185185184,
+      "ndcg_at5": 0.8038318073036286,
       "hit_any_count": 41,
       "hit_all_count": 40
     },
@@ -33,9 +41,10 @@
       "hit_any": 0.9333333333333333,
       "hit_all": 0.9111111111111111,
       "mrr_any": 0.9222222222222223,
+      "ndcg_at5": 0.9165350432519315,
       "hit_any_count": 42,
       "hit_all_count": 41
     }
   ],
-  "elapsed_ms": 67556.7
+  "elapsed_ms": 62545.6
 }

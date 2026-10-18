@@ -4,6 +4,8 @@
 
 - 运行测试：`uv run pytest`
 - 代码检查：`uv run ruff check src/ tests/ scripts/`
+- 检索回归门禁（离线，CI 同款）：
+  `uv run python scripts/eval_v2.py --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo --rebuild --skip-reranker --report reports/ci_retrieval_report.json --gate-mode hybrid --min-hit-any 0.85 --min-mrr 0.60`
 
 ## 模块结构
 

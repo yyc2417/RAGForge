@@ -3,15 +3,9 @@
     "query": "它怎么配置？",
     "expected_behavior": "clarify",
     "ambiguity_type": "missing_slot",
-    "clarification_keywords": ["哪个", "对象"],
-    "follow_up": "Docker 怎么配置？"
-  },
-  {
-    "query": "GIL 和 GC 的区别是什么？",
-    "expected_behavior": "clarify",
-    "ambiguity_type": "multiple_interpretations",
-    "clarification_keywords": ["Python", "Java"],
-    "follow_up": "Python 的 GIL 和 Java 的 GC 有什么区别？"
+    "clarification_keywords": ["哪个", "产品"],
+    "follow_up": "Nebula Note 怎么充电？",
+    "expected_sources": ["product_manual.pdf"]
   },
   {
     "query": "那个版本有什么变化？",
@@ -25,34 +19,87 @@
     "expected_behavior": "clarify",
     "ambiguity_type": "missing_slot",
     "clarification_keywords": ["最近", "查什么"],
-    "follow_up": "帮我查一下最近的差旅报销规定。"
+    "follow_up": "帮我查一下最近的差旅报销规定。",
+    "expected_sources": ["company_handbook.md"]
   },
   {
     "query": "怎么设置权限，但又不要让所有人都能看到？",
     "expected_behavior": "clarify",
     "ambiguity_type": "conflicting_constraints",
     "clarification_keywords": ["哪些人", "什么权限"],
-    "follow_up": "只让团队成员看到，怎么设置权限？"
+    "follow_up": "星云笔记团队版怎么设置成员权限？"
   },
   {
     "query": "这个和那个哪个更好？",
     "expected_behavior": "clarify",
     "ambiguity_type": "multiple_interpretations",
     "clarification_keywords": ["哪两个", "比较"],
-    "follow_up": "Docker 多阶段构建和普通构建哪个更好？"
+    "follow_up": "Nebula Note 和星云笔记哪个更好用？"
   },
   {
     "query": "退款要多久？",
     "expected_behavior": "clarify",
     "ambiguity_type": "missing_slot",
     "clarification_keywords": ["哪个产品", "退款方式"],
-    "follow_up": "星云笔记退货后退款要多久？"
+    "follow_up": "星云笔记退货后退款要多久？",
+    "expected_sources": ["product_faq.html"]
   },
   {
     "query": "它支持多少台设备？",
     "expected_behavior": "clarify",
     "ambiguity_type": "missing_slot",
     "clarification_keywords": ["哪个产品", "免费版还是团队版"],
-    "follow_up": "星云笔记免费版支持多少台设备？"
+    "follow_up": "星云笔记免费版支持多少台设备？",
+    "expected_sources": ["faq.jsonl"]
+  },
+  {
+    "query": "这个怎么导入？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "missing_slot",
+    "clarification_keywords": ["什么格式", "导入"],
+    "follow_up": "PDF 文件怎么导入知识库？"
+  },
+  {
+    "query": "它和它有什么区别？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "multiple_interpretations",
+    "clarification_keywords": ["哪两个", "比较"],
+    "follow_up": "BM25 和向量检索有什么区别？"
+  },
+  {
+    "query": "杭州那边有什么推荐？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "multiple_interpretations",
+    "clarification_keywords": ["美食", "景点", "住宿"],
+    "follow_up": "杭州有什么本地美食推荐？",
+    "expected_sources": ["travel_guide.txt"]
+  },
+  {
+    "query": "报销要多久？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "multiple_interpretations",
+    "clarification_keywords": ["提交", "处理", "期限"],
+    "follow_up": "差旅报销要在行程结束后多久提交？",
+    "expected_sources": ["company_handbook.md"]
+  },
+  {
+    "query": "杭州西湖适合什么季节去？",
+    "expected_behavior": "answer"
+  },
+  {
+    "query": "星云笔记免费版最多同步几台设备？",
+    "expected_behavior": "answer"
+  },
+  {
+    "query": "Project Nebula 什么时候发布？",
+    "expected_behavior": "answer"
+  },
+  {
+    "query": "团队版怎么收费？",
+    "expected_behavior": "answer"
+  },
+  {
+    "query": "你好",
+    "expected_behavior": "chitchat"
   }
 ]

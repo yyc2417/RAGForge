@@ -1,6 +1,6 @@
 # 评测 v2 · 设计
 
-> 状态：统一 schema、校验器、检索层基线、CRUD-RAG Read 120 题与离线基线已实现；RGB 适配与全量 LLM 双跑待执行。
+> 状态：统一 schema、校验器、CRUD-RAG Read 120 题、多格式 45 题、离线基线与 CI 回归门禁已实现；多轮（10×3）与 clarify（16 例）数据集已建；RGB 适配与全量 LLM 双跑待执行。
 
 ## 1. 目标
 
@@ -47,7 +47,7 @@
 | CRUD-RAG Read | 中文公开泛化 | 100–200 |
 | RGB 子集 | 噪声/拒答/反事实 | 可选 100 |
 | 自定义多格式 | PDF/HTML/DOCX/CSV/JSONL、多跳、来源 | 40–60 |
-| 多轮 / clarify / 优质库 | 交互与沉淀 | 10 会话 / 10–20 / 6–10 |
+| 多轮 / clarify / 优质库 | 交互与沉淀 | 10 会话 × 3 轮 / 16 / 6–10 |
 
 公开集不提交仓库，放 `data/public_eval/` 并 gitignore。
 
@@ -56,8 +56,9 @@
 检索层（离线，可进 CI）：
 
 - vector / bm25 / hybrid / hybrid+reranker；
-- doc 级 `hit_any` / `hit_all` / `mrr_any`；
-- 旧 v1 仍保留 chunk 级 Recall@5 / MRR@5。
+- doc 级 `hit_any` / `hit_all` / `MRR_any` / `NDCG@5`（二值相关性，按来源去重）；
+- 旧 v1 仍保留 chunk 级 Recall@5 / MRR@5；
+- CI 用多格式集 + hybrid 粗排跑回归门禁（`--skip-reranker --min-hit-any --min-mrr`）。
 
 端到端（全量 LLM，后置）：
 
@@ -68,7 +69,8 @@
 交互层：
 
 - 多轮：轮级命中、会话成功率、会话隔离；
-- clarify：澄清准确率、过度澄清率、补充后解决率；
+- clarify：澄清准确率、过度澄清率、澄清问题关键词命中率；`--with-followup`
+  额外统计补充后来源命中率；
 - 优质库：归档幂等、优质命中、无关不误召回、移除回滚。
 
 ## 5. 本地 / API 协议
@@ -78,6 +80,9 @@
 3. 本地模型先跑 dev / smoke；
 4. 最终在同一 git tag 上跑本地 test 和 API test；
 5. 报告记录 provider / model / commit / hash / judge 版本。
+
+检索层报告额外记录 `dataset_name / dataset_version / dataset_license /
+dataset_hash / k`，用于复现与许可追溯。
 
 判官固定（DeepSeek 或另一固定 judge），抽 20 样本人工复核；本地模型不自判。
 
@@ -99,14 +104,30 @@ uv run python scripts/import_crud_rag.py --limit 120
 uv run python scripts/eval_v2.py \
   --dataset data/public_eval/crud_read_eval.json \
   --corpus-dir data/public_eval/crud_corpus \
-  --report reports/eval_v2_crud_read_report.json
+  --report reports/eval_v2_crud_read_report.json \
+  --dataset-name CRUD-RAG-Read --dataset-version crud_split_2024 \
+  --dataset-license Apache-2.0
 
 # 检索层 v2 基线
 uv run python scripts/eval_v2.py --dataset tests/eval_dataset.json --corpus-dir data/sample
 
 # clarify 判定 + 多轮会话（需真实 LLM）
 uv run python scripts/eval_interaction.py --mode both --limit 5
+uv run python scripts/eval_interaction.py --mode clarify --with-followup
 # 报告：reports/eval_interaction_report.json（含 commit / model / base_url）
+
+# 多格式集基线（45 题）
+uv run python scripts/eval_v2.py \
+  --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo \
+  --rebuild --report reports/eval_v2_multiformat_report.json \
+  --dataset-name multiformat-demo --dataset-version 2026-10-18 \
+  --dataset-license internal
+
+# CI 回归门禁（多格式集 + hybrid，跳过 reranker）
+uv run python scripts/eval_v2.py \
+  --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo \
+  --rebuild --skip-reranker --report reports/ci_retrieval_report.json \
+  --gate-mode hybrid --min-hit-any 0.85 --min-mrr 0.60
 
 # 旧 4 模式端到端（全量 LLM，后置）
 uv run python scripts/eval.py --rebuild
@@ -119,28 +140,28 @@ uv run python scripts/eval.py --rebuild
 120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CPU embedding
 （all-MiniLM-L6-v2），独立评测索引，不调 LLM：
 
-| 模式 | hit_any | hit_all | MRR_any |
-|------|---:|---:|---:|
-| vector | 60.0% | 30.0% | 50.5% |
-| bm25 | 99.2% | 90.0% | 96.9% |
-| hybrid | 99.2% | 65.8% | 80.5% |
-| reranker | 99.2% | 89.2% | 97.9% |
+| 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
+|------|---:|---:|---:|---:|
+| vector | 60.0% | 30.0% | 50.5% | 42.6% |
+| bm25 | 99.2% | 90.0% | 96.9% | 94.7% |
+| hybrid | 99.2% | 65.8% | 80.5% | 76.8% |
+| reranker | 99.2% | 89.2% | 97.9% | 95.4% |
 
 解读：英文 embedding 在中文公开集上向量单路明显偏弱；BM25 兜底后 hit_any
 接近饱和。hybrid 的 top-10 候选池压缩了多跳 hit_all，reranker 精排可恢复到
 89.2%。报告：`reports/eval_v2_crud_read_report.json`（dataset_hash
-`2b087ab38af08ad2`）。
+`2b087ab38af08ad2`，Apache-2.0）。
 
 ### 多格式自定义集
 
 45 题覆盖 8 个 demo 文件、7 种格式，含 4 道多跳、10 道跨语言样本：
 
-| 模式 | hit_any | hit_all | MRR_any |
-|------|---:|---:|---:|
-| vector | 80.0% | 80.0% | 61.0% |
-| bm25 | 93.3% | 91.1% | 87.4% |
-| hybrid | 91.1% | 88.9% | 76.9% |
-| reranker | 93.3% | 91.1% | 92.2% |
+| 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
+|------|---:|---:|---:|---:|
+| vector | 80.0% | 80.0% | 61.0% | 68.0% |
+| bm25 | 93.3% | 91.1% | 87.4% | 88.1% |
+| hybrid | 91.1% | 88.9% | 76.9% | 80.4% |
+| reranker | 93.3% | 91.1% | 92.2% | 91.7% |
 
 剩余未命中集中在中文 query 检索英文 PDF/DOCX；格式解析本身正常。
 报告：`reports/eval_v2_multiformat_report.json`。

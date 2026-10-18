@@ -15,6 +15,7 @@ vector / bm25 / hybrid / hybrid+reranker
 
 import argparse
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -49,12 +50,63 @@ def _rank_sources(docs, expected: list[str]) -> list[int]:
     return ranks
 
 
+def _ndcg_at_k(docs, expected: list[str], k: int) -> float:
+    """文档级 NDCG@k（二值相关性，按来源去重后排序）。"""
+    expected_names = {Path(source).name for source in expected}
+    ranked: list[str] = []
+    for doc in docs:
+        name = _basename(getattr(doc, "metadata", {}).get("source", ""))
+        if name and name not in ranked:
+            ranked.append(name)
+        if len(ranked) >= k:
+            break
+    gains = [1.0 if name in expected_names else 0.0 for name in ranked[:k]]
+    dcg = sum(gain / math.log2(i + 1) for i, gain in enumerate(gains, start=1))
+    ideal = min(len(expected_names), k)
+    idcg = sum(1.0 / math.log2(i + 1) for i in range(1, ideal + 1))
+    return dcg / idcg if idcg else 0.0
+
+
+def _gate_failures(
+    modes: list[dict],
+    *,
+    mode: str,
+    min_hit_any: float | None,
+    min_mrr: float | None,
+) -> list[str]:
+    """按指定模式检查回归门槛；返回空列表表示通过。"""
+    if min_hit_any is None and min_mrr is None:
+        return []
+    selected = next((row for row in modes if row["mode"] == mode), None)
+    if selected is None:
+        return [f"没有找到模式 {mode}"]
+    failures = []
+    if min_hit_any is not None and selected["hit_any"] < min_hit_any:
+        failures.append(
+            f"{mode} hit_any={selected['hit_any']:.4f} < {min_hit_any:.4f}"
+        )
+    if min_mrr is not None and selected["mrr_any"] < min_mrr:
+        failures.append(f"{mode} mrr_any={selected['mrr_any']:.4f} < {min_mrr:.4f}")
+    return failures
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="评测 v2 检索层基线")
     parser.add_argument("--dataset", default=str(PROJECT_ROOT / "tests" / "eval_dataset.json"))
     parser.add_argument("--corpus-dir", default=None)
     parser.add_argument("--rebuild", action="store_true")
+    parser.add_argument(
+        "--skip-reranker",
+        action="store_true",
+        help="跳过 CrossEncoder 重排（CI 或无模型缓存时使用）",
+    )
     parser.add_argument("--report", type=Path, default=REPORT_PATH)
+    parser.add_argument("--dataset-name", default=None)
+    parser.add_argument("--dataset-version", default="v1")
+    parser.add_argument("--dataset-license", default="unspecified")
+    parser.add_argument("--gate-mode", default="hybrid")
+    parser.add_argument("--min-hit-any", type=float, default=None)
+    parser.add_argument("--min-mrr", type=float, default=None)
     args = parser.parse_args()
 
     dataset_path = Path(args.dataset)
@@ -103,17 +155,25 @@ def main() -> None:
             top_n=EVAL_K,
         ),
     }
+    if args.skip_reranker:
+        modes.pop("reranker")
 
     report = {
         "dataset": str(dataset_path),
+        "dataset_name": args.dataset_name or dataset_path.stem,
+        "dataset_version": args.dataset_version,
+        "dataset_license": args.dataset_license,
         "dataset_hash": dataset_hash(items),
         "corpus_dir": str(corpus_dir),
         "samples": len(samples),
+        "k": EVAL_K,
+        "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",
         "modes": [],
     }
     for name, fn in modes.items():
         any_hits = all_hits = 0
         rr_sum = 0.0
+        ndcg_sum = 0.0
         for item in samples:
             docs_hit = fn(item.query)
             ranks = _rank_sources(docs_hit, item.expected_sources)
@@ -122,11 +182,13 @@ def main() -> None:
                 rr_sum += 1.0 / min(r for r in ranks if r > 0)
             if all(r > 0 for r in ranks):
                 all_hits += 1
+            ndcg_sum += _ndcg_at_k(docs_hit, item.expected_sources, EVAL_K)
         row = {
             "mode": name,
             "hit_any": any_hits / len(samples),
             "hit_all": all_hits / len(samples),
             "mrr_any": rr_sum / len(samples),
+            "ndcg_at5": ndcg_sum / len(samples),
             "hit_any_count": any_hits,
             "hit_all_count": all_hits,
         }
@@ -134,13 +196,25 @@ def main() -> None:
         print(
             f"{name:10s} hit_any={row['hit_any']*100:5.1f}% "
             f"hit_all={row['hit_all']*100:5.1f}% "
-            f"mrr_any={row['mrr_any']*100:5.1f}%"
+            f"mrr_any={row['mrr_any']*100:5.1f}% "
+            f"ndcg@5={row['ndcg_at5']*100:5.1f}%"
         )
 
     report["elapsed_ms"] = round((time.perf_counter() - t0) * 1000, 1)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"报告已保存：{args.report}")
+
+    failures = _gate_failures(
+        report["modes"],
+        mode=args.gate_mode,
+        min_hit_any=args.min_hit_any,
+        min_mrr=args.min_mrr,
+    )
+    if failures:
+        for failure in failures:
+            print(f"回归门禁失败：{failure}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

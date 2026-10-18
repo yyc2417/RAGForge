@@ -41,6 +41,9 @@ reusable-project-template.md
 # Logs
 logs/
 
+# CI 运行时产物
+reports/ci_retrieval_report.json
+
 # 本地验证截图产物（浏览器/手动测试生成，勿提交）
 screenshot_*.png
 

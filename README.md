@@ -145,6 +145,7 @@ uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM
 uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
+uv run python scripts/eval_interaction.py --mode both --limit 5          # clarify / 多轮交互（需 LLM）
 # 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json
 ```
 
@@ -324,6 +325,7 @@ RAGForge/
 ├── scripts/
 │   ├── eval.py                # 4 套端到端对比（全量 LLM）
 │   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
+│   ├── eval_interaction.py    # clarify / 多轮交互评测（需 LLM）
 │   ├── validate_eval_dataset.py  # schema / 标签 / 来源校验
 │   ├── adapt_public_eval.py   # 公开集字段映射 → 评测 v2 schema
 │   └── promote_hard_cases.py  # 难例候选半自动晋升
@@ -390,8 +392,9 @@ RAGForge/
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
 - **评测 v2 公开集**：用 `adapt_public_eval.py` 接入 CRUD-RAG Read / RGB 子集，
   冻结 dev/test 后跑本地与 API 双基线；当前 schema/validator/检索 harness 已就绪。
-- **多轮 / clarify 跑分**：数据集已建（`tests/eval_multiturn.json` /
-  `tests/eval_clarify.json`），还需补自动跑分脚本与报表。
+- **多轮 / clarify 跑分**：数据集与脚本已建（`tests/eval_multiturn.json` /
+  `tests/eval_clarify.json` + `scripts/eval_interaction.py`），真实 LLM 跑分与
+  报表待本地 / API 双跑阶段补齐。
 - **GPU embedding**：`EMBEDDING_DEVICE=cuda` 与归一化/查询指令已预留；
   待 CUDA 版 PyTorch 与显存实测后再切换并重建索引。
 

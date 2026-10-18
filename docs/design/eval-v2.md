@@ -95,6 +95,9 @@ uv run python scripts/adapt_public_eval.py \
 # 检索层 v2 基线
 uv run python scripts/eval_v2.py --dataset tests/eval_dataset.json --corpus-dir data/sample
 
+# clarify 判定 + 多轮会话（需真实 LLM）
+uv run python scripts/eval_interaction.py --mode both --limit 5
+
 # 旧 4 模式端到端（全量 LLM，后置）
 uv run python scripts/eval.py --rebuild
 ```
@@ -103,6 +106,6 @@ uv run python scripts/eval.py --rebuild
 
 - CRUD-RAG Read adapter 与 100–200 题子集；
 - RGB noise/rejection/integration/counterfactual adapter；
-- 多轮 / clarify 数据集；
+- 多轮 / clarify 真实 LLM 跑分（数据与 `eval_interaction.py` 已就绪）；
 - 评测 v2 端到端矩阵与 README 报表；
 - 本地 + API 双跑。

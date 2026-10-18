@@ -26,6 +26,7 @@ data/public_eval/
 .vscode/
 .idea/
 .qoder/
+.qoder-credits/
 .workbuddy/
 
 # OS

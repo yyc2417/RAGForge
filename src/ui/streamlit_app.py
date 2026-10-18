@@ -155,6 +155,17 @@ with st.sidebar:
                     kb.remove_source(src["source"])
                     st.rerun()
 
+    qualities = kb.list_quality()
+    with st.expander(f"优质库（{len(qualities)}）"):
+        if not qualities:
+            st.caption("暂无归档；回答点“有用”后自动沉淀。")
+        for item in qualities:
+            cols = st.columns([4, 1])
+            cols[0].caption(item["question"])
+            if cols[1].button("移除", key=f"rmq-{item['message_id']}"):
+                kb.remove_quality(item["message_id"])
+                st.rerun()
+
     st.divider()
     st.header("本次运行参数")
     st.caption(
@@ -204,11 +215,25 @@ def _render_trace(trace: list[str]) -> None:
 
 def _render_feedback(session_id: str, message: SessionMessage) -> None:
     cols = st.columns([1, 1, 6])
-    up_disabled = message.feedback == "up"
+    can_archive = message.message_type == "answer" and bool(message.content.strip())
+    up_disabled = message.feedback == "up" or not can_archive
     down_disabled = message.feedback == "down"
     if cols[0].button("👍 有用", key=f"up-{message.id}", disabled=up_disabled):
-        service.record_feedback(session_id, message.id, "up")
-        st.toast("已记录：有用")
+        question = message.resolved_query or message.original_query or message.content
+        original = message.original_query or question
+        archived_path = kb.archive_quality(
+            message_id=message.id,
+            question=question,
+            original_query=original,
+            answer=message.content,
+            sources=message.sources,
+            session_id=session_id,
+        )
+        service.record_feedback(session_id, message.id, "up", archived=archived_path is not None)
+        if archived_path is None:
+            st.error("归档失败：回答为空或 message_id 非法")
+        else:
+            st.toast("已记录：有用，并归档到优质库")
         st.rerun()
     if cols[1].button("👎 没用", key=f"down-{message.id}", disabled=down_disabled):
         service.record_feedback(session_id, message.id, "down")
@@ -216,7 +241,8 @@ def _render_feedback(session_id: str, message: SessionMessage) -> None:
         st.rerun()
     if message.feedback:
         label = "有用" if message.feedback == "up" else "没用"
-        cols[2].caption(f"已标记：{label}")
+        suffix = "（已归档）" if message.archived else ""
+        cols[2].caption(f"已标记：{label}{suffix}")
 
 
 def _render_message(session_id: str, message: SessionMessage) -> None:
@@ -270,6 +296,7 @@ def _run_turn(session_id: str, query: str) -> None:
                 service.record_assistant_state(
                     session_id,
                     {"answer": f"执行失败：{type(e).__name__}: {e}"},
+                    original_query=query,
                     resolved_query=standalone,
                 )
                 st.rerun()
@@ -285,6 +312,7 @@ def _run_turn(session_id: str, query: str) -> None:
     service.record_assistant_state(
         session_id,
         final_state,
+        original_query=query,
         resolved_query=standalone if standalone != query else None,
     )
     st.rerun()

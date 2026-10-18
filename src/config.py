@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     reranker_model: str = "BAAI/bge-reranker-v2-m3"  # CrossEncoder 重排序模型
     reranker_top_n: int = Field(5, gt=0)  # 重排序后保留的文档数
 
+    # ── 优质库加权通道 ─────────────────────────────────────────────
+    quality_weight: float = Field(1.3, gt=0)
+    quality_top_k: int = Field(3, gt=0)
+    quality_min_relevance: float = Field(0.3, ge=0, le=1)
+    quality_max_per_source: int = Field(2, gt=0)
+
     # ── API 服务（Task 7）────────────────────────────────────────────
     api_host: str = "127.0.0.1"  # 默认仅监听本机；对外部署时显式改为 0.0.0.0 并配合鉴权
     api_port: int = Field(8000, ge=1, le=65535)  # FastAPI 监听端口

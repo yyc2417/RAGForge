@@ -31,6 +31,7 @@ class SessionMessage(BaseModel):
     content: str
     created_at: str = Field(default_factory=utc_now)
     message_type: MessageType = "answer"
+    original_query: str | None = None
     resolved_query: str | None = None
     sources: list[dict[str, Any]] = Field(default_factory=list)
     trace: list[str] = Field(default_factory=list)

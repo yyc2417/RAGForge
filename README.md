@@ -212,6 +212,12 @@ HTML/DOCX 保留标题层级，CSV/JSONL 按 `text/content` 约定导入，PDF �
 图外 `ConversationService` 把追问 condense 成独立问题；`analyze` 判定歧义时走
 clarify 终止分支，先问清再检索。会话 JSON 落盘，历史回放不重新检索。
 
+### 9. 优质问答归档
+
+点“有用”会把问题、回答和参考来源写成 `library/quality/<message_id>.md`，
+chunk 标记 `source_type=qa_archive`；检索时走加权 RRF 优质通道，相似问题优先召回。
+侧栏可查看并移除归档，移除后重建索引。
+
 ## 项目结构
 
 ## 项目结构

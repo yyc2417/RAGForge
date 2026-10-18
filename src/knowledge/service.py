@@ -20,6 +20,8 @@ from src.ingestion import DocumentParser, EmbeddingService, TextChunker
 from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore
 from src.utils.logger import logger
 
+from .quality import QualityArchive
+
 _SUPPORTED = DocumentParser.SUPPORTED_EXTENSIONS
 
 
@@ -63,6 +65,7 @@ class KnowledgeBaseService:
         self.bm25 = BM25Retriever()
         self.hybrid = HybridRetriever(self.vector_store, self.bm25)
         self.reranker = Reranker()
+        self.quality = QualityArchive(self.library_dir / "quality")
         self._lock = threading.RLock()
         self._chunks: list = []
         self.rebuild()
@@ -75,6 +78,13 @@ class KnowledgeBaseService:
             docs = []
             for directory in self._source_dirs():
                 docs.extend(self.parser.parse_directory(directory))
+            # 优质库路径标记：供 HybridRetriever 的 metadata filter 使用
+            quality_dir = (self.library_dir / "quality").resolve()
+            for doc in docs:
+                source = Path(str(doc.metadata.get("source", ""))).resolve()
+                doc.metadata["source_type"] = (
+                    "qa_archive" if source.is_relative_to(quality_dir) else "document"
+                )
             chunks = self.chunker.split(docs)
             self.vector_store.build_index(chunks)
             self.bm25.build_index(chunks)
@@ -226,6 +236,41 @@ class KnowledgeBaseService:
         self.rebuild()
         logger.info(f"[knowledge] 已移除来源：{resolved}")
         return True
+
+    # ── 优质库 ─────────────────────────────────────────────────────
+    def archive_quality(
+        self,
+        *,
+        message_id: str,
+        question: str,
+        original_query: str,
+        answer: str,
+        sources: list[dict],
+        session_id: str,
+        model: str | None = None,
+    ) -> Path | None:
+        """写入一条优质问答并重建索引。"""
+        path = self.quality.archive(
+            message_id=message_id,
+            question=question,
+            original_query=original_query,
+            answer=answer,
+            sources=sources,
+            session_id=session_id,
+            model=model or settings.deepseek_model,
+        )
+        if path is not None:
+            self.rebuild()
+        return path
+
+    def list_quality(self) -> list[dict]:
+        return self.quality.list()
+
+    def remove_quality(self, message_id: str) -> bool:
+        removed = self.quality.remove(message_id)
+        if removed:
+            self.rebuild()
+        return removed
 
     @property
     def chunks_count(self) -> int:

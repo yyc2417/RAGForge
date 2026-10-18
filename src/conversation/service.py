@@ -46,6 +46,7 @@ class ConversationService:
         session_id: str,
         final_state: dict[str, Any],
         *,
+        original_query: str | None = None,
         resolved_query: str | None = None,
     ) -> SessionMessage:
         """把图最终状态写入 assistant 消息（回答 / 澄清）。"""
@@ -57,6 +58,7 @@ class ConversationService:
             role="assistant",
             content=content,
             message_type=message_type,
+            original_query=original_query,
             resolved_query=resolved_query,
             sources=self.extract_sources(final_state),
             trace=list(final_state.get("messages") or []),
@@ -69,11 +71,20 @@ class ConversationService:
         self.store.append_message(session_id, message)
         return message
 
-    def record_feedback(self, session_id: str, message_id: str, feedback: str) -> bool:
-        """记录赞/踩；返回是否找到并更新。"""
+    def record_feedback(
+        self,
+        session_id: str,
+        message_id: str,
+        feedback: str,
+        *,
+        archived: bool | None = None,
+    ) -> bool:
+        """记录赞/踩；可同时更新 archived 标记。"""
         if feedback not in ("up", "down"):
             return False
-        return self.store.update_feedback(session_id, message_id, feedback) is not None
+        return self.store.update_feedback(
+            session_id, message_id, feedback, archived=archived
+        ) is not None
 
     # ── 多轮查询改写 ───────────────────────────────────────────────
     def prepare_query(self, session_id: str, query: str) -> tuple[str, str | None]:

@@ -31,6 +31,11 @@ class HybridRetriever:
         vector_store: VectorStore,
         bm25: BM25Retriever,
         rrf_k: int | None = None,
+        *,
+        quality_weight: float | None = None,
+        quality_top_k: int | None = None,
+        quality_min_relevance: float | None = None,
+        quality_max_per_source: int | None = None,
     ) -> None:
         """初始化混合检索器。
 
@@ -38,10 +43,30 @@ class HybridRetriever:
             vector_store: 已构建索引的向量检索器
             bm25: 已构建索引的 BM25 检索器
             rrf_k: RRF 平滑常数，默认读 settings.rrf_k
+            quality_weight: 优质通道权重，默认读 settings.quality_weight
+            quality_top_k: 优质通道候选数，默认读 settings.quality_top_k
+            quality_min_relevance: 优质文档最低相关度，默认读 settings.quality_min_relevance
+            quality_max_per_source: 同一优质来源最多计入的 chunk 数
         """
         self._vector = vector_store
         self._bm25 = bm25
         self._rrf_k = rrf_k if rrf_k is not None else settings.rrf_k
+        self._quality_weight = (
+            quality_weight if quality_weight is not None else settings.quality_weight
+        )
+        self._quality_top_k = (
+            quality_top_k if quality_top_k is not None else settings.quality_top_k
+        )
+        self._quality_min_relevance = (
+            quality_min_relevance
+            if quality_min_relevance is not None
+            else settings.quality_min_relevance
+        )
+        self._quality_max_per_source = (
+            quality_max_per_source
+            if quality_max_per_source is not None
+            else settings.quality_max_per_source
+        )
 
     def search(self, query: str, k: int | None = None) -> list[Document]:
         """RRF 融合检索，返回 Top-k 文档。"""
@@ -81,14 +106,44 @@ class HybridRetriever:
             rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (self._rrf_k + rank)
             doc_map[key] = doc
 
+        # 优质通道：只查 qa_archive，按加权 RRF 计入；失败不影响普通 hybrid
+        quality_hits = 0
+        try:
+            q_docs, q_scores = self._vector.search_with_scores(
+                query,
+                k=self._quality_top_k,
+                filter={"source_type": "qa_archive"},
+            )
+        except TypeError:
+            # 兼容未实现 filter 的旧 fake / 旧索引
+            q_docs, q_scores = [], []
+        except Exception as e:  # noqa: BLE001 - 优质通道是增强项，失败降级
+            logger.warning(f"[hybrid] 优质通道检索失败，跳过：{e}")
+            q_docs, q_scores = [], []
+
+        per_source: dict[str, int] = {}
+        for rank, (doc, score) in enumerate(zip(q_docs, q_scores, strict=False), start=1):
+            if score < self._quality_min_relevance:
+                continue
+            source = str(doc.metadata.get("source", "unknown"))
+            if per_source.get(source, 0) >= self._quality_max_per_source:
+                continue
+            per_source[source] = per_source.get(source, 0) + 1
+            key = self._doc_key(doc)
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + self._quality_weight / (
+                self._rrf_k + rank
+            )
+            doc_map[key] = doc
+            quality_hits += 1
+
         # 按 RRF 分数降序取 top-k
         sorted_keys = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)[:k]
         docs = [doc_map[key] for key in sorted_keys]
         scores = [round(rrf_scores[key], 6) for key in sorted_keys]
 
         logger.info(
-            f"[hybrid] RRF 融合：vector={len(v_docs)}, bm25={len(b_docs)} "
-            f"→ top-{k}（rrf_k={self._rrf_k}）"
+            f"[hybrid] RRF 融合：vector={len(v_docs)}, bm25={len(b_docs)}, "
+            f"quality={quality_hits} → top-{k}（rrf_k={self._rrf_k}）"
         )
         return docs, scores
 

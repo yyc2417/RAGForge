@@ -109,13 +109,17 @@ class VectorStore:
         return self._store.similarity_search(query, k=k)
 
     def search_with_scores(
-        self, query: str, k: int | None = None
+        self,
+        query: str,
+        k: int | None = None,
+        filter: dict | None = None,
     ) -> tuple[list[Document], list[float]]:
-        """带相关性分数的检索，供 evaluate 节点诊断使用。
+        """带相关性分数的检索，供 evaluate 与优质通道使用。
 
         Args:
             query: 用户查询文本
             k: 返回数量，默认读 settings.retrieval_k
+            filter: Chroma metadata filter（如 {"source_type": "qa_archive"}）
 
         Returns:
             (documents, scores) 二元组，分数越高越相关（cosine relevance score ∈ [0,1]）
@@ -124,7 +128,9 @@ class VectorStore:
             raise RuntimeError("索引未构建，请先调用 build_index() 或 load_or_build()")
         k = k if k is not None else settings.retrieval_k
         # similarity_search_with_relevance_scores 返回 [(Document, score), ...]
-        results = self._store.similarity_search_with_relevance_scores(query, k=k)
+        results = self._store.similarity_search_with_relevance_scores(
+            query, k=k, filter=filter
+        )
         docs = [doc for doc, _ in results]
         scores = [float(score) for _, score in results]
         return docs, scores

@@ -35,8 +35,8 @@ class VectorStore:
     def count(self) -> int:
         """返回当前 collection 的文档数量。"""
 
-    def search_with_scores(self, query: str, k: int | None = None) -> tuple[list[Document], list[float]]:
-        """返回 cosine relevance score ∈ [0, 1]（显式声明 hnsw:space=cosine）。"""
+    def search_with_scores(self, query: str, k: int | None = None, filter: dict | None = None) -> tuple[list[Document], list[float]]:
+        """返回 cosine relevance score ∈ [0, 1]（显式 cosine）；filter 供优质通道使用。"""
 
     @classmethod
     def load_or_build(cls, documents: list[Document], embedding_service: EmbeddingService,
@@ -78,11 +78,15 @@ Reciprocal Rank Fusion 融合向量 + BM25，无需归一化两路不同尺度�
 
 ```python
 class HybridRetriever:
-    def __init__(self, vector_store: VectorStore, bm25: BM25Retriever, rrf_k: int | None = None) -> None:
-        """注入底层检索器，rrf_k 默认 60。"""
-        
+    def __init__(
+        self, vector_store: VectorStore, bm25: BM25Retriever, rrf_k: int | None = None,
+        *, quality_weight: float | None = None, quality_top_k: int | None = None,
+        quality_min_relevance: float | None = None, quality_max_per_source: int | None = None,
+    ) -> None:
+        """注入底层检索器；rrf_k / 优质通道参数默认读 settings。"""
+
     def search_with_scores(self, query: str, k: int | None = None) -> tuple[list[Document], list[float]]:
-        """RRF 融合：score(d) = Σ_i 1/(rrf_k + rank_i(d))。"""
+        """普通 RRF + 加权优质通道，按融合分取 top-k。"""
         
     @staticmethod
     def _doc_key(doc: Document) -> str:
@@ -95,6 +99,22 @@ class HybridRetriever:
 \]
 
 其中 \(k=60\) 为平滑常数，避免 top-1 过度主导。每路各取 top-2k 候选，融合后按 RRF 分数取 top-k。
+
+**加权优质通道**（ADR-007）：
+
+- 用 `VectorStore.search_with_scores(..., filter={"source_type": "qa_archive"})` 单独查优质库；
+- 按 `quality_weight / (rrf_k + rank)` 追加进融合分；
+- 低于 `quality_min_relevance` 的文档不参与；
+- 同一来源最多 `quality_max_per_source` 个 chunk；
+- BM25 不参与优质通道；
+- 通道失败/为空时自动跳过，不影响普通 hybrid。
+
+```text
+quality_weight = 1.3
+quality_top_k = 3
+quality_min_relevance = 0.3
+quality_max_per_source = 2
+```
 
 ### Reranker：CrossEncoder 重排序
 

@@ -180,7 +180,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（134 用例：130 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（136 用例：132 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，

@@ -74,6 +74,36 @@ def test_ingest_folder_outside_data_is_refused(tmp_path, monkeypatch):
     assert "data/" in result.failed[0][1]
 
 
+def test_ingest_folder_dedup_on_second_import(tmp_path, monkeypatch):
+    kb = _make_service(tmp_path, monkeypatch)
+    import_dir = tmp_path / "data" / "imports" / "policies"
+    import_dir.mkdir(parents=True)
+    (import_dir / "leave.md").write_text("# 请假\n\n提前一天申请。", encoding="utf-8")
+
+    first = kb.ingest_folder(import_dir)
+    second = kb.ingest_folder(import_dir)
+    assert first.added == ["leave.md"]
+    assert second.added == []
+    assert second.skipped
+
+
+def test_quality_archive_and_remove_through_service(tmp_path, monkeypatch):
+    kb = _make_service(tmp_path, monkeypatch)
+    message_id = "12345678-1234-1234-1234-123456789abc"
+    path = kb.archive_quality(
+        message_id=message_id,
+        question="远程办公怎么申请？",
+        original_query="怎么申请？",
+        answer="在团队日历标注并保持在线。",
+        sources=[],
+        session_id="s1",
+    )
+    assert path is not None and path.exists()
+    assert [item["message_id"] for item in kb.list_quality()] == [message_id]
+    assert kb.remove_quality(message_id) is True
+    assert kb.list_quality() == []
+
+
 def test_ingest_files_rejects_limits(tmp_path, monkeypatch):
     kb = _make_service(tmp_path, monkeypatch)
     bad = kb.ingest_files([("bad.exe", b"x")])

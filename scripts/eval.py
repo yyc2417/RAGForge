@@ -1,12 +1,12 @@
 """RAGForge 自动化评估脚本
 
-跑 4 套检索配置，计算召回率、幻觉率、拒答准确率、延迟、token 消耗，输出对比表。
+跑 4 套 RAG 配置，计算召回率、幻觉率、拒答准确率、延迟、token 消耗，输出对比表。
 
-四套配置：
-- baseline：Task 4 线性 RAG（vector-only，无 Agent）
-- agent：Task 5 Agent 状态机（vector/bm25 策略，无混合）
-- hybrid：Task 6 Agent + HybridRetriever（RRF 融合，无 Reranker）
-- reranker：Task 6 Agent + HybridRetriever + Reranker（CrossEncoder 重排序）
+四套配置（固定 hybrid 后的评测矩阵）：
+- baseline：线性 vector RAG（无 Agent）
+- linear_hybrid：线性 hybrid RAG（无 Agent）
+- agent：7 节点 Agent 主链路 + 固定 HybridRetriever（无 Reranker）
+- agent_reranker：7 节点 Agent 主链路 + HybridRetriever + Reranker
 
 数据集分层（对齐业界惯例：RAGAS 题型分布 / SQuAD 式 is_impossible）：
 - 可答题（answerable=true 且有 expected_source）：chunk 级召回判定
@@ -57,7 +57,7 @@ DATA_DIR = CFG_ROOT / settings.data_dir
 DATASET_PATH = PROJECT_ROOT / "tests" / "eval_dataset.json"
 REPORT_PATH = PROJECT_ROOT / "reports" / "eval_report.json"
 RETRIEVAL_REPORT_PATH = PROJECT_ROOT / "reports" / "eval_retrieval_report.json"
-MODES = ["baseline", "agent", "hybrid", "reranker"]
+MODES = ["baseline", "linear_hybrid", "agent", "agent_reranker"]
 EVAL_K = 5  # 评估统一检索数量，与 recall_top5 指标口径一致
 
 
@@ -169,27 +169,24 @@ class Evaluator:
     def _get_pipeline(self, mode: str):
         """按模式惰性构建并缓存执行管道。
 
-        - baseline：返回 (vector_store, llm) 二元组，用 answer() 线性执行
-        - agent/hybrid/reranker：返回编译后的 Agent graph
+        - baseline：返回 (vector_store, llm) 二元组，线性 vector 执行
+        - linear_hybrid：返回 (hybrid, llm) 二元组，线性 hybrid 执行
+        - agent / agent_reranker：返回编译后的 7 节点 Agent graph
         """
         if mode in self._pipelines:
             return self._pipelines[mode]
 
         if mode == "baseline":
-            # 线性 RAG：直接用 vector_store + llm
             pipeline = (self._vector_store, self._ensure_llm())
+        elif mode == "linear_hybrid":
+            pipeline = (HybridRetriever(self._vector_store, self._bm25), self._ensure_llm())
         else:
-            hybrid = None
-            reranker = None
-            if mode in ("hybrid", "reranker"):
-                hybrid = HybridRetriever(self._vector_store, self._bm25)
-            if mode == "reranker":
-                reranker = self._reranker
+            reranker = self._reranker if mode == "agent_reranker" else None
             pipeline = build_agent_graph_from_pipeline(
                 vector_store=self._vector_store,
                 bm25_retriever=self._bm25,
                 llm_client=self._ensure_llm(),
-                hybrid_retriever=hybrid,
+                hybrid_retriever=HybridRetriever(self._vector_store, self._bm25),
                 reranker=reranker,
             )
         self._pipelines[mode] = pipeline
@@ -238,9 +235,9 @@ class Evaluator:
         error: str | None = None
 
         try:
-            if mode == "baseline":
-                vs, llm = self._get_pipeline(mode)
-                docs = vs.search(query, k=EVAL_K)
+            if mode in ("baseline", "linear_hybrid"):
+                retriever, llm = self._get_pipeline(mode)
+                docs = retriever.search(query, k=EVAL_K)
                 retrieved_sources = [
                     _source_filename(getattr(d, "metadata", {}).get("source", ""))
                     for d in docs
@@ -387,6 +384,8 @@ class Evaluator:
             "refusal_accuracy": round(refusal_accuracy, 4),
             "fabrication_rate": round(fabrication_rate, 4),
             "latency_p50_ms": e2e.get("p50", 0.0),
+            "latency_max_ms": e2e.get("max", 0.0),
+            # P95/P99 保留在 JSON 中；45 题规模下 P99 近似最大值，主表改用 P50 + max
             "latency_p95_ms": e2e.get("p95", 0.0),
             "latency_p99_ms": e2e.get("p99", 0.0),
             "avg_token": round(token.get("avg_per_call", 0.0)) if token else 0,
@@ -422,7 +421,7 @@ class Evaluator:
         """用 rich 表格输出对比矩阵。"""
         targets = report["targets"]
         console.print()
-        console.rule("[bold]RAGForge 评估报告 — 4 套检索配置对比[/bold]")
+        console.rule("[bold]RAGForge 评估报告 — 4 套 RAG 配置对比[/bold]")
 
         table = Table(show_lines=True, header_style="bold magenta")
         table.add_column("配置", style="cyan", no_wrap=True)
@@ -430,7 +429,8 @@ class Evaluator:
         table.add_column("MRR@5", justify="right")
         table.add_column("幻觉率(可答)", justify="right")
         table.add_column("拒答准确率", justify="right")
-        table.add_column("P99 延迟(ms)", justify="right")
+        table.add_column("P50 延迟(ms)", justify="right")
+        table.add_column("Max 延迟(ms)", justify="right")
         table.add_column("平均 Token", justify="right")
         table.add_column("错误/未验证", justify="right")
         table.add_column("达标", justify="center")
@@ -440,10 +440,8 @@ class Evaluator:
             mrr_ok = m["mrr_at5"] >= targets["mrr_at5"]
             halluc_ok = m["hallucination_rate"] <= targets["hallucination_rate"]
             refusal_ok = m["refusal_accuracy"] >= targets["refusal_accuracy"]
-            # 无有效样本（延迟为 0）不视为达标
-            p99_ok = 0 < m["latency_p99_ms"] <= targets["latency_p99_ms"]
             token_ok = 0 < m["avg_token"] <= targets["avg_token"]
-            all_ok = recall_ok and mrr_ok and halluc_ok and refusal_ok and p99_ok and token_ok
+            all_ok = recall_ok and mrr_ok and halluc_ok and refusal_ok and token_ok
 
             table.add_row(
                 m["mode"],
@@ -451,7 +449,8 @@ class Evaluator:
                 self._fmt(m["mrr_at5"], mrr_ok, percent=True),
                 self._fmt(m["hallucination_rate"], halluc_ok, percent=True),
                 self._fmt(m["refusal_accuracy"], refusal_ok, percent=True),
-                self._fmt(m["latency_p99_ms"], p99_ok),
+                f'{m.get("latency_p50_ms", 0.0):.0f}',
+                f'{m.get("latency_max_ms", 0.0):.0f}',
                 self._fmt(m["avg_token"], token_ok),
                 f"{m.get('errors', 0)}/{m.get('unverified', 0)}",
                 "[green]V[/green]" if all_ok else "[yellow]~[/yellow]",
@@ -459,7 +458,8 @@ class Evaluator:
 
         console.print(table)
         console.print(
-            "[dim]图例：V 全指标达标 | ~ 部分达标；幻觉率=可答题不忠实占比，"
+            "[dim]图例：V 质量指标全达标 | ~ 部分达标；延迟为 P50 + max 观测值，"
+            "样本小不参与达标判定；幻觉率=可答题不忠实占比，"
             "拒答准确率=不可答题诚实拒答占比，编造率见 JSON 报告[/dim]"
         )
 

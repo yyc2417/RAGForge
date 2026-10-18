@@ -1,0 +1,41 @@
+{
+  "dataset": "tests\\eval_dataset_multiformat.json",
+  "dataset_hash": "5846bc120a9cce7c",
+  "corpus_dir": "data\\demo",
+  "samples": 45,
+  "modes": [
+    {
+      "mode": "vector",
+      "hit_any": 0.8,
+      "hit_all": 0.8,
+      "mrr_any": 0.61,
+      "hit_any_count": 36,
+      "hit_all_count": 36
+    },
+    {
+      "mode": "bm25",
+      "hit_any": 0.9333333333333333,
+      "hit_all": 0.9111111111111111,
+      "mrr_any": 0.8740740740740741,
+      "hit_any_count": 42,
+      "hit_all_count": 41
+    },
+    {
+      "mode": "hybrid",
+      "hit_any": 0.9111111111111111,
+      "hit_all": 0.8888888888888888,
+      "mrr_any": 0.7685185185185184,
+      "hit_any_count": 41,
+      "hit_all_count": 40
+    },
+    {
+      "mode": "reranker",
+      "hit_any": 0.9333333333333333,
+      "hit_all": 0.9111111111111111,
+      "mrr_any": 0.9222222222222223,
+      "hit_any_count": 42,
+      "hit_all_count": 41
+    }
+  ],
+  "elapsed_ms": 67556.7
+}

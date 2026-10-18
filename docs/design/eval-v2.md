@@ -112,7 +112,9 @@ uv run python scripts/eval_interaction.py --mode both --limit 5
 uv run python scripts/eval.py --rebuild
 ```
 
-## 7. CRUD-RAG Read 基线（2026-10-18）
+## 7. 离线检索基线（2026-10-18）
+
+### CRUD-RAG Read
 
 120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CPU embedding
 （all-MiniLM-L6-v2），独立评测索引，不调 LLM：
@@ -129,10 +131,24 @@ uv run python scripts/eval.py --rebuild
 89.2%。报告：`reports/eval_v2_crud_read_report.json`（dataset_hash
 `2b087ab38af08ad2`）。
 
+### 多格式自定义集
+
+45 题覆盖 8 个 demo 文件、7 种格式，含 4 道多跳、10 道跨语言样本：
+
+| 模式 | hit_any | hit_all | MRR_any |
+|------|---:|---:|---:|
+| vector | 80.0% | 80.0% | 61.0% |
+| bm25 | 93.3% | 91.1% | 87.4% |
+| hybrid | 91.1% | 88.9% | 76.9% |
+| reranker | 93.3% | 91.1% | 92.2% |
+
+剩余未命中集中在中文 query 检索英文 PDF/DOCX；格式解析本身正常。
+报告：`reports/eval_v2_multiformat_report.json`。
+
 ## 8. 待办
 
 - RGB 噪声/拒答/反事实子集适配；
-- CRUD-RAG 端到端生成评测与结果报表；
+- CRUD-RAG / 多格式集端到端生成评测与结果报表；
 - 多轮 / clarify 真实 LLM 跑分（数据与 `eval_interaction.py` 已就绪）；
 - 评测 v2 端到端矩阵与 README 报表；
 - 本地 + API 双跑。

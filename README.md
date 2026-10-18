@@ -146,6 +146,8 @@ uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
 uv run python scripts/import_crud_rag.py --limit 120                    # CRUD-RAG Read → 本地评测集
+uv run python scripts/eval_v2.py --dataset tests/eval_dataset_multiformat.json \
+  --corpus-dir data/demo --rebuild --report reports/eval_v2_multiformat_report.json
 uv run python scripts/eval_interaction.py --mode both --limit 5          # clarify / 多轮交互（需 LLM）
 # 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json / eval_interaction_report.json
 ```
@@ -177,7 +179,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（130 用例：126 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（131 用例：127 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -326,6 +328,7 @@ RAGForge/
 │   ├── test_ui.py             #   事件蒸馏 + 逐轮归集 + HTML 装配测试（离线）
 │   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
 │   ├── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
+│   ├── eval_dataset_multiformat.json  # 多格式集（45 题，8 文件 / 7 格式）
 │   ├── eval_clarify.json      #   clarify 判定用例
 │   └── eval_multiturn.json    #   多轮会话用例
 ├── scripts/
@@ -404,6 +407,19 @@ RAGForge/
 
 向量单路在中文公开集上明显偏弱，与“英文 embedding + 中文语料”的判断一致；BM25 兜底后 hit_any 接近饱和。RRF 只把 top-10 候选交给精排，多跳 `hit_all` 会从 BM25 的 90.0% 降到 65.8%，reranker 精排后恢复到 89.2%。明细见 `reports/eval_v2_crud_read_report.json`。
 
+### 多格式自定义集检索基线
+
+45 题覆盖 8 个 demo 文件、7 种格式（MD/TXT/CSV/JSONL/HTML/PDF/DOCX），含 4 道多跳、10 道中文 query 检索英文 PDF/DOCX 的跨语言样本；文档级 top-5，离线：
+
+| 模式 | hit_any | hit_all | MRR_any |
+|------|---:|---:|---:|
+| vector | 80.0% | 80.0% | 61.0% |
+| bm25 | 93.3% | 91.1% | 87.4% |
+| hybrid | 91.1% | 88.9% | 76.9% |
+| reranker | 93.3% | 91.1% | 92.2% |
+
+剩余未命中集中在“中文问题 → 英文 PDF/DOCX”的跨语言检索，格式解析本身正常；reranker 把 MRR 从 76.9% 拉回 92.2%。明细见 `reports/eval_v2_multiformat_report.json`。
+
 ## 未来工作
 
 - **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，评估显示
@@ -415,6 +431,8 @@ RAGForge/
 - **评测 v2 公开集**：CRUD-RAG Read 120 题已导入并完成离线检索基线
   （见上表，报告 `reports/eval_v2_crud_read_report.json`）；RGB 子集尚未接入。
   冻结 test 后跑本地与 API 双基线。
+- **多格式集与跨语言检索**：45 题多格式集已建（`tests/eval_dataset_multiformat.json`），
+  剩余失败集中在中文 query 检索英文 PDF/DOCX；换多语 embedding 后复测。
 - **多轮 / clarify 跑分**：数据集与脚本已建（`tests/eval_multiturn.json` /
   `tests/eval_clarify.json` + `scripts/eval_interaction.py`），真实 LLM 跑分与
   报表待本地 / API 双跑阶段补齐。

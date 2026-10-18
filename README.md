@@ -77,6 +77,9 @@ flowchart TD
 uv sync
 ```
 
+> 默认 `RAGFORGE_HF_OFFLINE=1`，使用已缓存的 embedding / reranker 模型启动；
+> 首次下载模型时设置 `RAGFORGE_HF_OFFLINE=0`（或 `HF_HUB_OFFLINE=0`）。
+
 ### 2. 配置环境变量
 
 ```bash

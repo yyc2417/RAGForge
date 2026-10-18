@@ -1,5 +1,6 @@
 """Embedding 生成与索引构建（线程安全单例）"""
 
+import os
 import threading
 
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -32,11 +33,23 @@ class EmbeddingService:
                 encode_kwargs = {"batch_size": settings.embedding_batch_size}
                 if settings.embedding_normalize:
                     encode_kwargs["normalize_embeddings"] = True
-                instance._model = HuggingFaceEmbeddings(
-                    model_name=instance._model_name,
-                    model_kwargs=model_kwargs,
-                    encode_kwargs=encode_kwargs,
-                )
+                try:
+                    instance._model = HuggingFaceEmbeddings(
+                        model_name=instance._model_name,
+                        model_kwargs=model_kwargs,
+                        encode_kwargs=encode_kwargs,
+                    )
+                except Exception as e:  # noqa: BLE001 - 网络异常时回退本地缓存
+                    logger.warning(
+                        f"[embedder] 在线加载失败，改用本地缓存重试：{type(e).__name__}: {e}"
+                    )
+                    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+                    instance._model = HuggingFaceEmbeddings(
+                        model_name=instance._model_name,
+                        model_kwargs=model_kwargs,
+                        encode_kwargs=encode_kwargs,
+                    )
                 logger.info("[embedder] 模型加载完成")
                 cls._instance = instance
             elif model_name and model_name != cls._instance._model_name:

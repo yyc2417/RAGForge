@@ -95,8 +95,8 @@ def validate_dataset(items: list[EvalItem], corpus_dir: Path | str | None = None
         if item.expected_behavior == "answer":
             if not item.expected_sources:
                 errors.append(f"{label}: 可答题缺少 expected_sources")
-            if not item.gold_keywords:
-                errors.append(f"{label}: 可答题缺少 gold_keywords")
+            if not item.gold_keywords and not item.reference_answer:
+                errors.append(f"{label}: 可答题缺少 gold_keywords 或 reference_answer")
         if item.expected_behavior in ("refuse", "chitchat") and item.expected_sources:
             errors.append(f"{label}: {item.expected_behavior} 样本不应带 expected_sources")
 

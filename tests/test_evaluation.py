@@ -38,6 +38,18 @@ def test_validate_dataset_catches_duplicates_and_missing_labels(tmp_path):
     assert "不应带 expected_sources" in text
 
 
+def test_validate_dataset_allows_reference_answer_without_keywords():
+    item = EvalItem(
+        query="公开集问题",
+        expected_source="doc.txt",
+        reference_answer="参考回答",
+        tags=["public_adapter"],
+    )
+    assert validate_dataset([item]) == []
+    errors = validate_dataset([EvalItem(query="两者都缺", expected_source="doc.txt")])
+    assert len(errors) == 1 and "缺少 gold_keywords 或 reference_answer" in errors[0]
+
+
 def test_validate_dataset_checks_corpus_sources(tmp_path):
     (tmp_path / "a.md").write_text("# A", encoding="utf-8")
     items = [
@@ -58,6 +70,48 @@ def test_multiturn_and_clarify_fixtures():
     assert all("resolved_query" in turn for conv in multiturn for turn in conv["turns"])
     assert len(clarify) >= 8
     assert all(item["expected_behavior"] == "clarify" for item in clarify)
+
+
+def test_crud_rag_read_import(tmp_path):
+    from scripts.import_crud_rag import build_dataset, extract_news
+
+    data = {
+        "questanswer_1doc": [
+            {"questions": "q1", "answers": "a1", "news1": "共享文档"},
+        ],
+        "questanswer_2docs": [
+            {"questions": "q2", "answers": "a2", "news1": "共享文档", "news2": "文档二"},
+        ],
+        "questanswer_3docs": [
+            {
+                "questions": "q3",
+                "answers": "a3",
+                "news1": "文档一",
+                "news2": "文档二",
+                "news3": "文档三",
+            }
+        ],
+    }
+    items, corpus = build_dataset(
+        data,
+        quotas={
+            "questanswer_1doc": 1,
+            "questanswer_2docs": 1,
+            "questanswer_3docs": 1,
+        },
+    )
+    assert len(items) == 3
+    assert len(corpus) == 4  # 共享文档按内容去重
+    assert extract_news(data["questanswer_3docs"][0]) == ["文档一", "文档二", "文档三"]
+    assert items[0].reference_answer == "a1"
+    assert items[0].id.startswith("crud-questanswer_1doc-")
+    assert items[0].query_type == "factual"
+    assert items[1].query_type == "complex"
+    assert [len(item.expected_sources) for item in items] == [1, 2, 3]
+
+    for name, text in corpus.items():
+        (tmp_path / name).write_text(text, encoding="utf-8")
+    assert validate_dataset(items, corpus_dir=tmp_path) == []
 
 
 def test_dataset_hash_stable():

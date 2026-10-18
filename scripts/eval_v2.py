@@ -54,6 +54,7 @@ def main() -> None:
     parser.add_argument("--dataset", default=str(PROJECT_ROOT / "tests" / "eval_dataset.json"))
     parser.add_argument("--corpus-dir", default=None)
     parser.add_argument("--rebuild", action="store_true")
+    parser.add_argument("--report", type=Path, default=REPORT_PATH)
     args = parser.parse_args()
 
     dataset_path = Path(args.dataset)
@@ -137,9 +138,9 @@ def main() -> None:
         )
 
     report["elapsed_ms"] = round((time.perf_counter() - t0) * 1000, 1)
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"报告已保存：{REPORT_PATH}")
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"报告已保存：{args.report}")
 
 
 if __name__ == "__main__":

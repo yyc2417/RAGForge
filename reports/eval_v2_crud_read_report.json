@@ -1,0 +1,41 @@
+{
+  "dataset": "data\\public_eval\\crud_read_eval.json",
+  "dataset_hash": "2b087ab38af08ad2",
+  "corpus_dir": "data\\public_eval\\crud_corpus",
+  "samples": 120,
+  "modes": [
+    {
+      "mode": "vector",
+      "hit_any": 0.6,
+      "hit_all": 0.3,
+      "mrr_any": 0.5047222222222222,
+      "hit_any_count": 72,
+      "hit_all_count": 36
+    },
+    {
+      "mode": "bm25",
+      "hit_any": 0.9916666666666667,
+      "hit_all": 0.9,
+      "mrr_any": 0.9694444444444444,
+      "hit_any_count": 119,
+      "hit_all_count": 108
+    },
+    {
+      "mode": "hybrid",
+      "hit_any": 0.9916666666666667,
+      "hit_all": 0.6583333333333333,
+      "mrr_any": 0.804861111111111,
+      "hit_any_count": 119,
+      "hit_all_count": 79
+    },
+    {
+      "mode": "reranker",
+      "hit_any": 0.9916666666666667,
+      "hit_all": 0.8916666666666667,
+      "mrr_any": 0.9791666666666666,
+      "hit_any_count": 119,
+      "hit_all_count": 107
+    }
+  ],
+  "elapsed_ms": 377115.2
+}

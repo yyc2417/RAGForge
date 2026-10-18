@@ -145,6 +145,7 @@ uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM
 uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
+uv run python scripts/import_crud_rag.py --limit 120                    # CRUD-RAG Read → 本地评测集
 uv run python scripts/eval_interaction.py --mode both --limit 5          # clarify / 多轮交互（需 LLM）
 # 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json / eval_interaction_report.json
 ```
@@ -176,7 +177,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（128 用例：124 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（130 用例：126 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -331,6 +332,7 @@ RAGForge/
 │   ├── eval.py                # 4 套端到端对比（全量 LLM）
 │   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
 │   ├── eval_interaction.py    # clarify / 多轮交互评测（需 LLM）
+│   ├── import_crud_rag.py     # CRUD-RAG Read → 本地评测集与语料
 │   ├── validate_eval_dataset.py  # schema / 标签 / 来源校验
 │   ├── adapt_public_eval.py   # 公开集字段映射 → 评测 v2 schema
 │   └── promote_hard_cases.py  # 难例候选半自动晋升
@@ -389,6 +391,19 @@ RAGForge/
 
 **延迟**：Agent 模式 P50 约 15s（多轮 LLM 调用），P99 长尾 27~33s；较旧基线（Agent P99 47.5s）大幅下降。优化方向：调低 `max_iterations`、缓存、流式输出。
 
+### 公开集检索基线（CRUD-RAG Read）
+
+120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，离线 CPU embedding（all-MiniLM-L6-v2），独立评测索引，不调用 LLM：
+
+| 模式 | hit_any | hit_all | MRR_any |
+|------|---:|---:|---:|
+| vector | 60.0% | 30.0% | 50.5% |
+| bm25 | 99.2% | 90.0% | 96.9% |
+| hybrid | 99.2% | 65.8% | 80.5% |
+| reranker | 99.2% | 89.2% | 97.9% |
+
+向量单路在中文公开集上明显偏弱，与“英文 embedding + 中文语料”的判断一致；BM25 兜底后 hit_any 接近饱和。RRF 只把 top-10 候选交给精排，多跳 `hit_all` 会从 BM25 的 90.0% 降到 65.8%，reranker 精排后恢复到 89.2%。明细见 `reports/eval_v2_crud_read_report.json`。
+
 ## 未来工作
 
 - **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，评估显示
@@ -397,8 +412,9 @@ RAGForge/
 - **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
   （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
-- **评测 v2 公开集**：用 `adapt_public_eval.py` 接入 CRUD-RAG Read / RGB 子集，
-  冻结 dev/test 后跑本地与 API 双基线；当前 schema/validator/检索 harness 已就绪。
+- **评测 v2 公开集**：CRUD-RAG Read 120 题已导入并完成离线检索基线
+  （见上表，报告 `reports/eval_v2_crud_read_report.json`）；RGB 子集尚未接入。
+  冻结 test 后跑本地与 API 双基线。
 - **多轮 / clarify 跑分**：数据集与脚本已建（`tests/eval_multiturn.json` /
   `tests/eval_clarify.json` + `scripts/eval_interaction.py`），真实 LLM 跑分与
   报表待本地 / API 双跑阶段补齐。

@@ -1,6 +1,6 @@
 # 评测 v2 · 设计
 
-> 状态：统一 schema、校验器、检索层基线已实现；CRUD-RAG/RGB 适配与全量 LLM 双跑待执行。
+> 状态：统一 schema、校验器、检索层基线、CRUD-RAG Read 120 题与离线基线已实现；RGB 适配与全量 LLM 双跑待执行。
 
 ## 1. 目标
 
@@ -30,6 +30,8 @@
 
 - `expected_behavior`：answer / refuse / clarify / chitchat；
 - `expected_sources`：支持多跳（列表）；
+- `gold_keywords` 与 `reference_answer` 二选一即可：自定义集用关键词判召回，
+  公开集（如 CRUD-RAG）通常只有参考答案，校验器接受 `reference_answer` 兜底；
 - `evidence`：可选，保留 chunk/page/span 级信息；
 - `split`：dev / test；
 - 兼容旧字段 `expected_source`，加载时自动转成列表。
@@ -88,9 +90,16 @@ uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample
 # 公开数据字段映射（CRUD-RAG / RGB / MultiHop-RAG 等）
 uv run python scripts/adapt_public_eval.py \
   --input data/public_eval/crud_rag_read.jsonl \
-  --output tests/eval_dataset_public.json \
+  --output data/public_eval/crud_read_eval.json \
   --query-field question --answer-field answer \
   --source-field doc_id --keywords-field keywords --split test
+
+# CRUD-RAG 官方 split → Read 子集（120 题，含本地语料）
+uv run python scripts/import_crud_rag.py --limit 120
+uv run python scripts/eval_v2.py \
+  --dataset data/public_eval/crud_read_eval.json \
+  --corpus-dir data/public_eval/crud_corpus \
+  --report reports/eval_v2_crud_read_report.json
 
 # 检索层 v2 基线
 uv run python scripts/eval_v2.py --dataset tests/eval_dataset.json --corpus-dir data/sample
@@ -103,10 +112,27 @@ uv run python scripts/eval_interaction.py --mode both --limit 5
 uv run python scripts/eval.py --rebuild
 ```
 
-## 7. 待办
+## 7. CRUD-RAG Read 基线（2026-10-18）
 
-- CRUD-RAG Read adapter 与 100–200 题子集；
-- RGB noise/rejection/integration/counterfactual adapter；
+120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CPU embedding
+（all-MiniLM-L6-v2），独立评测索引，不调 LLM：
+
+| 模式 | hit_any | hit_all | MRR_any |
+|------|---:|---:|---:|
+| vector | 60.0% | 30.0% | 50.5% |
+| bm25 | 99.2% | 90.0% | 96.9% |
+| hybrid | 99.2% | 65.8% | 80.5% |
+| reranker | 99.2% | 89.2% | 97.9% |
+
+解读：英文 embedding 在中文公开集上向量单路明显偏弱；BM25 兜底后 hit_any
+接近饱和。hybrid 的 top-10 候选池压缩了多跳 hit_all，reranker 精排可恢复到
+89.2%。报告：`reports/eval_v2_crud_read_report.json`（dataset_hash
+`2b087ab38af08ad2`）。
+
+## 8. 待办
+
+- RGB 噪声/拒答/反事实子集适配；
+- CRUD-RAG 端到端生成评测与结果报表；
 - 多轮 / clarify 真实 LLM 跑分（数据与 `eval_interaction.py` 已就绪）；
 - 评测 v2 端到端矩阵与 README 报表；
 - 本地 + API 双跑。

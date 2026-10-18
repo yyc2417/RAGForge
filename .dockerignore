@@ -5,6 +5,7 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .qoder
+.qoder-credits
 .workbuddy
 .zcode
 logs
@@ -14,8 +15,10 @@ data/library
 data/sessions
 data/feedback
 data/public_eval
+docs/planning
 reports/code_review_report.md
 screenshot_*.png
 .env
 .env.example
 项目记忆.md
+RAGForge-升级补全方案.md

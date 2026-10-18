@@ -137,6 +137,9 @@ docker run --rm -p 8000:8000 --env-file .env \
   -v "$PWD/chroma_db:/app/chroma_db" ragforge
 ```
 
+镜像构建时预取默认 embedding 模型（`all-MiniLM-L6-v2`）；reranker 模型不内置，
+运行时不可用会按既有降级逻辑继续用 hybrid。本机无 Docker CLI，镜像尚未实机构建验证。
+
 ### 5. 运行评估
 
 ```bash

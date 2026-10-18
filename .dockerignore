@@ -16,7 +16,7 @@ data/sessions
 data/feedback
 data/public_eval
 docs/planning
-reports/code_review_report.md
+reports
 screenshot_*.png
 .env
 .env.example

@@ -150,9 +150,9 @@ docker run --rm -p 8000:8000 --env-file .env \
 ```
 
 镜像构建时预取默认 embedding 模型（`all-MiniLM-L6-v2`），并强制 CPU 版
-PyTorch（`UV_TORCH_BACKEND=cpu`）避免容器带入数 GB CUDA 依赖；reranker 模型
-不内置，运行时不可用会按既有降级逻辑继续用 hybrid。本机无 Docker CLI，镜像
-尚未实机构建验证。
+PyTorch（跳过 CUDA 依赖）控制镜像体积；reranker 模型不内置，运行时不可用会按
+既有降级逻辑继续用 hybrid。已在 Docker Desktop 29.8 实测：镜像约 2.38GB，
+容器健康检查通过，`/chat` 调用本地模型返回 200。
 
 ### 5. 运行评估
 

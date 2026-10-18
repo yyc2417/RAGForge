@@ -45,18 +45,26 @@ _ENUM_ALIASES: dict[str, str] = {
     "指代不明": "missing_slot",
     "缺少指代": "missing_slot",
     "missing_entity": "missing_slot",
+    "missing_entities": "missing_slot",
+    "missing_object": "missing_slot",
     "missing_reference": "missing_slot",
     "missing_slot_value": "missing_slot",
     "missing_key_slot": "missing_slot",
     "missing_information": "missing_slot",
     "missing_detail": "missing_slot",
     "missing_context": "missing_slot",
+    "pronoun_reference": "missing_slot",
+    "pronoun": "missing_slot",
+    "unspecified_reference": "missing_slot",
+    "under_specified": "missing_slot",
     "underspecified": "missing_slot",
     "ambiguous_reference": "missing_slot",
     "多解释": "multiple_interpretations",
     "多种解释": "multiple_interpretations",
     "歧义": "multiple_interpretations",
     "multiple_interpretation": "multiple_interpretations",
+    "unspecified_entities": "multiple_interpretations",
+    "ambiguous_entities": "multiple_interpretations",
     "ambiguous": "multiple_interpretations",
     "ambiguity": "multiple_interpretations",
     "约束冲突": "conflicting_constraints",
@@ -106,12 +114,17 @@ def _normalize_enum(value: object) -> object:
     """归一化 LLM 输出的枚举值：strip + lower + 中文变体映射。"""
     if isinstance(value, str):
         value = value.strip().lower()
+        if value in {"", "none", "null", "n/a", "not_applicable", "无"}:
+            return None
         value = _ENUM_ALIASES.get(value, value)
     return value
 
 
 NormalizedQueryType = Annotated[QueryType, BeforeValidator(_normalize_enum)]
 NormalizedAmbiguityType = Annotated[AmbiguityType, BeforeValidator(_normalize_enum)]
+OptionalAmbiguityType = Annotated[
+    AmbiguityType | None, BeforeValidator(_normalize_enum)
+]
 NormalizedFailureMode = Annotated[FailureMode, BeforeValidator(_normalize_enum)]
 NormalizedSuggestedAction = Annotated[SuggestedAction, BeforeValidator(_normalize_enum)]
 NormalizedRewriteStrategy = Annotated[RewriteStrategy, BeforeValidator(_normalize_enum)]
@@ -130,7 +143,7 @@ class AnalyzeResult(BaseModel):
         default=False,
         description="是否需要先向用户澄清（缺槽位 / 多解释 / 约束冲突）",
     )
-    ambiguity_type: NormalizedAmbiguityType | None = Field(
+    ambiguity_type: OptionalAmbiguityType = Field(
         default=None,
         description=(
             "歧义类型：missing_slot(缺槽位) / "

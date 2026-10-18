@@ -46,6 +46,14 @@ def test_schema_aliases_for_local_model_variants():
     assert analyze.query_type == "factual"
     assert analyze.ambiguity_type == "missing_slot"
 
+    no_ambiguity = AnalyzeResult.model_validate({
+        "query_type": "factual",
+        "needs_retrieval": True,
+        "needs_clarification": False,
+        "ambiguity_type": "",
+    })
+    assert no_ambiguity.ambiguity_type is None
+
     evaluate = EvaluateResult.model_validate({
         "failure_mode": "insufficient",
         "suggested_action": "continue",

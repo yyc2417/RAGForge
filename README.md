@@ -96,6 +96,8 @@ DEEPSEEK_API_KEY=local
 ```
 
 结构化输出会校验并归一化常见枚举变体；本地模型若输出未知枚举，会重试一次后降级。
+本地大模型单次调用较慢时，可同时调高 `API_REQUEST_TIMEOUT`（如 300）与
+`LLM_TIMEOUT`（如 180），避免 `/chat` 在生成阶段触发 504。
 
 ### 3. 运行
 
@@ -147,8 +149,10 @@ docker run --rm -p 8000:8000 --env-file .env \
   -v "$PWD/chroma_db:/app/chroma_db" ragforge
 ```
 
-镜像构建时预取默认 embedding 模型（`all-MiniLM-L6-v2`）；reranker 模型不内置，
-运行时不可用会按既有降级逻辑继续用 hybrid。本机无 Docker CLI，镜像尚未实机构建验证。
+镜像构建时预取默认 embedding 模型（`all-MiniLM-L6-v2`），并强制 CPU 版
+PyTorch（`UV_TORCH_BACKEND=cpu`）避免容器带入数 GB CUDA 依赖；reranker 模型
+不内置，运行时不可用会按既有降级逻辑继续用 hybrid。本机无 Docker CLI，镜像
+尚未实机构建验证。
 
 ### 5. 运行评估
 

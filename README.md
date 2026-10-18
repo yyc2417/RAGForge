@@ -250,9 +250,8 @@ chunk 标记 `source_type=qa_archive`；检索时走加权 RRF 优质通道，�
 `promote_hard_cases.py` 在补齐 `answerable / expected_source / gold_keywords`
 后把候选晋升到独立 hard 数据集；不自动污染冻结的 v1 45 题。
 评测 v2 统一 schema 支持 `expected_sources / evidence / expected_behavior`，
-`validate_eval_dataset.py` 校验标签与来源，`eval_v2.py` 跑离线检索基线。
-
-## 项目结构
+`validate_eval_dataset.py` 校验标签与来源，`eval_v2.py` 跑离线检索基线；
+clarify 判定与多轮命中率由 `eval_interaction.py` 评测。
 
 ## 项目结构
 
@@ -264,7 +263,7 @@ RAGForge/
 │   ├── pipeline.py            # Agent 管道构建与执行（从 main.py 拆分）
 │   ├── cli.py                 # CLI / Server 启动模式（从 main.py 拆分）
 │   ├── ingestion/             # Task 2：文档处理层
-│   │   ├── parser.py          #   DocumentParser（MD/PDF 策略模式）
+│   │   ├── parser.py          #   DocumentParser（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
 │   │   ├── chunker.py         #   TextChunker（token 预算切分 + 标题上下文）
 │   │   └── embedder.py        #   EmbeddingService（线程安全单例）
 │   ├── retrieval/             # Task 3/6：检索层
@@ -274,7 +273,7 @@ RAGForge/
 │   │   └── reranker.py        #   Reranker（CrossEncoder 优雅降级）
 │   ├── generation/            # Task 4/5：生成层
 │   │   ├── llm_client.py      #   LLMClient（tenacity 重试 + 结构化输出）
-│   │   ├── prompts.py         #   PromptManager（6 个 Prompt 模板）
+│   │   ├── prompts.py         #   PromptManager（7 个 Prompt 模板）
 │   │   └── schemas.py         #   结构化输出 Pydantic schema
 │   ├── conversation/          # 会话层：JSON 会话、多轮 condense、反馈
 │   │   ├── models.py          #   Session / SessionMessage
@@ -288,9 +287,9 @@ RAGForge/
 │   │   └── schema.py          #   EvalItem / validate_dataset / dataset_hash
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
-│   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + 条件边）
-│   │   └── nodes/             #   7 个节点实现
-│   │       ├── analyze.py / decide.py
+│   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + clarify 终止分支）
+│   │   └── nodes/             #   8 个节点实现
+│   │       ├── analyze.py / decide.py / clarify.py
 │   │       ├── retrieve.py / evaluate.py
 │   │       ├── reformulate.py
 │   │       └── generate.py / verify.py
@@ -298,14 +297,17 @@ RAGForge/
 │   │   ├── app.py             #   应用工厂 + lifespan 启动预热 + CORS
 │   │   ├── routes.py          #   /health /chat(async) /chat/stream(SSE)
 │   │   ├── schemas.py         #   请求/响应 Pydantic 模型
+│   │   ├── middleware.py      #   请求 ID / 可选 API Key / 限流
+│   │   ├── request_context.py #   request_id ContextVar
 │   │   └── dependencies.py    #   graph 注入（lifespan 预热，未就绪 503）
 │   ├── ui/                    # 可视化演示（可选依赖 streamlit）
 │   │   ├── event_view.py      #   astream_events 事件流蒸馏器 + 逐轮归集（纯逻辑，可单测）
 │   │   ├── html_view.py       #   EventView → HTML 片段装配：字段释义 / 样式表（纯逻辑，可单测）
-│   │   └── streamlit_app.py   #   界面入口（占位符写入 + 侧边栏说明）
+│   │   └── streamlit_app.py   #   聊天式界面：会话历史 / 上传 / 反馈 / 来源面板
 │   └── utils/
 │       ├── logger.py          #   loguru 双输出（多 worker 安全）
-│       └── metrics.py         #   MetricsCollector（请求级实例 + ContextVar 注入）
+│       ├── metrics.py         #   MetricsCollector（请求级实例 + ContextVar 注入）
+│       └── token_budget.py    #   上下文 token 预算
 ├── tests/
 │   ├── conftest.py            #   共享 fixtures（临时 Chroma 目录 / Fake 工厂）
 │   ├── fakes.py               #   FakeLLM / FakeRetriever（无网络测试组件）
@@ -317,11 +319,14 @@ RAGForge/
 │   ├── test_quality.py        #   优质库归档 / 加权通道测试（离线）
 │   ├── test_feedback.py       #   难例池 / 晋升测试（离线）
 │   ├── test_evaluation.py     #   评测 v2 schema / 校验测试（离线）
+│   ├── test_api.py            #   鉴权 / 限流 / 超时 / request_id 测试（离线）
 │   ├── test_stage1.py         #   结构与管道构建测试（离线）
 │   ├── test_token_budget.py   #   上下文 token 预算测试（离线）
 │   ├── test_ui.py             #   事件蒸馏 + 逐轮归集 + HTML 装配测试（离线）
 │   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
-│   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
+│   ├── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
+│   ├── eval_clarify.json      #   clarify 判定用例
+│   └── eval_multiturn.json    #   多轮会话用例
 ├── scripts/
 │   ├── eval.py                # 4 套端到端对比（全量 LLM）
 │   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
@@ -330,12 +335,14 @@ RAGForge/
 │   ├── adapt_public_eval.py   # 公开集字段映射 → 评测 v2 schema
 │   └── promote_hard_cases.py  # 难例候选半自动晋升
 ├── data/sample/               # 旧评测/测试语料（8 个 md）
-├── data/demo/                 # 多格式通用 demo（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
+├── data/demo/                 # 多格式通用 demo（8 篇：MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
 ├── data/library/              # 运行时上传与后续优质库（gitignore）
 ├── data/sessions/             # 会话 JSON（运行时生成，gitignore）
 ├── docs/
-│   ├── adr/                   # 架构决策记录（6 篇 ADR）
-│   ├── modules/               # 模块设计文档（5 篇）
+│   ├── adr/                   # 架构决策记录（8 篇 ADR）
+│   ├── modules/               # 模块设计文档（7 篇）
+│   ├── design/                # 交互与评测设计（2 篇）
+│   ├── reference/             # 格式支持 / 优质库格式（2 篇）
 │   ├── learning/              # 学习笔记（8 篇，按 Task 拆分）
 │   └── planning/              # 规划文档（.gitignore 排除，不提交）
 ├── Dockerfile / .dockerignore # 容器化启动

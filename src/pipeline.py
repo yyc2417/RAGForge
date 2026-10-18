@@ -1,49 +1,54 @@
 """Agent 管道构建与执行
 
-封装完整的 Agent 状态机管道构建（含混合检索）和执行逻辑。
-从 main.py 迁出，使 main.py 保持精简。
+封装完整的 Agent 状态机管道构建（含运行时知识库）和执行逻辑。
+- build_agent_runtime()：返回 graph + KnowledgeBaseService，供 UI/API 入库后重建索引；
+- build_agent_pipeline()：向后兼容，只返回 graph。
 """
 
 import time
+from dataclasses import dataclass
 
 from langgraph.graph.state import CompiledStateGraph
 
 from src.agent import build_agent_graph_from_pipeline, initial_state
-from src.config import PROJECT_ROOT, settings
 from src.generation.llm_client import LLMClient
-from src.ingestion import DocumentParser, EmbeddingService, TextChunker
-from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore
+from src.knowledge import KnowledgeBaseService
 from src.utils.logger import logger
 from src.utils.metrics import MetricsCollector, reset_current_collector, set_current_collector
 
-DATA_DIR = PROJECT_ROOT / settings.data_dir
+
+@dataclass
+class AgentRuntime:
+    """图 + 知识库服务；二者共享同一批 retriever 对象。"""
+
+    graph: CompiledStateGraph
+    knowledge_base: KnowledgeBaseService
+
+
+def build_agent_runtime() -> AgentRuntime:
+    """构建完整运行时：知识库索引 + 7 主链路 + clarify 分支。"""
+    kb = KnowledgeBaseService()
+    llm = LLMClient()
+    graph = build_agent_graph_from_pipeline(
+        kb.vector_store,
+        kb.bm25,
+        llm,
+        kb.hybrid,
+        kb.reranker,
+    )
+    logger.info(
+        f"[pipeline] Agent 运行时就绪（固定 hybrid，chunks={kb.chunks_count}）"
+    )
+    return AgentRuntime(graph=graph, knowledge_base=kb)
 
 
 def build_agent_pipeline() -> CompiledStateGraph:
-    """构建完整 Agent 状态机管道：ingestion → retrieval(vector+bm25+hybrid) → agent graph。"""
-    parser = DocumentParser()
-    docs = parser.parse_directory(DATA_DIR)
-    chunker = TextChunker()
-    chunks = chunker.split(docs)
-    embedder = EmbeddingService()
-    vector_store = VectorStore.load_or_build(chunks, embedder)
-
-    bm25 = BM25Retriever()
-    bm25.build_index(chunks)
-
-    # 混合检索（RRF 融合）+ 重排序（优雅降级：模型不可用自动跳过）
-    hybrid = HybridRetriever(vector_store, bm25)
-    reranker = Reranker()
-
-    llm = LLMClient()
-    graph = build_agent_graph_from_pipeline(vector_store, bm25, llm, hybrid, reranker)
-    logger.info("[pipeline] Agent 状态机管道就绪（含混合检索）")
-    return graph
+    """向后兼容入口：只返回编译后的 graph。"""
+    return build_agent_runtime().graph
 
 
 def ask_agent(graph, question: str, max_iterations: int = 3) -> tuple[str, dict]:
     """对单个问题执行 Agent 状态机，返回 (回答, 完整最终状态)。"""
-    # 独立收集器注入当前上下文：节点内 token/延迟记录都落到本实例
     metrics = MetricsCollector()
     context_token = set_current_collector(metrics)
     try:

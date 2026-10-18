@@ -39,10 +39,18 @@ class Settings(BaseSettings):
     # ── 向量存储（ChromaDB）─────────────────────────────────────────
     chroma_persist_dir: str = "./chroma_db"
     chroma_collection_name: str = "knowledge_base"
+    # 评测索引隔离：避免 eval 按 count 不匹配重建 app 的运行时索引
+    eval_chroma_persist_dir: str = "./chroma_db_eval"
+    eval_chroma_collection_name: str = "knowledge_base_eval"
 
     # ── 数据路径 ────────────────────────────────────────────────────
-    data_dir: str = "data/sample"
+    data_dir: str = "data/sample"          # 旧评测/测试语料
+    demo_dir: str = "data/demo"            # UI 演示语料
+    library_dir: str = "data/library"      # 运行时上传与优质库
+    eval_data_dir: str = "data/sample"     # 评测语料（v2 后续切到 data/eval）
     session_dir: str = "data/sessions"
+    max_import_files: int = Field(50, gt=0)
+    max_upload_mb: int = Field(20, gt=0)
 
     # ── 会话与澄清 ──────────────────────────────────────────────────
     # 多轮改写注入的历史轮数（一轮 = user + assistant）

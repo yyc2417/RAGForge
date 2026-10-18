@@ -32,7 +32,7 @@ from src.agent.state import initial_state  # noqa: E402
 from src.config import settings  # noqa: E402
 from src.conversation import ConversationService, ConversationStore, SessionMessage  # noqa: E402
 from src.generation.llm_client import LLMClient  # noqa: E402
-from src.pipeline import build_agent_pipeline  # noqa: E402
+from src.pipeline import build_agent_runtime  # noqa: E402
 from src.ui.event_view import LEVEL_ANSWER, LEVEL_FULL, EventView  # noqa: E402
 from src.ui.html_view import CSS  # noqa: E402
 
@@ -50,17 +50,22 @@ st.caption(
 class Runtime:
     graph: Any
     service: ConversationService
+    knowledge_base: Any
 
 
 @st.cache_resource(show_spinner="正在构建 Agent 管道（加载 embedding 模型与向量库）...")
 def _get_runtime() -> Runtime:
-    graph = build_agent_pipeline()
+    agent_runtime = build_agent_runtime()
     service = ConversationService(
         store=ConversationStore(),
         llm=LLMClient(),
         prompts=None,
     )
-    return Runtime(graph=graph, service=service)
+    return Runtime(
+        graph=agent_runtime.graph,
+        service=service,
+        knowledge_base=agent_runtime.knowledge_base,
+    )
 
 
 if not settings.deepseek_key_value():
@@ -75,6 +80,7 @@ except Exception as e:  # noqa: BLE001 - 管道构建失败给可读错误
 
 service = runtime.service
 store = service.store
+kb = runtime.knowledge_base
 
 
 # ── 会话侧栏 ───────────────────────────────────────────────────────
@@ -102,6 +108,52 @@ with st.sidebar:
         if st.button(label, key=f"sess-{meta.session_id}", use_container_width=True):
             st.session_state.current_session_id = meta.session_id
             st.rerun()
+
+    st.divider()
+    st.header("知识库")
+    uploaded = st.file_uploader(
+        "上传文件",
+        type=["md", "txt", "pdf", "html", "htm", "docx", "csv", "jsonl"],
+        accept_multiple_files=True,
+        key="kb-uploader",
+    )
+    if uploaded and st.button("导入上传文件", use_container_width=True):
+        with st.spinner("入库并重建索引…"):
+            result = kb.ingest_files([(f.name, f.getvalue()) for f in uploaded])
+        if result.failed:
+            st.error(result.summary + "\n" + "; ".join(f"{n}: {e}" for n, e in result.failed))
+        else:
+            st.success(result.summary)
+        st.rerun()
+
+    folder_path = st.text_input(
+        "导入文件夹（项目 data/ 下）",
+        key="kb-folder",
+        placeholder="例如 data/library/folders/faq",
+    )
+    if st.button("导入文件夹", use_container_width=True):
+        if not folder_path.strip():
+            st.warning("请填写文件夹路径")
+        else:
+            with st.spinner("导入并重建索引…"):
+                result = kb.ingest_folder(folder_path.strip())
+            if result.failed:
+                st.error(result.summary + "\n" + "; ".join(f"{n}: {e}" for n, e in result.failed))
+            else:
+                st.success(result.summary)
+            st.rerun()
+
+    sources = kb.list_sources()
+    with st.expander(f"来源列表（{len(sources)}）"):
+        for src in sources:
+            cols = st.columns([4, 1])
+            cols[0].caption(
+                f"{src['name']} · {src['scope']} · {src['file_type']} · {src['size']}B"
+            )
+            if src["scope"] == "library":
+                if cols[1].button("移除", key=f"rm-{abs(hash(src['source']))}"):
+                    kb.remove_source(src["source"])
+                    st.rerun()
 
     st.divider()
     st.header("本次运行参数")

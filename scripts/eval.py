@@ -53,7 +53,7 @@ from src.utils.logger import logger  # noqa: E402
 from src.utils.metrics import get_current_collector  # noqa: E402
 
 console = Console()
-DATA_DIR = CFG_ROOT / settings.data_dir
+DATA_DIR = CFG_ROOT / settings.eval_data_dir
 DATASET_PATH = PROJECT_ROOT / "tests" / "eval_dataset.json"
 REPORT_PATH = PROJECT_ROOT / "reports" / "eval_report.json"
 RETRIEVAL_REPORT_PATH = PROJECT_ROOT / "reports" / "eval_retrieval_report.json"
@@ -67,6 +67,10 @@ def _build_base_artifacts(rebuild: bool = False) -> tuple[list, VectorStore, BM2
     Args:
         rebuild: 为 True 时清库重建向量索引，否则按指纹校验复用
     """
+    # 评测索引与 app 运行时索引隔离，避免互相按 count 重建
+    settings.chroma_persist_dir = settings.eval_chroma_persist_dir
+    settings.chroma_collection_name = settings.eval_chroma_collection_name
+
     parser = DocumentParser()
     docs = parser.parse_directory(DATA_DIR)
     chunker = TextChunker()

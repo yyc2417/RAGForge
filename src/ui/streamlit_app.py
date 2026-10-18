@@ -1,6 +1,6 @@
 """Streamlit 可视化演示界面
 
-进程内直调 LangGraph（不依赖 FastAPI），实时展示 8 节点状态机的决策与自愈过程：
+进程内直调 LangGraph（不依赖 FastAPI），实时展示 7 节点主链路的决策与自愈过程：
 流程轨道 → 分组诊断 → 轮次时间线 → 流式回答 → 折叠来源 → 运行摘要。
 
 启动：
@@ -38,22 +38,22 @@ st.set_page_config(page_title="RAGForge", page_icon="⚒️", layout="wide")
 # 实际走哪条分支由运行时的诊断结论决定，同一问题多次运行可能不经过相同节点。
 _PRESETS = {
     "寒暄（不检索）": "你好",
-    "向量单轮命中": "Python 的 GIL 是什么？",
-    "策略升级链": "Docker 多阶段构建怎么写？",
+    "混合检索单轮": "Python 的 GIL 是什么？",
+    "改写后命中": "Docker 多阶段构建怎么写？",
     "语料外拒答": "K8s 怎么做滚动升级？",
 }
 
 _PRESET_NOTES = {
     "寒暄（不检索）": "analyze 判 chitchat → decide 给 strategy=none，retrieve / verify 均不执行",
-    "向量单轮命中": "典型 factual 路径，一轮检索即判 sufficient",
-    "策略升级链": "实测完整走出 vector → bm25 → hybrid 三轮升级，每轮诊断 low_recall",
+    "混合检索单轮": "典型 factual 路径，固定 hybrid 一轮检索即判 sufficient",
+    "改写后命中": "低召回时 evaluate 建议 reformulate，改写查询后重新走 hybrid",
     "语料外拒答": "实测 irrelevant → 两轮改写后跑满预算，最终诚实拒答（不编造）",
 }
 
 st.markdown(html_view.CSS, unsafe_allow_html=True)
 st.title("RAGForge — Agentic RAG 状态机可视化")
 st.caption(
-    "提问后观察状态机如何自主决策：诊断检索质量，不达标时改写查询或升级策略重新检索，"
+    "提问后观察状态机如何自主决策：固定 hybrid 检索，诊断质量不达标时改写查询重新检索，"
     "生成答案后做幻觉检测。节点重复执行（徽章显示次数）即自愈的证据。"
 )
 
@@ -82,21 +82,20 @@ def _render_sidebar() -> int:
     with st.sidebar:
         st.header("读图说明")
         st.markdown(
-            "**流程轨道**：8 个节点的状态卡片，灰色待执行、琥珀色执行中、绿色已完成、"
-            "紫色为自愈动作（reformulate / switch_strategy）。卡片徽章只在被执行两次"
-            "及以上时显示次数。"
+            "**流程轨道**：7 个节点的状态卡片，灰色待执行、琥珀色执行中、绿色已完成、"
+            "紫色为自愈动作（reformulate）。卡片徽章只在被执行两次及以上时显示次数。"
         )
         st.markdown("**轮次时间线**：每执行一次检索就记一行，能看到「这轮用什么查询、"
                     "什么策略、命中几篇、诊断结论是什么、下一步做什么」——"
                     "自愈循环的因果链在这里完整呈现。")
-        st.markdown("**检索来源**：按轮次分组折叠，点开读 chunk 全文。分数语义随策略而变"
-                    "（向量 cosine 可比较，BM25 与 RRF 只能轮内比序），故条形按本轮最高归一。")
+        st.markdown("**检索来源**：按轮次分组折叠，点开读 chunk 全文。固定 hybrid 的 RRF 分数"
+                    "只能在本轮内比较排序，故条形按本轮最高归一。")
 
         st.header("示例问题演示什么")
         for label, note in _PRESET_NOTES.items():
             st.markdown(f"- **{label}** — {note}")
 
-        st.header("8 个节点职责")
+        st.header("7 个节点职责")
         st.markdown(
             "\n".join(
                 f"- **`{name}`** {cn} — {hint}"
@@ -171,7 +170,7 @@ def _render_query(query: str) -> EventView:
                     unsafe_allow_html=True)
         return st.empty()
 
-    track_ph = _section("①", "执行流程", "8 节点状态机实时流转；徽章显示次数即重复执行")
+    track_ph = _section("①", "执行流程", "7 节点主链路实时流转；徽章显示次数即重复执行")
     diag_ph = _section("②", "决策诊断", "各节点结论按归属分组，hover 查看字段含义")
     rounds_ph = _section("③", "轮次时间线", "每轮检索的查询、策略、命中与诊断——自愈因果在此")
     heal_ph = st.empty()

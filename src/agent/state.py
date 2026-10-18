@@ -1,10 +1,10 @@
 """Agent 状态定义
 
-AgentState 是 LangGraph 状态机的全局状态容器，贯穿 8 个节点。
+AgentState 是 LangGraph 状态机的全局状态容器，贯穿 7 节点主链路。
 每个节点读取所需字段、返回需要更新的字段（部分状态更新）。
 
 关键字段说明：
-- failure_mode + suggested_action：诊断式评估的核心，驱动策略切换/改写
+- failure_mode + suggested_action：诊断式评估的核心，驱动查询改写
 - iteration_count / max_iterations：防死循环（默认最多 3 轮重检索）
 - messages：决策轨迹日志（Annotated[list, add] 自动追加）
 """
@@ -16,9 +16,11 @@ from langchain_core.documents import Document
 
 # ── 字面量类型（与各节点输出严格对应）────────────────────────────
 QueryType = Literal["factual", "reasoning", "chitchat", "complex"]
-RetrievalStrategy = Literal["vector", "bm25", "hybrid", "none"]
+# 固定 hybrid：需要检索时只走 hybrid，不检索为 none
+RetrievalStrategy = Literal["hybrid", "none"]
 FailureMode = Literal["low_recall", "irrelevant", "sufficient"]
-SuggestedAction = Literal["reformulate", "switch_strategy", "proceed"]
+# 固定 hybrid 后不再有 switch_strategy；失败统一改写查询
+SuggestedAction = Literal["reformulate", "proceed"]
 RewriteStrategy = Literal["specify", "generalize", "synonym_replace"]  # 仅供 reformulate 节点日志使用
 
 

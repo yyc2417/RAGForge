@@ -61,8 +61,11 @@ class PromptManager:
 
 诊断维度（三选一）：
 - sufficient：检索结果与问题相关且信息充足，可 proceed 直接生成
-- low_recall：检索结果与问题部分相关但关键信息缺失，召回不足，建议 switch_strategy 切换检索策略
+- low_recall：检索结果与问题部分相关但关键信息缺失，召回不足，建议 reformulate 改写查询后重试
 - irrelevant：检索结果与问题无关（语义不匹配），建议 reformulate 改写查询
+
+当前系统固定使用 hybrid 检索，没有“切换检索策略”这个动作；suggested_action 只能是
+proceed 或 reformulate。
 
 请输出 failure_mode、suggested_action 和 reason。"""
     )

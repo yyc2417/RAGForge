@@ -36,8 +36,10 @@ _ENUM_ALIASES: dict[str, str] = {
     "足够": "sufficient",
     "改写": "reformulate",
     "改写查询": "reformulate",
-    "切换策略": "switch_strategy",
-    "切策略": "switch_strategy",
+    # 固定 hybrid 后不再有 switch_strategy；旧模型输出统一映射为改写
+    "切换策略": "reformulate",
+    "切策略": "reformulate",
+    "switch_strategy": "reformulate",
     "继续": "proceed",
     "直接生成": "proceed",
     "具体化": "specify",
@@ -97,7 +99,6 @@ class EvaluateResult(BaseModel):
         description=(
             "建议动作："
             "reformulate(改写查询重试) / "
-            "switch_strategy(切换检索策略) / "
             "proceed(直接生成)"
         ),
     )

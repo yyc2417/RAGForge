@@ -31,9 +31,9 @@ from src.utils.metrics import MetricsCollector, reset_current_collector, set_cur
 
 router = APIRouter()
 
-# 8 个 Agent 节点名（用于过滤 on_chain_end 事件，只推送业务节点）
+# 7 个 Agent 主链路节点名（用于过滤 on_chain_end 事件，只推送业务节点）
 _AGENT_NODES = {"analyze", "decide", "retrieve", "evaluate",
-                "reformulate", "switch_strategy", "generate", "verify"}
+                "reformulate", "generate", "verify"}
 
 
 @router.get("/health", response_model=HealthResponse)

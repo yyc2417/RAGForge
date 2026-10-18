@@ -87,6 +87,16 @@ cp .env.example .env
 # 编辑 .env，填入 DEEPSEEK_API_KEY
 ```
 
+本地 OpenAI 兼容服务（如 FreeToken / vLLM / llama.cpp）可直接覆盖：
+
+```bash
+DEEPSEEK_BASE_URL=http://127.0.0.1:1919/v1
+DEEPSEEK_MODEL=<GET /v1/models 返回的 id>
+DEEPSEEK_API_KEY=local
+```
+
+结构化输出会校验并归一化常见枚举变体；本地模型若输出未知枚举，会重试一次后降级。
+
 ### 3. 运行
 
 ```bash
@@ -185,7 +195,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（138 用例：134 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（139 用例：135 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，

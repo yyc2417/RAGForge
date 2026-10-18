@@ -66,7 +66,7 @@ class VerifyResult(BaseModel):     # → is_faithful: bool
 class RefusalJudgeResult(BaseModel):# → verdict: refused/fabricated/other（评估脚本拒答裁决，不在状态机内）
 ```
 
-所有枚举字段经 `BeforeValidator` 归一化（strip → lower → 中文变体映射，如「低召回」→ low_recall、「Factual」→ factual），归一化后再进入 `Literal` 校验——常见的大小写与语言变体不再被拦截为校验错误、不再白白落入节点降级分支。
+所有枚举字段经 `BeforeValidator` 归一化（strip → lower → 中文变体映射，如「低召回」→ low_recall、「Factual」→ factual），归一化后再进入 `Literal` 校验——常见的大小写与语言变体不再被拦截为校验错误、不再白白落入节点降级分支。已覆盖本地 Qwen 常见输出变体（`Question`、`missing_entity`、`missing_key_slot`、`insufficient`、`continue` 等）。
 
 ---
 

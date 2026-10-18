@@ -1,0 +1,97 @@
+[
+  {
+    "conversation_id": "c1-travel",
+    "turns": [
+      {
+        "query": "杭州西湖怎么玩？",
+        "resolved_query": "杭州西湖怎么玩？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["骑行", "西湖"]
+      },
+      {
+        "query": "它适合什么季节去？",
+        "resolved_query": "杭州西湖适合什么季节去？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["春季", "秋季"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c2-policy",
+    "turns": [
+      {
+        "query": "公司远程办公有什么规定？",
+        "resolved_query": "星云科技远程办公有什么规定？",
+        "answerable": true,
+        "expected_sources": ["company_handbook.md"],
+        "gold_keywords": ["远程办公", "两天"]
+      },
+      {
+        "query": "那报销呢？",
+        "resolved_query": "星云科技差旅报销有什么规定？",
+        "answerable": true,
+        "expected_sources": ["company_handbook.md"],
+        "gold_keywords": ["报销", "发票"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c3-product",
+    "turns": [
+      {
+        "query": "星云笔记可以退货吗？",
+        "resolved_query": "星云笔记可以退货吗？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["退货", "7 天"]
+      },
+      {
+        "query": "配送要多久？",
+        "resolved_query": "星云笔记的配送要多久？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["48 小时", "2 到 3 天"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c4-team",
+    "turns": [
+      {
+        "query": "谁负责发布前的质量检查？",
+        "resolved_query": "星云科技谁负责发布前的质量检查？",
+        "answerable": true,
+        "expected_sources": ["team_roles.md"],
+        "gold_keywords": ["测试工程师", "质量"]
+      },
+      {
+        "query": "生产变更需要准备什么？",
+        "resolved_query": "星云科技生产变更需要准备什么？",
+        "answerable": true,
+        "expected_sources": ["team_roles.md"],
+        "gold_keywords": ["变更窗口", "回滚"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c5-account",
+    "turns": [
+      {
+        "query": "免费版可以同步几台设备？",
+        "resolved_query": "星云笔记免费版可以同步几台设备？",
+        "answerable": true,
+        "expected_sources": ["faq.jsonl"],
+        "gold_keywords": ["3 台", "同步"]
+      },
+      {
+        "query": "团队版怎么收费？",
+        "resolved_query": "星云笔记团队版怎么收费？",
+        "answerable": true,
+        "expected_sources": ["faq.jsonl"],
+        "gold_keywords": ["席位", "8 折"]
+      }
+    ]
+  }
+]

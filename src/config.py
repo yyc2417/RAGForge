@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_device: str = "cpu"  # cpu / cuda
     embedding_batch_size: int = Field(32, gt=0)
+    # 换型预留：BGE 系列通常建议 normalize + 查询指令；默认关闭以保持现有索引口径
+    embedding_normalize: bool = False
+    embedding_query_instruction: str = ""
+    embedding_trust_remote_code: bool = False
 
     # ── 向量存储（ChromaDB）─────────────────────────────────────────
     chroma_persist_dir: str = "./chroma_db"

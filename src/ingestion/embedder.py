@@ -26,10 +26,16 @@ class EmbeddingService:
                 instance = super().__new__(cls)
                 instance._model_name = model_name or settings.embedding_model
                 logger.info(f"[embedder] 加载模型: {instance._model_name}")
+                model_kwargs = {"device": settings.embedding_device}
+                if settings.embedding_trust_remote_code:
+                    model_kwargs["trust_remote_code"] = True
+                encode_kwargs = {"batch_size": settings.embedding_batch_size}
+                if settings.embedding_normalize:
+                    encode_kwargs["normalize_embeddings"] = True
                 instance._model = HuggingFaceEmbeddings(
                     model_name=instance._model_name,
-                    model_kwargs={"device": settings.embedding_device},
-                    encode_kwargs={"batch_size": settings.embedding_batch_size},
+                    model_kwargs=model_kwargs,
+                    encode_kwargs=encode_kwargs,
                 )
                 logger.info("[embedder] 模型加载完成")
                 cls._instance = instance
@@ -49,8 +55,10 @@ class EmbeddingService:
         return self._model.embed_documents(texts)
 
     def embed_query(self, text: str) -> list[float]:
-        """生成单条查询向量。"""
-        return self._model.embed_query(text)
+        """生成单条查询向量；BGE 等模型可配置查询指令前缀。"""
+        instruction = settings.embedding_query_instruction.strip()
+        query = f"{instruction}{text}" if instruction else text
+        return self._model.embed_query(query)
 
     @property
     def embedding_function(self) -> HuggingFaceEmbeddings:

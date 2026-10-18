@@ -302,6 +302,7 @@ RAGForge/
 │   ├── eval.py                # 4 套端到端对比（全量 LLM）
 │   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
 │   ├── validate_eval_dataset.py  # schema / 标签 / 来源校验
+│   ├── adapt_public_eval.py   # 公开集字段映射 → 评测 v2 schema
 │   └── promote_hard_cases.py  # 难例候选半自动晋升
 ├── data/sample/               # 旧评测/测试语料（8 个 md）
 ├── data/demo/                 # 多格式通用 demo（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）

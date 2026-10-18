@@ -136,6 +136,9 @@ graph LR
 | `embedding_model` | all-MiniLM-L6-v2 | HuggingFace Embedding 模型 |
 | `embedding_device` | cpu | 推理设备（cpu / cuda） |
 | `embedding_batch_size` | 32 | 批量编码大小 |
+| `embedding_normalize` | false | 是否归一化向量（BGE 换型时可开） |
+| `embedding_query_instruction` | 空 | 查询指令前缀（BGE-zh 等） |
+| `embedding_trust_remote_code` | false | Qwen3-Embedding 等模型可能需要 |
 | `demo_dir` | data/demo | UI 演示多格式语料 |
 | `library_dir` | data/library | 运行时上传 / 文件夹导入 |
 | `max_import_files` | 50 | 单次最多导入文件数 |

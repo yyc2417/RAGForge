@@ -85,6 +85,13 @@
 # schema / 标签 / 来源校验
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample
 
+# 公开数据字段映射（CRUD-RAG / RGB / MultiHop-RAG 等）
+uv run python scripts/adapt_public_eval.py \
+  --input data/public_eval/crud_rag_read.jsonl \
+  --output tests/eval_dataset_public.json \
+  --query-field question --answer-field answer \
+  --source-field doc_id --keywords-field keywords --split test
+
 # 检索层 v2 基线
 uv run python scripts/eval_v2.py --dataset tests/eval_dataset.json --corpus-dir data/sample
 

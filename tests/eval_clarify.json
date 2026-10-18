@@ -1,0 +1,58 @@
+[
+  {
+    "query": "它怎么配置？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "missing_slot",
+    "clarification_keywords": ["哪个", "对象"],
+    "follow_up": "Docker 怎么配置？"
+  },
+  {
+    "query": "GIL 和 GC 的区别是什么？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "multiple_interpretations",
+    "clarification_keywords": ["Python", "Java"],
+    "follow_up": "Python 的 GIL 和 Java 的 GC 有什么区别？"
+  },
+  {
+    "query": "那个版本有什么变化？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "missing_slot",
+    "clarification_keywords": ["哪个产品", "哪个版本"],
+    "follow_up": "星云笔记 2.0 有什么变化？"
+  },
+  {
+    "query": "帮我查一下最近的。",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "missing_slot",
+    "clarification_keywords": ["最近", "查什么"],
+    "follow_up": "帮我查一下最近的差旅报销规定。"
+  },
+  {
+    "query": "怎么设置权限，但又不要让所有人都能看到？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "conflicting_constraints",
+    "clarification_keywords": ["哪些人", "什么权限"],
+    "follow_up": "只让团队成员看到，怎么设置权限？"
+  },
+  {
+    "query": "这个和那个哪个更好？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "multiple_interpretations",
+    "clarification_keywords": ["哪两个", "比较"],
+    "follow_up": "Docker 多阶段构建和普通构建哪个更好？"
+  },
+  {
+    "query": "退款要多久？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "missing_slot",
+    "clarification_keywords": ["哪个产品", "退款方式"],
+    "follow_up": "星云笔记退货后退款要多久？"
+  },
+  {
+    "query": "它支持多少台设备？",
+    "expected_behavior": "clarify",
+    "ambiguity_type": "missing_slot",
+    "clarification_keywords": ["哪个产品", "免费版还是团队版"],
+    "follow_up": "星云笔记免费版支持多少台设备？"
+  }
+]

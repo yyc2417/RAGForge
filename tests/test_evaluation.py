@@ -1,5 +1,8 @@
 """评测 v2 schema 与校验测试（离线）"""
 
+import json
+from pathlib import Path
+
 from src.evaluation import EvalItem, dataset_hash, validate_dataset
 
 
@@ -44,6 +47,17 @@ def test_validate_dataset_checks_corpus_sources(tmp_path):
     errors = validate_dataset(items, corpus_dir=tmp_path)
     assert any("missing.md" in e for e in errors)
     assert not any("a.md" in e for e in errors)
+
+
+def test_multiturn_and_clarify_fixtures():
+    root = Path(__file__).parent
+    multiturn = json.loads((root / "eval_multiturn.json").read_text(encoding="utf-8"))
+    clarify = json.loads((root / "eval_clarify.json").read_text(encoding="utf-8"))
+    assert len(multiturn) >= 5
+    assert all(len(conv["turns"]) >= 2 for conv in multiturn)
+    assert all("resolved_query" in turn for conv in multiturn for turn in conv["turns"])
+    assert len(clarify) >= 8
+    assert all(item["expected_behavior"] == "clarify" for item in clarify)
 
 
 def test_dataset_hash_stable():

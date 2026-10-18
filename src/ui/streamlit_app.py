@@ -32,6 +32,7 @@ from src.agent.state import initial_state  # noqa: E402
 from src.config import settings  # noqa: E402
 from src.conversation import ConversationService, ConversationStore, SessionMessage  # noqa: E402
 from src.generation.llm_client import LLMClient  # noqa: E402
+from src.knowledge import HardCaseStore  # noqa: E402
 from src.pipeline import build_agent_runtime  # noqa: E402
 from src.ui.event_view import LEVEL_ANSWER, LEVEL_FULL, EventView  # noqa: E402
 from src.ui.html_view import CSS  # noqa: E402
@@ -81,6 +82,7 @@ except Exception as e:  # noqa: BLE001 - 管道构建失败给可读错误
 service = runtime.service
 store = service.store
 kb = runtime.knowledge_base
+hard_cases = HardCaseStore()
 
 
 # ── 会话侧栏 ───────────────────────────────────────────────────────
@@ -230,6 +232,7 @@ def _render_feedback(session_id: str, message: SessionMessage) -> None:
             session_id=session_id,
         )
         service.record_feedback(session_id, message.id, "up", archived=archived_path is not None)
+        hard_cases.update_status(message.id, "dismissed")
         if archived_path is None:
             st.error("归档失败：回答为空或 message_id 非法")
         else:
@@ -237,7 +240,16 @@ def _render_feedback(session_id: str, message: SessionMessage) -> None:
         st.rerun()
     if cols[1].button("👎 没用", key=f"down-{message.id}", disabled=down_disabled):
         service.record_feedback(session_id, message.id, "down")
-        st.toast("已记录：没用")
+        hard_cases.add({
+            "message_id": message.id,
+            "session_id": session_id,
+            "query": message.original_query or message.resolved_query or "",
+            "resolved_query": message.resolved_query,
+            "answer": message.content,
+            "sources": message.sources,
+            "trace": message.trace,
+        })
+        st.toast("已记录：没用，并进入难例候选池")
         st.rerun()
     if message.feedback:
         label = "有用" if message.feedback == "up" else "没用"

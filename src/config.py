@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     library_dir: str = "data/library"      # 运行时上传与优质库
     eval_data_dir: str = "data/sample"     # 评测语料（v2 后续切到 data/eval）
     session_dir: str = "data/sessions"
+    feedback_dir: str = "data/feedback"
     max_import_files: int = Field(50, gt=0)
     max_upload_mb: int = Field(20, gt=0)
 

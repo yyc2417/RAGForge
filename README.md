@@ -120,7 +120,9 @@ curl -N -X POST http://localhost:8000/chat/stream \
 uv run python scripts/eval.py                  # 完整评估（4 套模式，需 API key）
 uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM，免 API）
 uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
-# 输出：终端对比表 + reports/eval_report.json
+uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
+uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
+# 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json
 ```
 
 ### 6. 可视化演示
@@ -218,6 +220,14 @@ clarify 终止分支，先问清再检索。会话 JSON 落盘，历史回放不
 chunk 标记 `source_type=qa_archive`；检索时走加权 RRF 优质通道，相似问题优先召回。
 侧栏可查看并移除归档，移除后重建索引。
 
+### 10. 难例池与评测 v2
+
+点“没用”会把问答写入 `data/feedback/hard_cases.jsonl`（按 message_id 去重）。
+`promote_hard_cases.py` 在补齐 `answerable / expected_source / gold_keywords`
+后把候选晋升到独立 hard 数据集；不自动污染冻结的 v1 45 题。
+评测 v2 统一 schema 支持 `expected_sources / evidence / expected_behavior`，
+`validate_eval_dataset.py` 校验标签与来源，`eval_v2.py` 跑离线检索基线。
+
 ## 项目结构
 
 ## 项目结构
@@ -247,7 +257,11 @@ RAGForge/
 │   │   ├── store.py           #   ConversationStore（原子写）
 │   │   └── service.py         #   ConversationService（condense / 落盘）
 │   ├── knowledge/             # 运行时知识库
-│   │   └── service.py         #   demo + library 重建 / 上传 / 文件夹导入 / 删除
+│   │   ├── service.py         #   demo + library 重建 / 上传 / 文件夹导入 / 删除
+│   │   ├── quality.py         #   优质库归档
+│   │   └── feedback.py        #   难例候选池
+│   ├── evaluation/            # 评测 v2 schema / 校验
+│   │   └── schema.py          #   EvalItem / validate_dataset / dataset_hash
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
 │   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + 条件边）
@@ -275,13 +289,20 @@ RAGForge/
 │   ├── test_retrieval.py      #   检索层测试（离线，含索引一致性回归）
 │   ├── test_agent.py          #   Agent 状态机测试（全 mock，离线）
 │   ├── test_conversation.py   #   会话存储 / condense / 来源落盘测试（离线）
+│   ├── test_knowledge.py      #   运行时知识库 / 多格式导入测试（离线）
+│   ├── test_quality.py        #   优质库归档 / 加权通道测试（离线）
+│   ├── test_feedback.py       #   难例池 / 晋升测试（离线）
+│   ├── test_evaluation.py     #   评测 v2 schema / 校验测试（离线）
 │   ├── test_stage1.py         #   结构与管道构建测试（离线）
 │   ├── test_token_budget.py   #   上下文 token 预算测试（离线）
 │   ├── test_ui.py             #   事件蒸馏 + 逐轮归集 + HTML 装配测试（离线）
 │   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
 │   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
 ├── scripts/
-│   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
+│   ├── eval.py                # 4 套端到端对比（全量 LLM）
+│   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
+│   ├── validate_eval_dataset.py  # schema / 标签 / 来源校验
+│   └── promote_hard_cases.py  # 难例候选半自动晋升
 ├── data/sample/               # 旧评测/测试语料（8 个 md）
 ├── data/demo/                 # 多格式通用 demo（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
 ├── data/library/              # 运行时上传与后续优质库（gitignore）

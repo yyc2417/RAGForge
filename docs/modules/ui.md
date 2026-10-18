@@ -70,13 +70,15 @@ down-<message_id>
 
 ## 当前边界
 
-- 知识库上传 / 来源列表 / 优质库移除尚未接入 UI（Phase 2/3）；
+- 侧栏已接入知识库上传 / 文件夹导入 / 来源列表 / 优质库移除；
 - 聊天页不再展示旧版流程轨道卡片；执行细节以 trace 文本 expander 呈现；
 - 历史回放依赖会话 JSON 中的 `sources` / `trace` 快照，不重新检索；
-- 单进程假设：会话文件锁为进程内锁。
+- 单进程假设：会话文件锁为进程内锁；
+- 实际对话需要真实 API key 或本地 LLM endpoint。
 
 ## 测试
 
 - `tests/test_conversation.py`：会话/反馈/来源落盘；
-- `tests/test_ui.py`：EventView 事件蒸馏、8 节点状态、来源/诊断渲染；
+- `tests/test_knowledge.py` / `test_quality.py`：入库、优质库与来源管理；
+- `tests/test_ui.py`：EventView 事件蒸馏、8 节点（含 clarify）状态、来源/诊断渲染；
 - UI 入口本身需要手动 smoke test（需要真实 API key 或本地 LLM endpoint）。

@@ -147,7 +147,8 @@ uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schem
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
 uv run python scripts/import_crud_rag.py --limit 120                    # CRUD-RAG Read → 本地评测集
 uv run python scripts/eval_v2.py --dataset tests/eval_dataset_multiformat.json \
-  --corpus-dir data/demo --rebuild --report reports/eval_v2_multiformat_report.json
+  --corpus-dir data/demo --rebuild --report reports/eval_v2_multiformat_report.json \
+  --dataset-name multiformat-demo --dataset-version 2026-10-18 --dataset-license internal
 uv run python scripts/eval_interaction.py --mode both --limit 5          # clarify / 多轮交互（需 LLM）
 # 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json / eval_interaction_report.json
 ```
@@ -179,7 +180,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（131 用例：127 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（134 用例：130 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -190,7 +191,8 @@ uv run python -c "from sentence_transformers import SentenceTransformer; Sentenc
 ```
 
 集成测试真实调用 DeepSeek API，由 `RUN_INTEGRATION=1` 门控，默认跳过。
-GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型。
+GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型；随后用多格式集跑
+hybrid 检索回归门禁（跳过 reranker），低于阈值直接失败。
 
 ## 设计亮点
 
@@ -346,7 +348,7 @@ RAGForge/
 ├── data/public_eval/          # 公开集下载 / 转换 / 本地语料（gitignore）
 ├── docs/
 │   ├── adr/                   # 架构决策记录（8 篇 ADR）
-│   ├── modules/               # 模块设计文档（7 篇）
+│   ├── modules/               # 模块设计文档（8 篇）
 │   ├── design/                # 交互与评测设计（2 篇）
 │   ├── reference/             # 格式支持 / 优质库格式（2 篇）
 │   ├── learning/              # 学习笔记（8 篇，按 Task 拆分）
@@ -358,7 +360,7 @@ RAGForge/
 
 ## 评估指标对比
 
-> **历史口径（旧 8 节点拓扑）**：下表来自含 `switch_strategy` 的旧 8 节点版本，固定 hybrid 后尚未重跑全量 LLM 评测；旧数字只能作历史对照，不能当作当前现状。新的评测矩阵（baseline / linear_hybrid / agent / agent_reranker）与 v2 数据集正在按升级方案推进。
+> **历史口径（旧 8 节点拓扑）**：下表来自含 `switch_strategy` 的旧 8 节点版本，固定 hybrid 后尚未重跑全量 LLM 评测；旧数字只能作历史对照，不能当作当前现状。v2 检索层基线（CRUD-RAG Read / 多格式集）已补齐，端到端 LLM 双跑后置。
 
 运行 `uv run python scripts/eval.py --rebuild` 生成（数据集：45 题 = 30 可答 + 10 语料外不可答 + 5 寒暄；语料 8 文档 49 chunks；模型 deepseek-flash）：
 
@@ -399,12 +401,12 @@ RAGForge/
 
 120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，离线 CPU embedding（all-MiniLM-L6-v2），独立评测索引，不调用 LLM：
 
-| 模式 | hit_any | hit_all | MRR_any |
-|------|---:|---:|---:|
-| vector | 60.0% | 30.0% | 50.5% |
-| bm25 | 99.2% | 90.0% | 96.9% |
-| hybrid | 99.2% | 65.8% | 80.5% |
-| reranker | 99.2% | 89.2% | 97.9% |
+| 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
+|------|---:|---:|---:|---:|
+| vector | 60.0% | 30.0% | 50.5% | 42.6% |
+| bm25 | 99.2% | 90.0% | 96.9% | 94.7% |
+| hybrid | 99.2% | 65.8% | 80.5% | 76.8% |
+| reranker | 99.2% | 89.2% | 97.9% | 95.4% |
 
 向量单路在中文公开集上明显偏弱，与“英文 embedding + 中文语料”的判断一致；BM25 兜底后 hit_any 接近饱和。RRF 只把 top-10 候选交给精排，多跳 `hit_all` 会从 BM25 的 90.0% 降到 65.8%，reranker 精排后恢复到 89.2%。明细见 `reports/eval_v2_crud_read_report.json`。
 
@@ -412,20 +414,21 @@ RAGForge/
 
 45 题覆盖 8 个 demo 文件、7 种格式（MD/TXT/CSV/JSONL/HTML/PDF/DOCX），含 4 道多跳、10 道中文 query 检索英文 PDF/DOCX 的跨语言样本；文档级 top-5，离线：
 
-| 模式 | hit_any | hit_all | MRR_any |
-|------|---:|---:|---:|
-| vector | 80.0% | 80.0% | 61.0% |
-| bm25 | 93.3% | 91.1% | 87.4% |
-| hybrid | 91.1% | 88.9% | 76.9% |
-| reranker | 93.3% | 91.1% | 92.2% |
+| 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
+|------|---:|---:|---:|---:|
+| vector | 80.0% | 80.0% | 61.0% | 68.0% |
+| bm25 | 93.3% | 91.1% | 87.4% | 88.1% |
+| hybrid | 91.1% | 88.9% | 76.9% | 80.4% |
+| reranker | 93.3% | 91.1% | 92.2% | 91.7% |
 
 剩余未命中集中在“中文问题 → 英文 PDF/DOCX”的跨语言检索，格式解析本身正常；reranker 把 MRR 从 76.9% 拉回 92.2%。明细见 `reports/eval_v2_multiformat_report.json`。
 
 ## 未来工作
 
-- **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，评估显示
-  vector-only 检索在中文语料上 recall 仅 73.3%（混合检索已兜底）。切换 BGE 系列
-  或 bge-m3 预期可显著提升向量单路召回；需同步重建索引并重跑评估。
+- **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，旧基线
+  vector-only 检索在中文语料上 recall 仅 73.3%（混合检索已兜底）；v2 的多格式
+  跨语言样本也暴露了同类问题。切换 BGE 系列或 bge-m3 预期可显著提升向量单路
+  召回；需同步重建索引并重跑评估。
 - **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
   （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
@@ -434,8 +437,9 @@ RAGForge/
   冻结 test 后跑本地与 API 双基线。
 - **多格式集与跨语言检索**：45 题多格式集已建（`tests/eval_dataset_multiformat.json`），
   剩余失败集中在中文 query 检索英文 PDF/DOCX；换多语 embedding 后复测。
-- **多轮 / clarify 跑分**：数据集与脚本已建（`tests/eval_multiturn.json` /
-  `tests/eval_clarify.json` + `scripts/eval_interaction.py`），真实 LLM 跑分与
+- **多轮 / clarify 跑分**：多轮集已扩到 10 会话 × 3 轮，clarify 16 例
+  （含清晰问题负例）；`eval_interaction.py` 统计澄清准确率、过度澄清率、
+  问题关键词命中率，`--with-followup` 可统计补充后解决率。真实 LLM 跑分与
   报表待本地 / API 双跑阶段补齐。
 - **GPU embedding**：`EMBEDDING_DEVICE=cuda` 与归一化/查询指令已预留；
   待 CUDA 版 PyTorch 与显存实测后再切换并重建索引。

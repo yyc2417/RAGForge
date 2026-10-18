@@ -19,10 +19,11 @@ from src.utils.metrics import MetricsCollector, reset_current_collector, set_cur
 
 @dataclass
 class AgentRuntime:
-    """图 + 知识库服务；二者共享同一批 retriever 对象。"""
+    """图 + 知识库服务 + LLM 客户端；图与知识库共享同一批 retriever 对象。"""
 
     graph: CompiledStateGraph
     knowledge_base: KnowledgeBaseService
+    llm: LLMClient
 
 
 def build_agent_runtime() -> AgentRuntime:
@@ -39,7 +40,7 @@ def build_agent_runtime() -> AgentRuntime:
     logger.info(
         f"[pipeline] Agent 运行时就绪（固定 hybrid，chunks={kb.chunks_count}）"
     )
-    return AgentRuntime(graph=graph, knowledge_base=kb)
+    return AgentRuntime(graph=graph, knowledge_base=kb, llm=llm)
 
 
 def build_agent_pipeline() -> CompiledStateGraph:

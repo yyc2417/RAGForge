@@ -31,7 +31,6 @@ import streamlit as st  # noqa: E402
 from src.agent.state import initial_state  # noqa: E402
 from src.config import settings  # noqa: E402
 from src.conversation import ConversationService, ConversationStore, SessionMessage  # noqa: E402
-from src.generation.llm_client import LLMClient  # noqa: E402
 from src.knowledge import HardCaseStore  # noqa: E402
 from src.pipeline import build_agent_runtime  # noqa: E402
 from src.ui.event_view import LEVEL_ANSWER, LEVEL_FULL, EventView  # noqa: E402
@@ -59,7 +58,7 @@ def _get_runtime() -> Runtime:
     agent_runtime = build_agent_runtime()
     service = ConversationService(
         store=ConversationStore(),
-        llm=LLMClient(),
+        llm=agent_runtime.llm,
         prompts=None,
     )
     return Runtime(

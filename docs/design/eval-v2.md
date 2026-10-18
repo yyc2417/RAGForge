@@ -97,6 +97,7 @@ uv run python scripts/eval_v2.py --dataset tests/eval_dataset.json --corpus-dir 
 
 # clarify 判定 + 多轮会话（需真实 LLM）
 uv run python scripts/eval_interaction.py --mode both --limit 5
+# 报告：reports/eval_interaction_report.json（含 commit / model / base_url）
 
 # 旧 4 模式端到端（全量 LLM，后置）
 uv run python scripts/eval.py --rebuild

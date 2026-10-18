@@ -146,7 +146,7 @@ uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
 uv run python scripts/eval_interaction.py --mode both --limit 5          # clarify / 多轮交互（需 LLM）
-# 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json
+# 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json / eval_interaction_report.json
 ```
 
 ### 6. 可视化演示

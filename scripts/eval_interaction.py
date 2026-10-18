@@ -11,8 +11,10 @@
 
 import argparse
 import json
+import subprocess
 import sys
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -24,6 +26,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from src.agent.nodes import analyze_node  # noqa: E402
 from src.agent.state import initial_state  # noqa: E402
+from src.config import settings  # noqa: E402
 from src.conversation import ConversationService, ConversationStore  # noqa: E402
 from src.generation.prompts import PromptManager  # noqa: E402
 from src.pipeline import build_agent_runtime  # noqa: E402
@@ -31,6 +34,20 @@ from src.utils.logger import logger  # noqa: E402
 
 CLARIFY_PATH = PROJECT_ROOT / "tests" / "eval_clarify.json"
 MULTITURN_PATH = PROJECT_ROOT / "tests" / "eval_multiturn.json"
+DEFAULT_REPORT_PATH = PROJECT_ROOT / "reports" / "eval_interaction_report.json"
+
+
+def _git_commit() -> str:
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
 
 
 def _basename(source: str) -> str:
@@ -73,7 +90,6 @@ def eval_clarify(runtime, limit: int | None = None) -> dict:
         "keyword_hit_rate": round(keyword_hits / len(cases), 4) if cases else 0.0,
         "details": details,
     }
-    print(json.dumps(result, ensure_ascii=False, indent=2))
     return result
 
 
@@ -121,22 +137,40 @@ def eval_multiturn(runtime, limit: int | None = None) -> dict:
         ),
         "details": details,
     }
-    print(json.dumps(result, ensure_ascii=False, indent=2))
     return result
+
+
+def _write_report(report: dict, output: Path) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="clarify / 多轮交互评测")
     parser.add_argument("--mode", choices=["clarify", "multiturn", "both"], default="both")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--output", type=Path, default=DEFAULT_REPORT_PATH)
     args = parser.parse_args()
 
     logger.info("[eval-interaction] 构建运行时（demo 语料）...")
     runtime = build_agent_runtime()
+    report = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "commit": _git_commit(),
+        "model": settings.deepseek_model,
+        "base_url": settings.deepseek_base_url,
+        "mode": args.mode,
+    }
     if args.mode in ("clarify", "both"):
-        eval_clarify(runtime, args.limit)
+        report["clarify"] = eval_clarify(runtime, args.limit)
     if args.mode in ("multiturn", "both"):
-        eval_multiturn(runtime, args.limit)
+        report["multiturn"] = eval_multiturn(runtime, args.limit)
+
+    _write_report(report, args.output)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    logger.info(f"[eval-interaction] 报告已写入 {args.output}")
 
 
 if __name__ == "__main__":

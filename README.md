@@ -175,7 +175,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（79 用例，强制 HF 离线，零网络）
+uv run pytest -q    # 离线单元套件（128 用例：124 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -388,6 +388,12 @@ RAGForge/
 - **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
   （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
+- **评测 v2 公开集**：用 `adapt_public_eval.py` 接入 CRUD-RAG Read / RGB 子集，
+  冻结 dev/test 后跑本地与 API 双基线；当前 schema/validator/检索 harness 已就绪。
+- **多轮 / clarify 跑分**：数据集已建（`tests/eval_multiturn.json` /
+  `tests/eval_clarify.json`），还需补自动跑分脚本与报表。
+- **GPU embedding**：`EMBEDDING_DEVICE=cuda` 与归一化/查询指令已预留；
+  待 CUDA 版 PyTorch 与显存实测后再切换并重建索引。
 
 ## License
 

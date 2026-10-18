@@ -661,6 +661,8 @@ def main() -> None:
     """
     parser = argparse.ArgumentParser(description="RAGForge 自动化评估")
     parser.add_argument("--mode", choices=MODES, help="只跑指定模式（默认全部）")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="只跑前 N 条样本（本地 smoke）")
     parser.add_argument("--dataset", type=Path, default=DATASET_PATH,
                         help="评测数据集（v1 列表或 v2 schema）")
     parser.add_argument("--corpus-dir", type=Path, default=None,
@@ -706,6 +708,9 @@ def main() -> None:
         rebuild=args.rebuild,
         corpus_dir=args.corpus_dir,
     )
+    if args.limit:
+        evaluator.dataset = evaluator.dataset[: args.limit]
+        console.print(f"样本限制：{len(evaluator.dataset)} 条（--limit {args.limit}）")
 
     # 决定要跑哪些模式
     existing_report: dict | None = None

@@ -2,17 +2,19 @@
 
 ## 模块职责
 
-文档处理层负责将原始文档转换为可检索的向量表示，为检索层提供高质量的 Document 列表。核心流程：**文档解析 → 按标题切节 + token 预算切分 → 向量化**。
+文档处理层负责将原始文档转换为可检索的表示，为检索层提供高质量的 Document 列表。核心流程：**多格式解析 → 按标题切节 + token 预算切分 → 向量化**。
+
+支持 MD / TXT / PDF（文本型）/ HTML（本地静态）/ DOCX / CSV / JSONL；网页 URL、OCR、图片和复杂表格不在范围内。
 
 ## 类设计
 
 ### DocumentParser：策略模式解析器
 
-根据文件后缀自动选择解析策略，支持 Markdown 和 PDF 两种格式。
+根据文件后缀自动选择解析策略。
 
 ```python
 class DocumentParser:
-    SUPPORTED_EXTENSIONS = {".md", ".pdf"}
+    SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf", ".html", ".htm", ".docx", ".csv", ".jsonl"}
 
     def parse(self, file_path: Path) -> list[Document]:
         """解析单个文件，根据后缀分发到对应解析器。"""
@@ -21,9 +23,23 @@ class DocumentParser:
         """批量解析目录下所有支持格式的文件。"""
 ```
 
-**策略分发**：
-- `.md` → `TextLoader`（LangChain 内置）
-- `.pdf` → `PyMuPDF/fitz`（逐页提取，metadata 含 page_number）
+**格式矩阵**：
+
+| 格式 | 解析方式 | 关键 metadata |
+|---|---|---|
+| `.md` | LangChain `TextLoader` + 标题切分 | source / file_type / title / h1-h3 |
+| `.txt` | 纯文本，UTF-8/UTF-8-SIG/GBK 回退 | source / file_type / title |
+| `.pdf` | PyMuPDF 逐页 | page_number（1-based） |
+| `.html/.htm` | 标准库 `HTMLParser`，跳过 script/style，保留 h1-h3 | title / h1-h3 |
+| `.docx` | zip + XML 解析段落与标题样式（免额外依赖） | title / h1-h3 |
+| `.csv` | `csv.DictReader`，必须有 `text` 或 `content` 列 | row_index / 其他列进 metadata |
+| `.jsonl` | 逐行 JSON，`text`/`content` 必填；坏行跳过 | row_index / 标量字段进 metadata |
+
+**CSV/JSONL 约定**：
+
+- CSV：表头必须有 `text` 或 `content`；`id` / `title` 可选；其他列进 metadata；缺列直接报错并列出实际列名。
+- JSONL：每行一个对象；`text` 或 `content` 必填；`id` / `title` 可选；坏行记录日志后跳过。
+- 这两类结构化文件既可用于知识库导入，也可作为评测数据；评测 adapter 单独处理，不混入 demo 库。
 
 ### TextChunker：token 预算切分 + 标题上下文
 
@@ -31,6 +47,7 @@ class DocumentParser:
 
 - metadata 携带 `h1/h2/h3` 标题层级 + `chunk_index`（按 source 连续编号，供向量库确定性 ID 使用）
 - 正文前缀拼入标题路径（如 `机器学习 FAQ > 过拟合`），使标题词可被向量与 BM25 同时命中
+- HTML/DOCX 解析器放在 `doc.metadata` 的 h1-h3 会与 Markdown header splitter 的节标题合并，再生成正文前缀
 - 切分**确定性**：同语料两次切分结果逐字节一致（向量库确定性 ID 的前提）
 
 ```python
@@ -119,5 +136,21 @@ graph LR
 | `embedding_model` | all-MiniLM-L6-v2 | HuggingFace Embedding 模型 |
 | `embedding_device` | cpu | 推理设备（cpu / cuda） |
 | `embedding_batch_size` | 32 | 批量编码大小 |
+| `demo_dir` | data/demo | UI 演示多格式语料 |
+| `library_dir` | data/library | 运行时上传 / 文件夹导入 |
+| `max_import_files` | 50 | 单次最多导入文件数 |
+| `max_upload_mb` | 20 | 单文件大小上限 |
 
 配置通过 `pydantic-settings` 从 `.env` 文件和环境变量读取，全局单例 `settings` 供各模块使用；`chunk_overlap < chunk_size` 由 model_validator 在启动时校验。
+
+## 运行时知识库
+
+`src/knowledge/service.py` 的 `KnowledgeBaseService` 负责：
+
+- 汇总 `demo + library` 语料，解析 → 切块 → 重建 Vector/BM25；
+- 上传文件按内容哈希去重，保存到 `library/uploads/`；
+- 文件夹导入只允许项目 `data/` 下路径，复制到 `library/folders/<name>/`；
+- 列出/删除来源（demo 来源只读）；
+- 与图共享同一批 retriever 对象，重建后图无需重建。
+
+MVP 采用全量重建 + 进程内写锁；不承诺生产级并发。

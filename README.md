@@ -8,6 +8,8 @@ RAGForge 是一个**基于 LangGraph 的可控 Agentic RAG 系统**：7 节点�
 
 交互侧支持多轮会话与历史、clarify 澄清分支、消息点赞/点踩与来源面板；图外会话层负责把追问改写成独立问题，图本身保持无状态。
 
+知识库入口支持 MD / TXT / PDF / HTML / DOCX / CSV / JSONL，统一解析为 `Document` 后切块；`data/demo/` 是多格式演示语料，`data/library/` 承接运行时上传与后续优质库。
+
 ## 架构
 
 7 节点主链路，固定 hybrid 检索；旧 8 节点（含 `switch_strategy`）为历史口径：
@@ -129,7 +131,7 @@ uv run --extra ui streamlit run src/ui/streamlit_app.py
 
 Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 
-- **侧栏**：新建会话、历史会话切换、运行参数（含 `max_iterations`）；
+- **侧栏**：新建会话、历史会话切换、知识库上传 / 文件夹导入 / 来源列表、运行参数（含 `max_iterations`）；
 - **主区**：消息流 + `st.chat_input`；
 - **多轮**：会话层把追问 condense 成独立问题，再交给图；
 - **clarify**：需要澄清时显示“需要澄清”消息，下一轮带历史继续；
@@ -199,6 +201,19 @@ score(d) = Σ_i  1 / (rrf_k + rank_i(d))
 - LLM 生成彻底失败 → generate 节点返回降级文案，状态机总能产出答案
 - LLM 调用 → tenacity 重试（仅连接/超时/限流/5xx 等瞬时故障，3 次指数退避；401/400 等永久错误直接抛出）
 
+### 7. 多格式入库
+
+`DocumentParser` 用格式注册表统一解析 MD / TXT / PDF / HTML / DOCX / CSV / JSONL：
+HTML/DOCX 保留标题层级，CSV/JSONL 按 `text/content` 约定导入，PDF 保留页码；
+切块后复用同一套 HybridRetriever，不改变检索链路。
+
+### 8. 多轮会话与 clarify
+
+图外 `ConversationService` 把追问 condense 成独立问题；`analyze` 判定歧义时走
+clarify 终止分支，先问清再检索。会话 JSON 落盘，历史回放不重新检索。
+
+## 项目结构
+
 ## 项目结构
 
 ```
@@ -225,6 +240,8 @@ RAGForge/
 │   │   ├── models.py          #   Session / SessionMessage
 │   │   ├── store.py           #   ConversationStore（原子写）
 │   │   └── service.py         #   ConversationService（condense / 落盘）
+│   ├── knowledge/             # 运行时知识库
+│   │   └── service.py         #   demo + library 重建 / 上传 / 文件夹导入 / 删除
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
 │   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + 条件边）
@@ -259,7 +276,9 @@ RAGForge/
 │   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
 ├── scripts/
 │   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
-├── data/sample/               # 知识库（8 个语料 md：python_basics、machine_learning_faq、rag_techniques 等）
+├── data/sample/               # 旧评测/测试语料（8 个 md）
+├── data/demo/                 # 多格式通用 demo（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
+├── data/library/              # 运行时上传与后续优质库（gitignore）
 ├── data/sessions/             # 会话 JSON（运行时生成，gitignore）
 ├── docs/
 │   ├── adr/                   # 架构决策记录（6 篇 ADR）

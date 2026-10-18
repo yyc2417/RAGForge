@@ -11,7 +11,8 @@
 - `src/api` — FastAPI 服务，SSE 流式输出
 - `src/conversation` — 会话 JSON 存储、多轮 condense、会话反馈（图外）
 - `src/generation` — LLMClient（DeepSeek / OpenAI 兼容）
-- `src/ingestion` — 文档解析 / 分块 / 嵌入
+- `src/ingestion` — 多格式文档解析（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）/ 分块 / 嵌入
+- `src/knowledge` — 运行时知识库（demo + library 全量重建、上传、文件夹导入、来源删除）
 - `src/retrieval` — 混合检索（VectorStore + BM25 + RRF + Reranker）
 - `src/ui` — Streamlit 聊天式会话界面（可选依赖 `--extra ui`）
 - `src/utils` — 日志 / 指标收集 / token 预算
@@ -22,4 +23,4 @@
 
 - 敏感字段使用 `SecretStr`
 - `chunk_overlap` 必须 < `chunk_size`
-- 依赖方向：api / ui → pipeline → agent → retrieval / generation → ingestion / utils；ui → conversation → generation（conversation 不反向依赖 ui / agent）
+- 依赖方向：api / ui → pipeline → agent → retrieval / generation → ingestion / utils；pipeline → knowledge → ingestion / retrieval；ui → conversation → generation（conversation 不反向依赖 ui / agent）

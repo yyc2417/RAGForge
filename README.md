@@ -343,6 +343,7 @@ RAGForge/
 ├── data/demo/                 # 多格式通用 demo（8 篇：MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
 ├── data/library/              # 运行时上传与后续优质库（gitignore）
 ├── data/sessions/             # 会话 JSON（运行时生成，gitignore）
+├── data/public_eval/          # 公开集下载 / 转换 / 本地语料（gitignore）
 ├── docs/
 │   ├── adr/                   # 架构决策记录（8 篇 ADR）
 │   ├── modules/               # 模块设计文档（7 篇）

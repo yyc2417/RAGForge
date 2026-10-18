@@ -67,7 +67,7 @@ def test_node_transitions_start_to_done():
 
 
 def test_loop_counting_and_self_heal_flag():
-    """自愈序列：retrieve → evaluate(switch) → switch_strategy → retrieve ×2。"""
+    """自愈序列：retrieve → evaluate(reformulate) → reformulate → retrieve ×2。"""
     view = EventView()
     view.consume(chain_start("analyze"))
     view.consume(chain_end("analyze", {"query_type": "complex"}))
@@ -77,9 +77,9 @@ def test_loop_counting_and_self_heal_flag():
     view.consume(chain_start("retrieve"))
     view.consume(chain_end("retrieve", {"documents": [], "retrieval_scores": []}))
     view.consume(chain_start("evaluate"))
-    view.consume(chain_end("evaluate", {"failure_mode": "low_recall", "suggested_action": "switch_strategy"}))
-    view.consume(chain_start("switch_strategy"))
-    view.consume(chain_end("switch_strategy", {"retrieval_strategy": "hybrid"}))
+    view.consume(chain_end("evaluate", {"failure_mode": "low_recall", "suggested_action": "reformulate"}))
+    view.consume(chain_start("reformulate"))
+    view.consume(chain_end("reformulate", {"reformulated_query": "改写查询", "rewrite_effective": True}))
     # 第二轮检索
     view.consume(chain_start("retrieve"))
     view.consume(chain_end("retrieve", {"documents": [], "retrieval_scores": []}))
@@ -128,7 +128,7 @@ def test_diagnostic_fields_extracted():
     view.consume(chain_end("decide", {"retrieval_strategy": "hybrid"}))
     view.consume(chain_end(
         "evaluate",
-        {"failure_mode": "low_recall", "suggested_action": "switch_strategy",
+        {"failure_mode": "low_recall", "suggested_action": "reformulate",
          "diagnosis_reason": "关键信息缺失"},
     ))
     assert view.diagnostic["query_type"] == "complex"
@@ -212,35 +212,38 @@ def test_consume_reports_change_levels():
 # ── 逐轮归集（自愈时间线）───────────────────────────────────────
 
 
-def _switch_strategy_events() -> list[dict]:
-    """完整重放一条 vector → bm25 策略升级轨迹（两轮检索）。"""
+def _reformulate_events() -> list[dict]:
+    """完整重放一条固定 hybrid + 查询改写轨迹（两轮检索）。"""
     return [
         chain_start("analyze"),
         chain_end("analyze", {"query_type": "factual", "needs_retrieval": True}),
         chain_start("decide"),
-        chain_end("decide", {"retrieval_strategy": "vector"}),
+        chain_end("decide", {"retrieval_strategy": "hybrid"}),
         chain_start("retrieve", {
             "query": "令牌桶限流怎么实现",
-            "retrieval_strategy": "vector", "iteration_count": 0,
+            "retrieval_strategy": "hybrid", "iteration_count": 0,
         }),
         chain_end("retrieve", {
-            "documents": [doc("D:\\sample\\web_api_design.md", "向量召回的无关内容", 0.21, 0)],
-            "retrieval_scores": [0.21], "iteration_count": 1,
+            "documents": [doc("D:\\sample\\web_api_design.md", "粗排召回的无关内容", 0.021, 0)],
+            "retrieval_scores": [0.021], "iteration_count": 1,
         }),
         chain_start("evaluate"),
         chain_end("evaluate", {
-            "failure_mode": "low_recall", "suggested_action": "switch_strategy",
-            "diagnosis_reason": "平均分数 0.210 过低 → 切换策略",
+            "failure_mode": "low_recall", "suggested_action": "reformulate",
+            "diagnosis_reason": "粗排未命中关键章节",
         }),
-        chain_start("switch_strategy"),
-        chain_end("switch_strategy", {"retrieval_strategy": "bm25"}),
+        chain_start("reformulate"),
+        chain_end("reformulate", {
+            "reformulated_query": "令牌桶算法如何实现？", "rewrite_effective": True,
+        }),
         chain_start("retrieve", {
             "query": "令牌桶限流怎么实现",
-            "retrieval_strategy": "bm25", "iteration_count": 1,
+            "reformulated_query": "令牌桶算法如何实现？",
+            "retrieval_strategy": "hybrid", "iteration_count": 1,
         }),
         chain_end("retrieve", {
-            "documents": [doc("data/sample/web_api_design.md", "令牌桶算法定义", 12.4, 3)],
-            "retrieval_scores": [12.4], "iteration_count": 2,
+            "documents": [doc("data/sample/web_api_design.md", "令牌桶算法定义", 0.032, 3)],
+            "retrieval_scores": [0.032], "iteration_count": 2,
         }),
         chain_start("evaluate"),
         chain_end("evaluate", {
@@ -258,32 +261,32 @@ def _switch_strategy_events() -> list[dict]:
 
 def _replayed() -> EventView:
     view = EventView()
-    for event in _switch_strategy_events():
+    for event in _reformulate_events():
         view.consume(event)
     return view
 
 
 def test_rounds_capture_strategy_query_and_hits():
     first, second = _replayed().rounds
-    assert (first.index, first.strategy, first.hits) == (1, "vector", 1)
-    assert (second.index, second.strategy, second.hits) == (2, "bm25", 1)
-    assert second.query == "令牌桶限流怎么实现"
-    assert (first.top_score, second.top_score) == (0.21, 12.4)
+    assert (first.index, first.strategy, first.hits) == (1, "hybrid", 1)
+    assert (second.index, second.strategy, second.hits) == (2, "hybrid", 1)
+    assert second.query == "令牌桶算法如何实现？"
+    assert (first.top_score, second.top_score) == (0.021, 0.032)
 
 
 def test_second_round_does_not_overwrite_first_diagnosis():
     """核心回归：诊断字段只留终态，逐轮归档必须各自保留自己的结论。"""
     first, second = _replayed().rounds
     assert first.failure_mode == "low_recall"
-    assert "0.210" in first.diagnosis_reason
+    assert first.diagnosis_reason == "粗排未命中关键章节"
     assert second.failure_mode == "sufficient"
     # 顶层诊断面板仍展示终态（与时间线各取所需）
     assert second.diagnosis_reason == "命中限流章节"
 
 
-def test_switch_strategy_action_records_upgrade_chain():
+def test_reformulate_action_records_rewritten_query_in_first_round():
     first, second = _replayed().rounds
-    assert first.actions == [("switch_strategy", "vector → bm25")]
+    assert first.actions == [("reformulate", "令牌桶算法如何实现？")]
     assert first.healed is True
     assert second.actions == [] and second.healed is False
 
@@ -305,7 +308,7 @@ def test_reformulate_action_records_rewritten_query():
     # 第二轮检索使用改写后的查询
     view.consume(chain_start("retrieve", {
         "query": "什么是过拟合", "reformulated_query": "机器学习中什么是过拟合？如何解决？",
-        "retrieval_strategy": "vector", "iteration_count": 1,
+        "retrieval_strategy": "hybrid", "iteration_count": 1,
     }))
     view.consume(chain_end("retrieve", {
         "documents": [], "retrieval_scores": [], "iteration_count": 2,
@@ -340,7 +343,7 @@ def test_render_track_badges_and_self_heal_class():
     assert "执行检索" in html and "retrieve" in html  # 中文职责名 + 原节点名双标
     assert "2 次" in html                              # 循环计数徽章
     assert 'class="rf-node is-heal"' in html           # 自愈节点独立配色
-    assert html.count("rf-node ") == 8                 # 8 张节点卡片齐备
+    assert html.count("rf-node ") == 7                 # 7 张节点卡片齐备
 
 
 def test_render_diagnosis_groups_values_in_chinese():
@@ -361,15 +364,15 @@ def test_render_diagnosis_hides_absent_fields():
 def test_render_rounds_keeps_both_rounds_readable():
     html = html_view.render_rounds(_replayed())
     assert "第 1 轮" in html and "第 2 轮" in html
-    assert "召回不足" in html and "切换策略" in html
-    assert "vector → bm25" in html
+    assert "召回不足" in html and "改写查询" in html
+    assert "令牌桶算法如何实现？" in html
     assert "is-healed" in html  # 触发自愈的行高亮
 
 
 def test_render_sources_groups_by_round_and_shortens_path():
     html = html_view.render_sources(_replayed())
-    assert "第 1 轮 · vector · 1 篇" in html
-    assert "第 2 轮 · bm25 · 1 篇" in html
+    assert "第 1 轮 · hybrid · 1 篇" in html
+    assert "第 2 轮 · hybrid · 1 篇" in html
     # 可见文本只留文件名（绝对路径在窄列里会折行），完整路径移到 hover
     assert 'title="D:\\sample\\web_api_design.md">web_api_design.md<' in html
     assert html.count("rf-src-name") == 2
@@ -377,7 +380,7 @@ def test_render_sources_groups_by_round_and_shortens_path():
 
 def test_render_sources_escapes_html_in_content():
     view = EventView()
-    view.consume(chain_start("retrieve", {"query": "q", "retrieval_strategy": "vector"}))
+    view.consume(chain_start("retrieve", {"query": "q", "retrieval_strategy": "hybrid"}))
     view.consume(chain_end("retrieve", {
         "documents": [doc("a.md", "<script>alert(1)</script>", 0.5, 0)],
         "retrieval_scores": [0.5], "iteration_count": 1,
@@ -390,7 +393,7 @@ def test_render_sources_flows_paragraphs_without_markdown_lists():
     """正文行首的 `1. ` 必须被压进单行：Streamlit 会对注入的 HTML 再做 markdown 解析，
     否则正文被拆成 <ol>/<p>，叠加间距后实测多出约 58px 无信息空白。"""
     view = EventView()
-    view.consume(chain_start("retrieve", {"query": "q", "retrieval_strategy": "vector"}))
+    view.consume(chain_start("retrieve", {"query": "q", "retrieval_strategy": "hybrid"}))
     view.consume(chain_end("retrieve", {
         "documents": [doc("a.md", "方法：\n1. 早停\n2. 正则化\n\n另一段", 0.9, 0)],
         "retrieval_scores": [0.9], "iteration_count": 1,
@@ -406,7 +409,7 @@ def test_render_rounds_notes_budget_cutoff():
     view = EventView()
     for i in range(1, 4):
         view.consume(chain_start("retrieve", {
-            "query": "q", "retrieval_strategy": "vector", "iteration_count": i - 1,
+            "query": "q", "retrieval_strategy": "hybrid", "iteration_count": i - 1,
         }))
         view.consume(chain_end("retrieve", {
             "documents": [], "retrieval_scores": [], "iteration_count": i,
@@ -427,7 +430,7 @@ def test_render_rounds_silent_when_loop_not_truncated():
 
 def test_render_summary_reports_heal_actions():
     html = html_view.render_summary(_replayed())
-    assert "switch_strategy" in html  # 自愈动作实际触发情况
+    assert "reformulate" in html  # 自愈动作实际触发情况
     assert "忠实" in html and "检索轮次" in html
 
 

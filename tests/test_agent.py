@@ -36,6 +36,30 @@ from src.generation.schemas import (
 PROMPTS = PromptManager()
 
 
+def test_schema_aliases_for_local_model_variants():
+    analyze = AnalyzeResult.model_validate({
+        "query_type": "Question",
+        "needs_retrieval": True,
+        "needs_clarification": True,
+        "ambiguity_type": "missing_entity",
+    })
+    assert analyze.query_type == "factual"
+    assert analyze.ambiguity_type == "missing_slot"
+
+    evaluate = EvaluateResult.model_validate({
+        "failure_mode": "insufficient",
+        "suggested_action": "continue",
+    })
+    assert evaluate.failure_mode == "low_recall"
+    assert evaluate.suggested_action == "proceed"
+
+    reformulate = ReformulateResult.model_validate({
+        "reformulated_query": "具体问题",
+        "rewrite_strategy": "paraphrase",
+    })
+    assert reformulate.rewrite_strategy == "synonym_replace"
+
+
 # ── 纯规则节点 ────────────────────────────────────────────────────
 
 

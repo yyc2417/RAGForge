@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from src.evaluation import EvalItem, dataset_hash, validate_dataset
+from src.evaluation import EvalItem, dataset_hash, load_dataset, validate_dataset
 
 
 def test_eval_item_normalizes_behavior_and_sources():
@@ -112,6 +112,26 @@ def test_crud_rag_read_import(tmp_path):
     for name, text in corpus.items():
         (tmp_path / name).write_text(text, encoding="utf-8")
     assert validate_dataset(items, corpus_dir=tmp_path) == []
+
+
+def test_multiformat_fixture_covers_demo_sources():
+    root = Path(__file__).parent.parent
+    items = load_dataset(root / "tests" / "eval_dataset_multiformat.json")
+    assert len(items) >= 40
+    assert validate_dataset(items, corpus_dir=root / "data" / "demo") == []
+    sources = {Path(source).name for item in items for source in item.expected_sources}
+    assert sources == {
+        "company_handbook.md",
+        "team_roles.md",
+        "travel_guide.txt",
+        "city_guide.csv",
+        "faq.jsonl",
+        "product_faq.html",
+        "product_manual.pdf",
+        "project_brief.docx",
+    }
+    assert sum("multi-hop" in item.tags for item in items) >= 4
+    assert sum("cross-lingual" in item.tags for item in items) >= 8
 
 
 def test_dataset_hash_stable():

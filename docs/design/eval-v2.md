@@ -171,6 +171,13 @@ uv run python scripts/eval.py --rebuild
 剩余未命中集中在中文 query 检索英文 PDF/DOCX；格式解析本身正常。
 报告：`reports/eval_v2_multiformat_report.json`。
 
+### 本地模型 smoke（2026-10-18）
+
+本地 `Qwen3.6-35B-A3B-NVFP4`（OpenAI 兼容 endpoint）+ agent 模式，CRUD-RAG
+前 2 题：Recall@5 / MRR@5 100%，忠实度 100%，answer F1 76.0%，P50 130.6s，
+max 184.6s。样本仅用于验证 v2 e2e harness 与本地链路，不作为模型结论。
+报告：`reports/local_e2e_crud_smoke.json`。
+
 ## 8. 待办
 
 - RGB 噪声/拒答/反事实子集适配；

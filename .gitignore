@@ -21,6 +21,7 @@ data/library/
 data/sessions/
 data/feedback/
 data/public_eval/
+data/models/
 
 # IDE
 .vscode/

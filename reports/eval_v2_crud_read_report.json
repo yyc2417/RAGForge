@@ -11,12 +11,12 @@
   "modes": [
     {
       "mode": "vector",
-      "hit_any": 0.6,
-      "hit_all": 0.3,
-      "mrr_any": 0.5047222222222222,
-      "ndcg_at5": 0.42557040615357367,
-      "hit_any_count": 72,
-      "hit_all_count": 36
+      "hit_any": 1.0,
+      "hit_all": 0.95,
+      "mrr_any": 0.9819444444444445,
+      "ndcg_at5": 0.9728550180767178,
+      "hit_any_count": 120,
+      "hit_all_count": 114
     },
     {
       "mode": "bm25",
@@ -29,22 +29,22 @@
     },
     {
       "mode": "hybrid",
-      "hit_any": 0.9916666666666667,
-      "hit_all": 0.6583333333333333,
-      "mrr_any": 0.804861111111111,
-      "ndcg_at5": 0.7680219868550189,
-      "hit_any_count": 119,
-      "hit_all_count": 79
+      "hit_any": 1.0,
+      "hit_all": 0.925,
+      "mrr_any": 0.9652777777777778,
+      "ndcg_at5": 0.9546463270568589,
+      "hit_any_count": 120,
+      "hit_all_count": 111
     },
     {
       "mode": "reranker",
-      "hit_any": 0.9916666666666667,
-      "hit_all": 0.8916666666666667,
+      "hit_any": 1.0,
+      "hit_all": 0.9416666666666667,
       "mrr_any": 0.9791666666666666,
-      "ndcg_at5": 0.9541929788526143,
-      "hit_any_count": 119,
-      "hit_all_count": 107
+      "ndcg_at5": 0.9687757821218582,
+      "hit_any_count": 120,
+      "hit_all_count": 113
     }
   ],
-  "elapsed_ms": 303224.4
+  "elapsed_ms": 42489.6
 }

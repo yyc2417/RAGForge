@@ -62,7 +62,7 @@ flowchart TD
 | 关键词检索 | rank-bm25 | BM25Okapi，jieba/regex 双分词（小写归一） |
 | 混合检索 | RRF（自实现） | `score = Σ 1/(k+rank)`，top-2k 候选融合 |
 | 重排序 | sentence-transformers | CrossEncoder bge-reranker-v2-m3，优雅降级（600s 冷却重试） |
-| Embedding | langchain-huggingface | all-MiniLM-L6-v2（384 维） |
+| Embedding | langchain-huggingface | 本地 BAAI/bge-m3（1024 维，CUDA）；测试/CI 用 all-MiniLM 基线 |
 | 分块 | tiktoken + MarkdownHeaderTextSplitter | token 预算切分（220/30）+ 标题上下文注入 |
 | API | FastAPI + sse-starlette | /chat + /chat/stream（SSE 逐 token） |
 | 日志 | loguru | 双输出（控制台 + 文件） |
@@ -98,6 +98,20 @@ DEEPSEEK_API_KEY=local
 结构化输出会校验并归一化常见枚举变体；本地模型若输出未知枚举，会重试一次后降级。
 本地大模型单次调用较慢时，可同时调高 `API_REQUEST_TIMEOUT`（如 300）与
 `LLM_TIMEOUT`（如 180），避免 `/chat` 在生成阶段触发 504。
+
+本地推荐使用 `BAAI/bge-m3`（1024 维，多语言）。将模型放到 `data/models/bge-m3` 后设置：
+
+```bash
+EMBEDDING_MODEL=./data/models/bge-m3
+EMBEDDING_DEVICE=cuda
+EMBEDDING_BATCH_SIZE=8
+EMBEDDING_NORMALIZE=true
+```
+
+本地 CUDA 需要安装与驱动匹配的 PyTorch（本项目验证 `torch 2.12.0+cu130`）。
+注意：裸 `uv run` 会按 lockfile 恢复 CPU torch；GPU 任务请用
+`.venv/Scripts/python.exe`（Windows）或 `UV_NO_SYNC=1 uv run ...` 运行。
+单测与 CI 固定轻量 `all-MiniLM-L6-v2`，不下载 bge-m3。
 
 ### 3. 运行
 
@@ -151,7 +165,9 @@ docker run --rm -p 8000:8000 --env-file .env \
 
 镜像构建时预取默认 embedding 模型（`all-MiniLM-L6-v2`），并强制 CPU 版
 PyTorch（跳过 CUDA 依赖）控制镜像体积；reranker 模型不内置，运行时不可用会按
-既有降级逻辑继续用 hybrid。已在 Docker Desktop 29.8 实测：镜像约 2.38GB，
+既有降级逻辑继续用 hybrid。容器默认仍用 all-MiniLM；如需 bge-m3，挂载
+`data/models/bge-m3` 并设置 `EMBEDDING_MODEL=/app/models/bge-m3`、
+`EMBEDDING_NORMALIZE=true`。已在 Docker Desktop 29.8 实测：镜像约 2.38GB，
 容器健康检查通过，`/chat` 调用本地模型返回 200。
 
 ### 5. 运行评估
@@ -418,58 +434,57 @@ RAGForge/
 
 ### 公开集检索基线（CRUD-RAG Read）
 
-120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，离线 CPU embedding（all-MiniLM-L6-v2），独立评测索引，不调用 LLM：
+120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CUDA embedding（BAAI/bge-m3，1024 维），独立评测索引，不调用 LLM：
 
 | 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
 |------|---:|---:|---:|---:|
-| vector | 60.0% | 30.0% | 50.5% | 42.6% |
+| vector | 100.0% | 95.0% | 98.2% | 97.3% |
 | bm25 | 99.2% | 90.0% | 96.9% | 94.7% |
-| hybrid | 99.2% | 65.8% | 80.5% | 76.8% |
-| reranker | 99.2% | 89.2% | 97.9% | 95.4% |
+| hybrid | 100.0% | 92.5% | 96.5% | 95.5% |
+| reranker | 100.0% | 94.2% | 97.9% | 96.9% |
 
-向量单路在中文公开集上明显偏弱，与“英文 embedding + 中文语料”的判断一致；BM25 兜底后 hit_any 接近饱和。RRF 只把 top-10 候选交给精排，多跳 `hit_all` 会从 BM25 的 90.0% 降到 65.8%，reranker 精排后恢复到 89.2%。明细见 `reports/eval_v2_crud_read_report.json`。
+换 bge-m3 后 vector 单路 hit_any 从 60.0% 提升到 100.0%，hybrid hit_all 从 65.8% 提升到 92.5%；BM25 作为关键词兜底保持稳定。明细见 `reports/eval_v2_crud_read_report.json`。
 
 ### 多格式自定义集检索基线
 
-45 题覆盖 8 个 demo 文件、7 种格式（MD/TXT/CSV/JSONL/HTML/PDF/DOCX），含 4 道多跳、10 道中文 query 检索英文 PDF/DOCX 的跨语言样本；文档级 top-5，离线：
+45 题覆盖 8 个 demo 文件、7 种格式（MD/TXT/CSV/JSONL/HTML/PDF/DOCX），含 4 道多跳、10 道中文 query 检索英文 PDF/DOCX 的跨语言样本；文档级 top-5，CUDA embedding（BAAI/bge-m3）：
 
 | 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
 |------|---:|---:|---:|---:|
-| vector | 80.0% | 80.0% | 61.0% | 68.0% |
+| vector | 100.0% | 100.0% | 95.6% | 96.7% |
 | bm25 | 93.3% | 91.1% | 87.4% | 88.1% |
-| hybrid | 91.1% | 88.9% | 76.9% | 80.4% |
-| reranker | 93.3% | 91.1% | 92.2% | 91.7% |
+| hybrid | 100.0% | 100.0% | 91.3% | 94.1% |
+| reranker | 100.0% | 97.8% | 97.8% | 97.5% |
 
-剩余未命中集中在“中文问题 → 英文 PDF/DOCX”的跨语言检索，格式解析本身正常；reranker 把 MRR 从 76.9% 拉回 92.2%。明细见 `reports/eval_v2_multiformat_report.json`。
+换 bge-m3 后多格式集 vector/hybrid hit_any 均到 100%，此前的跨语言失败消失；reranker 把 MRR 拉到 97.8%。明细见 `reports/eval_v2_multiformat_report.json`。
 
 ### 本地模型 smoke（Qwen3.6-35B-A3B-NVFP4）
 
 - **clarify**：16 例（11 歧义 + 5 清晰/寒暄），澄清准确率 93.8%，过度澄清率 20.0%，问题关键词命中率 100%（`reports/local_clarify_report.json`）；
 - **多轮**：2 会话 × 3 轮 smoke，轮级来源命中 100%，会话成功率 100%（`reports/local_multiturn_smoke.json`）；
-- **CRUD-RAG e2e**：agent 模式前 2 题，Recall@5 / MRR@5 100%，忠实度 100%，answer F1 76.0%，P50 130.6s、max 184.6s（`reports/local_e2e_crud_smoke.json`）。
+- **CRUD-RAG e2e**：agent 模式前 2 题（bge-m3），Recall@5 / MRR@5 100%，忠实度 100%，answer F1 81.9%，P50 143.8s、max 188.4s（`reports/local_e2e_crud_smoke.json`）。
 
 三组都是小样本链路验证，不作为模型效果结论；全量 120 题 × 4 模式与 30 轮多轮待跑。
 
 ## 未来工作
 
-- **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，旧基线
-  vector-only 检索在中文语料上 recall 仅 73.3%（混合检索已兜底）；v2 的多格式
-  跨语言样本也暴露了同类问题。切换 BGE 系列或 bge-m3 预期可显著提升向量单路
-  召回；需同步重建索引并重跑评估。
+- **Embedding 多模型 ablation**：本地已切到 bge-m3（1024 维，CUDA），CRUD-RAG
+  vector hit_any 60.0%→100.0%。`bge-large-zh-v1.5` / `Qwen3-Embedding-0.6B`
+  的对照尚未跑；如需最终选型，在相同 dev/test 与 chunk 配置下比较 Recall/MRR/延迟/显存。
 - **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
   （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
 - **评测 v2 公开集**：CRUD-RAG Read 120 题已导入并完成离线检索基线
   （见上表，报告 `reports/eval_v2_crud_read_report.json`）；RGB 子集尚未接入。
   冻结 test 后跑本地与 API 双基线。
-- **多格式集与跨语言检索**：45 题多格式集已建（`tests/eval_dataset_multiformat.json`），
-  剩余失败集中在中文 query 检索英文 PDF/DOCX；换多语 embedding 后复测。
-- **多轮 / clarify 跑分**：多轮集已扩到 10 会话 × 3 轮，clarify 16 例
-  （含清晰问题负例）；`eval_interaction.py` 统计澄清准确率、过度澄清率、
-  问题关键词命中率，`--with-followup` 可统计补充后解决率。真实 LLM 跑分与
-  报表待本地 / API 双跑阶段补齐。
-- **GPU embedding**：`EMBEDDING_DEVICE=cuda` 与归一化/查询指令已预留；
-  待 CUDA 版 PyTorch 与显存实测后再切换并重建索引。
+- **多格式集与跨语言检索**：45 题多格式集已建；切 bge-m3 后 reranker hit_any
+  100%、NDCG@5 97.5%，跨语言失败已消除。
+- **多轮 / clarify 跑分**：clarify 16 例本地模型跑分已完成（准确率 93.8%、
+  过度澄清 20.0%）；多轮 2×3 smoke 通过，10×3 全量待跑。`--with-followup`
+  可统计补充后解决率。
+- **GPU embedding**：已安装 `torch 2.12.0+cu130`，bge-m3 在 RTX 5070 上实测
+  显存约 2.2GB、加载约 4s；本地 `.env` 使用 `EMBEDDING_DEVICE=cuda`，CPU 可回退。
+  裸 `uv run` 会按 lockfile 恢复 CPU torch，GPU 任务需用 `.venv/Scripts/python.exe`。
 
 ## License
 

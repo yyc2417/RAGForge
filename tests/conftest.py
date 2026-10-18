@@ -17,6 +17,9 @@ import os
 # 需要联网调试时，显式导出 HF_HUB_OFFLINE=0 即可绕过。
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+# 单测固定轻量模型，避免本地 .env 的 bge-m3 让测试套件加载 2GB 模型
+os.environ.setdefault("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+os.environ.setdefault("EMBEDDING_DEVICE", "cpu")
 
 from pathlib import Path
 

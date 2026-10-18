@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     context_token_budget: int = Field(3000, gt=0)
 
     # ── Embedding ──────────────────────────────────────────────────
+    # 默认 all-MiniLM 供单测 / CI 离线基线；本地推荐 bge-m3（见 README）
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_device: str = "cpu"  # cpu / cuda
     embedding_batch_size: int = Field(32, gt=0)

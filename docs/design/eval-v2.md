@@ -1,6 +1,6 @@
 # 评测 v2 · 设计
 
-> 状态：统一 schema、校验器、CRUD-RAG Read 120 题、多格式 45 题、离线基线与 CI 回归门禁已实现；多轮（10×3）与 clarify（16 例）数据集已建；RGB 适配与全量 LLM 双跑待执行。
+> 状态：统一 schema、校验器、CRUD-RAG Read 120 题、多格式 45 题、bge-m3/CUDA 检索基线、CI 回归门禁已实现；多轮（10×3）与 clarify（16 例）数据集已建；RGB 适配与全量 LLM 双跑待执行。
 
 ## 1. 目标
 
@@ -142,41 +142,41 @@ uv run python scripts/eval.py --rebuild
 
 ### CRUD-RAG Read
 
-120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CPU embedding
-（all-MiniLM-L6-v2），独立评测索引，不调 LLM：
+120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CUDA embedding
+（BAAI/bge-m3，1024 维），独立评测索引，不调 LLM：
 
 | 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
 |------|---:|---:|---:|---:|
-| vector | 60.0% | 30.0% | 50.5% | 42.6% |
+| vector | 100.0% | 95.0% | 98.2% | 97.3% |
 | bm25 | 99.2% | 90.0% | 96.9% | 94.7% |
-| hybrid | 99.2% | 65.8% | 80.5% | 76.8% |
-| reranker | 99.2% | 89.2% | 97.9% | 95.4% |
+| hybrid | 100.0% | 92.5% | 96.5% | 95.5% |
+| reranker | 100.0% | 94.2% | 97.9% | 96.9% |
 
-解读：英文 embedding 在中文公开集上向量单路明显偏弱；BM25 兜底后 hit_any
-接近饱和。hybrid 的 top-10 候选池压缩了多跳 hit_all，reranker 精排可恢复到
-89.2%。报告：`reports/eval_v2_crud_read_report.json`（dataset_hash
-`2b087ab38af08ad2`，Apache-2.0）。
+解读：换 bge-m3 后 vector hit_any 60.0%→100.0%，hybrid hit_all 65.8%→92.5%；
+BM25 兜底保持稳定。报告：`reports/eval_v2_crud_read_report.json`
+（dataset_hash `2b087ab38af08ad2`，Apache-2.0）。
 
 ### 多格式自定义集
 
-45 题覆盖 8 个 demo 文件、7 种格式，含 4 道多跳、10 道跨语言样本：
+45 题覆盖 8 个 demo 文件、7 种格式，含 4 道多跳、10 道跨语言样本，
+CUDA embedding（BAAI/bge-m3）：
 
 | 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
 |------|---:|---:|---:|---:|
-| vector | 80.0% | 80.0% | 61.0% | 68.0% |
+| vector | 100.0% | 100.0% | 95.6% | 96.7% |
 | bm25 | 93.3% | 91.1% | 87.4% | 88.1% |
-| hybrid | 91.1% | 88.9% | 76.9% | 80.4% |
-| reranker | 93.3% | 91.1% | 92.2% | 91.7% |
+| hybrid | 100.0% | 100.0% | 91.3% | 94.1% |
+| reranker | 100.0% | 97.8% | 97.8% | 97.5% |
 
-剩余未命中集中在中文 query 检索英文 PDF/DOCX；格式解析本身正常。
+换 bge-m3 后 vector/hybrid hit_any 到 100%，跨语言失败消除；reranker MRR 97.8%。
 报告：`reports/eval_v2_multiformat_report.json`。
 
 ### 本地模型 smoke（2026-10-18）
 
 本地 `Qwen3.6-35B-A3B-NVFP4`（OpenAI 兼容 endpoint）+ agent 模式，CRUD-RAG
-前 2 题：Recall@5 / MRR@5 100%，忠实度 100%，answer F1 76.0%，P50 130.6s，
-max 184.6s。多轮 2 会话 × 3 轮 smoke：轮级命中 100%，会话成功率 100%。
-样本仅用于验证 v2 e2e harness、clarify 与多轮链路，不作为模型结论。
+前 2 题（bge-m3）：Recall@5 / MRR@5 100%，忠实度 100%，answer F1 81.9%，
+P50 143.8s，max 188.4s。多轮 2 会话 × 3 轮 smoke：轮级命中 100%，会话成功率
+100%。样本仅用于验证 v2 e2e harness、clarify 与多轮链路，不作为模型结论。
 报告：`reports/local_e2e_crud_smoke.json`、`reports/local_clarify_report.json`、
 `reports/local_multiturn_smoke.json`。
 

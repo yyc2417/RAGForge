@@ -7,6 +7,12 @@
 - 检索回归门禁（离线，CI 同款）：
   `uv run python scripts/eval_v2.py --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo --rebuild --skip-reranker --report reports/ci_retrieval_report.json --gate-mode hybrid --min-hit-any 0.85 --min-mrr 0.60`
 
+## 本地环境备注
+
+- 单测与 CI 固定 `all-MiniLM-L6-v2`（`tests/conftest.py` 强制），保持离线与轻量。
+- 本地 GPU 推荐 `bge-m3` + `torch 2.12.0+cu130`；裸 `uv run` 会按 lockfile 恢复 CPU torch，GPU 任务用 `.venv/Scripts/python.exe` 或 `UV_NO_SYNC=1 uv run ...`。
+- 换 embedding 后必须重建 live / eval Chroma 索引。
+
 ## 模块结构
 
 - `src/agent` — LangGraph 7 节点主链路 + clarify 终止分支（固定 hybrid：analyze 分叉 clarify / decide → retrieve → evaluate → reformulate → generate → verify）；旧 8 节点（含 `switch_strategy`）为历史口径

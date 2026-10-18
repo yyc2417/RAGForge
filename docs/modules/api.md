@@ -34,8 +34,10 @@ POST /chat/stream  (async + SSE)     → EventSourceResponse
 | 端点 | 调用方式 | 用途 |
 |------|----------|------|
 | `/health` | 同步 | 健康检查，`status=ok`（就绪）/ `starting`（构建中）+ `version` |
-| `/chat` | `graph.ainvoke()` | 完整执行状态机后返回结构化响应（answer + sources + trace + metrics）；执行失败返回结构化 502 |
+| `/chat` | `graph.ainvoke()` | 完整执行状态机后返回结构化响应（answer + clarification + sources + trace + metrics）；执行失败返回结构化 502 |
 | `/chat/stream` | `graph.astream_events(v2)` | SSE 流式，逐 token + 节点事件推送 |
+
+**clarify 响应**：当状态机走 clarify 终止分支时，`answer` 为空，`clarification` 字段返回 `{question, ambiguity_type}`；SSE `done` 事件也携带 `clarification_question` 与 `ambiguity_type`。多轮会话续接目前只在 Streamlit UI 中实现，API 仍是无状态单轮接口。
 
 **关键设计取舍**：`/chat` 使用 `ainvoke` 而非 `invoke`，避免阻塞 FastAPI 的事件循环。`/chat/stream` 使用 `astream_events(version="v2")` 而非 `astream()`——后者只返回节点级状态快照，无法捕获 `on_chat_model_stream` 事件，无法实现真正的逐 token 推送。
 

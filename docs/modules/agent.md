@@ -2,9 +2,9 @@
 
 ## 模块职责
 
-Agent 决策层基于 LangGraph 构建 7 节点主链路，固定 hybrid 检索，包含诊断式评估（`failure_mode` + `suggested_action` 驱动查询改写）和幻觉检测闭环。
+Agent 决策层基于 LangGraph 构建 **7 节点主链路 + clarify 终止分支**（共 8 节点），固定 hybrid 检索，包含诊断式评估（`failure_mode` + `suggested_action` 驱动查询改写）、澄清分支和幻觉检测闭环。
 
-> 拓扑口径：旧 8 节点含 `switch_strategy`；当前为固定 hybrid 后的 7 节点主链路。Phase 1 计划新增 clarify 终止分支后为 8 节点（含 clarify，不含 switch），见 ADR-008。
+> 拓扑口径：旧 8 节点含 `switch_strategy`；当前 8 节点含 `clarify`（7 主链路 + 1 终止分支），见 ADR-007/008。
 
 ## 状态设计
 
@@ -17,6 +17,9 @@ class AgentState(TypedDict, total=False):
     query: str                                    # 用户输入
     query_type: QueryType                         # factual | reasoning | chitchat | complex
     needs_retrieval: bool                         # 是否需要检索
+    needs_clarification: bool                     # 是否需要先澄清
+    ambiguity_type: AmbiguityType | None           # missing_slot | multiple_interpretations | conflicting_constraints
+    clarification_question: str | None             # 澄清问题
     retrieval_strategy: RetrievalStrategy          # hybrid | none（固定 hybrid）
     documents: list[Document]                     # 检索结果
     retrieval_scores: list[float]                 # 检索分数
@@ -52,7 +55,9 @@ def initial_state(query: str, max_iterations: int = 3) -> AgentState:
 ```mermaid
 graph TD
     START --> Analyze[analyze]
-    Analyze --> Decide[decide]
+    Analyze -->|needs_clarification| Clarify[clarify]
+    Clarify --> END
+    Analyze -->|else| Decide[decide]
     Decide -->|strategy=none| Generate[generate]
     Decide -->|strategy=hybrid| Retrieve[retrieve]
     Retrieve --> Evaluate[evaluate]
@@ -70,7 +75,8 @@ graph TD
 
 | 节点 | 需要 LLM | 职责 |
 |------|----------|------|
-| `analyze` | 是 | 分析查询意图，判断 `query_type` 和 `needs_retrieval`，LLM 失败时降级为 factual+需检索 |
+| `analyze` | 是 | 分析查询意图，判断 `query_type`、`needs_retrieval` 与 `needs_clarification`；LLM 失败时降级为 factual+需检索 |
+| `clarify` | 否 | 终止节点：返回 `clarification_question`，不检索、不生成；下一轮带历史重新进图 |
 | `decide` | 否 | 纯规则决策：chitchat / 无需检索 → none，其余 → hybrid |
 | `retrieve` | 否 | 固定 hybrid（向量 + BM25 + RRF，可选重排），优先使用 `reformulated_query`；`iteration_count` 唯一递增点（每轮真实检索 +1） |
 | `evaluate` | 是 | 诊断检索质量：空结果硬规则 + LLM 语义判断（不注入 RRF 分数），输出 `failure_mode` + `suggested_action`（proceed / reformulate） |
@@ -79,6 +85,13 @@ graph TD
 | `verify` | 是 | 幻觉检测；确认幻觉时 `verify_failures += 1`（唯一递增点），校验失败标记 `is_faithful=None` |
 
 ## 条件边（路由函数）
+
+### route_after_analyze
+
+```python
+def route_after_analyze(state: AgentState) -> str:
+    """needs_clarification=True 且 clarify_enabled → clarify，否则 → decide。"""
+```
 
 ### route_after_decide
 
@@ -165,7 +178,9 @@ def build_agent_graph(
 ```mermaid
 graph LR
     Q[用户查询] --> A[analyze]
-    A --> D[decide]
+    A -->|needs_clarification| C[clarify]
+    C --> CLR[澄清问题]
+    A -->|else| D[decide]
     D --> R[retrieve]
     R --> E[evaluate]
     E -->|proceed| G[generate]

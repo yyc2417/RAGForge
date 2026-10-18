@@ -110,7 +110,7 @@ quality_max_per_source = 2
 
 - [ADR-002：RRF 融合向量和 BM25](002-rrf-hybrid-retrieval.md)
 - [ADR-006：检索分数语义与评估口径](006-score-semantics-and-eval-calibration.md)
-- ADR-008：clarify 终止分支（Phase 1 落地）
+- [ADR-008：clarify 终止分支](008-clarify-terminal-node.md)
 - [Agent 模块文档](../modules/agent.md)
 - [检索层模块文档](../modules/retrieval.md)
 - [升级补全方案](../../RAGForge-升级补全方案.md)（私有）

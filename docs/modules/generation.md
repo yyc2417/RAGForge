@@ -42,7 +42,8 @@ class LLMClient:
 ```python
 class PromptManager:
     QA_PROMPT: ChatPromptTemplate           # {context, input}；<doc> 定界符防注入 + 寒暄例外规则
-    ANALYZE_PROMPT: ChatPromptTemplate      # {query}
+    ANALYZE_PROMPT: ChatPromptTemplate      # {query}；同时判定 clarify
+    CONDENSE_PROMPT: ChatPromptTemplate     # {history, query}；多轮追问改写为独立问题
     EVALUATE_PROMPT: ChatPromptTemplate     # {query, retrieved_docs}；不注入分数（见 ADR-006）
     REFORMULATE_PROMPT: ChatPromptTemplate  # {query, failure_mode, rewrite_hint, context}
     VERIFY_PROMPT: ChatPromptTemplate       # {query, answer, context}；<doc> 定界符防注入
@@ -56,7 +57,9 @@ class PromptManager:
 五个 schema 类定义了 LLM 输出与 AgentState 之间的**类型边界**：
 
 ```python
-class AnalyzeResult(BaseModel):    # → query_type: Literal["factual","reasoning","chitchat","complex"]
+class AnalyzeResult(BaseModel):    # → query_type + needs_retrieval + clarify 三字段
+class CondenseResult(BaseModel):   # → standalone_query（多轮追问改写）
+class EvaluateResult(BaseModel):   # → failure_mode + suggested_action（reformulate/proceed）
 class EvaluateResult(BaseModel):   # → failure_mode: Literal["low_recall","irrelevant","sufficient"]
 class ReformulateResult(BaseModel):# → rewrite_strategy: Literal["specify","generalize","synonym_replace"]
 class VerifyResult(BaseModel):     # → is_faithful: bool

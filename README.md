@@ -6,6 +6,8 @@
 
 RAGForge 是一个**基于 LangGraph 的可控 Agentic RAG 系统**：7 节点主链路分析查询意图，需要检索时固定使用 **hybrid**（向量 + BM25 + RRF，可选重排），对检索结果做**诊断式评估**（区分“召回不足”还是“结果无关”），不达标时自动改写查询并重新检索，最后生成答案并做**幻觉检测**——一旦发现答案未忠实于上下文，会触发新一轮改写检索，直到通过验证或达到迭代上限。
 
+交互侧支持多轮会话与历史、clarify 澄清分支、消息点赞/点踩与来源面板；图外会话层负责把追问改写成独立问题，图本身保持无状态。
+
 ## 架构
 
 7 节点主链路，固定 hybrid 检索；旧 8 节点（含 `switch_strategy`）为历史口径：
@@ -13,7 +15,9 @@ RAGForge 是一个**基于 LangGraph 的可控 Agentic RAG 系统**：7 节点�
 ```mermaid
 flowchart TD
     START([START]) --> analyze[analyze<br/>意图分析]
-    analyze --> decide{decide<br/>检索决策}
+    analyze -->|需要澄清| clarify[clarify<br/>澄清追问]
+    clarify --> END([END])
+    analyze -->|继续| decide{decide<br/>检索决策}
     decide -->|chitchat / 无需检索| generate[generate<br/>答案生成]
     decide -->|需要检索| retrieve[retrieve<br/>固定 hybrid 检索]
     retrieve --> evaluate{evaluate<br/>诊断式评估}
@@ -30,7 +34,8 @@ flowchart TD
 
 | 节点 | LLM | 职责 |
 |------|:---:|------|
-| analyze | ✅ | 判断 query_type（factual/reasoning/chitchat/complex）+ needs_retrieval |
+| analyze | ✅ | 判断 query_type（factual/reasoning/chitchat/complex）+ needs_retrieval + 是否需要澄清 |
+| clarify | ❌ | 终止分支：返回澄清问题，不检索、不生成；下一轮带历史重新进图 |
 | decide | ❌ | 纯规则路由：chitchat / 无需检索 → none，其余 → hybrid |
 | retrieve | ❌ | 固定调用 HybridRetriever；iteration_count 唯一递增点（每轮真实检索 +1） |
 | evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action（proceed / reformulate）；RRF 分不进绝对阈值 |
@@ -40,7 +45,7 @@ flowchart TD
 
 **安全机制**：双预算防死循环——`iteration_count`（检索总次数上限，retrieve 唯一递增）与 `verify_failures`（幻觉重试上限，verify 唯一递增）均默认 3；外加 LangGraph `recursion_limit`（第二道防线）。
 
-> 拓扑口径：旧 8 节点含 `switch_strategy`；当前为 7 节点主链路。Phase 1 计划新增 clarify 终止分支后为 8 节点（含 clarify，不含 switch）。
+> 拓扑口径：旧 8 节点含 `switch_strategy`；当前为 7 节点主链路 + clarify 终止分支（共 8 节点，含 clarify，不含 switch）。
 
 ## 技术栈
 
@@ -122,28 +127,21 @@ uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run --extra ui streamlit run src/ui/streamlit_app.py
 ```
 
-单文件 Streamlit 界面，进程内直调 LangGraph 状态机（不依赖 FastAPI）。
-呈现分三层：`event_view` 蒸馏事件流（纯逻辑）→ `html_view` 装配 HTML 片段（纯逻辑）
-→ `streamlit_app` 写占位符（唯一的 IO 层），前两层均可离线单测。
+Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 
-自上而下六个区块：
+- **侧栏**：新建会话、历史会话切换、运行参数（含 `max_iterations`）；
+- **主区**：消息流 + `st.chat_input`；
+- **多轮**：会话层把追问 condense 成独立问题，再交给图；
+- **clarify**：需要澄清时显示“需要澄清”消息，下一轮带历史继续；
+- **来源**：每条 assistant 消息可展开来源（文件名 / 页码 / chunk / 分数 / 摘要）；
+- **执行细节**：可展开状态机 trace 文本；
+- **反馈**：每条 assistant 消息支持赞 / 踩，点击只更新会话文件，不重跑查询。
 
-- **① 执行流程**：7 节点状态卡片（中文职责名 + 原节点名），四态配色
-  待执行 / 执行中 / 已完成 / 自愈动作，徽章显示重复执行次数——
-  `retrieve 3 次` 即自愈循环最直观的证据
-- **② 决策诊断**：按节点归属分组的三张卡片（意图与策略 / 检索质量诊断 / 改写与校验），
-  枚举值中文化并保留原始值便于对照日志；未产生的字段不占位
-- **③ 轮次时间线**：每执行一次检索记一行——本轮查询、策略、命中数与最高分、
-  诊断结论、下一步自愈动作。诊断字段只留终态（第二轮会覆盖第一轮），
-  逐轮归档是自愈因果链能被看见的唯一途径；轮次跑满预算时额外标注强制截断
-- **④ 回答**：`astream_events(v2)` 捕获 generate 节点逐 token 输出
-- **⑤ 检索来源**：按轮次分组折叠，每条一行显示文件名 + 分数条 + 分数，点开读全文；
-  分数语义随策略而变（ADR-006），故条形按本轮最高归一而不跨策略比较
-- **⑥ 运行摘要**：端到端状态 / 检索轮次 / 自愈动作 / 幻觉检测，均带口径说明
+`event_view` 仍负责蒸馏 `astream_events`（流式 token / 节点状态），`html_view`
+保留 CSS 与旧版流程卡片渲染（供测试与后续复用）；聊天页只使用 CSS 与 trace。
 
-侧边栏提供读图说明、节点职责表、诊断字段释义与运行参数（含 `max_iterations` 可调）。
-内置四个按实测路径命名的示例问题：寒暄（不检索）、向量单轮命中、
-**策略升级链（实测完整走出 vector → bm25 → hybrid）**、语料外拒答。
+会话落盘在 `data/sessions/`，历史回放不重新检索。
+内置示例问题：寒暄（不检索）、混合检索单轮、改写后命中、语料外拒答。
 按钮标签仅为实测参考：LLM 判定存在不确定性，同一问题多次运行可能走不同分支，
 实际路径以轮次时间线为准。
 
@@ -223,6 +221,10 @@ RAGForge/
 │   │   ├── llm_client.py      #   LLMClient（tenacity 重试 + 结构化输出）
 │   │   ├── prompts.py         #   PromptManager（6 个 Prompt 模板）
 │   │   └── schemas.py         #   结构化输出 Pydantic schema
+│   ├── conversation/          # 会话层：JSON 会话、多轮 condense、反馈
+│   │   ├── models.py          #   Session / SessionMessage
+│   │   ├── store.py           #   ConversationStore（原子写）
+│   │   └── service.py         #   ConversationService（condense / 落盘）
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
 │   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + 条件边）
@@ -249,6 +251,7 @@ RAGForge/
 │   ├── test_ingestion.py      #   Ingestion 单元测试（离线）
 │   ├── test_retrieval.py      #   检索层测试（离线，含索引一致性回归）
 │   ├── test_agent.py          #   Agent 状态机测试（全 mock，离线）
+│   ├── test_conversation.py   #   会话存储 / condense / 来源落盘测试（离线）
 │   ├── test_stage1.py         #   结构与管道构建测试（离线）
 │   ├── test_token_budget.py   #   上下文 token 预算测试（离线）
 │   ├── test_ui.py             #   事件蒸馏 + 逐轮归集 + HTML 装配测试（离线）
@@ -257,6 +260,7 @@ RAGForge/
 ├── scripts/
 │   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
 ├── data/sample/               # 知识库（8 个语料 md：python_basics、machine_learning_faq、rag_techniques 等）
+├── data/sessions/             # 会话 JSON（运行时生成，gitignore）
 ├── docs/
 │   ├── adr/                   # 架构决策记录（6 篇 ADR）
 │   ├── modules/               # 模块设计文档（5 篇）

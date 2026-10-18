@@ -7,12 +7,13 @@
 
 ## 模块结构
 
-- `src/agent` — LangGraph 7 节点主链路（固定 hybrid：analyze → decide → retrieve → evaluate → reformulate → generate → verify）；旧 8 节点（含 `switch_strategy`）为历史口径，Phase 1 计划新增 clarify 终止分支
+- `src/agent` — LangGraph 7 节点主链路 + clarify 终止分支（固定 hybrid：analyze 分叉 clarify / decide → retrieve → evaluate → reformulate → generate → verify）；旧 8 节点（含 `switch_strategy`）为历史口径
 - `src/api` — FastAPI 服务，SSE 流式输出
+- `src/conversation` — 会话 JSON 存储、多轮 condense、会话反馈（图外）
 - `src/generation` — LLMClient（DeepSeek / OpenAI 兼容）
 - `src/ingestion` — 文档解析 / 分块 / 嵌入
 - `src/retrieval` — 混合检索（VectorStore + BM25 + RRF + Reranker）
-- `src/ui` — Streamlit 可视化演示（可选依赖 `--extra ui`）
+- `src/ui` — Streamlit 聊天式会话界面（可选依赖 `--extra ui`）
 - `src/utils` — 日志 / 指标收集 / token 预算
 - `src/pipeline.py` / `src/cli.py` / `src/main.py` — 管道组装 / 启动模式 / 精简入口
 - `src/config.py` — 唯一配置入口（pydantic-settings），禁止散落 `os.getenv`
@@ -21,4 +22,4 @@
 
 - 敏感字段使用 `SecretStr`
 - `chunk_overlap` 必须 < `chunk_size`
-- 依赖方向：api → pipeline → agent → retrieval / generation → ingestion / utils
+- 依赖方向：api / ui → pipeline → agent → retrieval / generation → ingestion / utils；ui → conversation → generation（conversation 不反向依赖 ui / agent）

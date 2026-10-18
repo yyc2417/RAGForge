@@ -142,6 +142,8 @@ docker run --rm -p 8000:8000 --env-file .env \
 ```bash
 uv run python scripts/eval.py                  # 完整评估（4 套模式，需 API key）
 uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM，免 API）
+uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
+  --corpus-dir data/demo --rebuild --report reports/eval_e2e_multiformat.json  # v2 端到端（需 LLM）
 uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
@@ -180,7 +182,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（136 用例：132 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（138 用例：134 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -334,7 +336,7 @@ RAGForge/
 │   ├── eval_clarify.json      #   clarify 判定用例
 │   └── eval_multiturn.json    #   多轮会话用例
 ├── scripts/
-│   ├── eval.py                # 4 套端到端对比（全量 LLM）
+│   ├── eval.py                # 4 套端到端对比（v1/v2 数据集，全量 LLM）
 │   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
 │   ├── eval_interaction.py    # clarify / 多轮交互评测（需 LLM）
 │   ├── import_crud_rag.py     # CRUD-RAG Read → 本地评测集与语料

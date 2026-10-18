@@ -9,12 +9,15 @@
 - agent_reranker：7 节点 Agent 主链路 + HybridRetriever + Reranker
 
 数据集分层（对齐业界惯例：RAGAS 题型分布 / SQuAD 式 is_impossible）：
-- 可答题（answerable=true 且有 expected_source）：chunk 级召回判定
-  （expected_source + gold_keywords 双条件）→ Recall@5 + MRR@5；
-  生成层判忠实度
+- 可答题（answerable=true 且有 expected_source(s)）：chunk 级召回判定
+  （来源匹配；配置了 gold_keywords 时再叠加关键词条件）→ Recall@5 + MRR@5；
+  生成层判忠实度；有 reference_answer 时附加词面 token F1（v2）
 - 不可答题（answerable=false，语料外问题）：LLM 裁决「诚实拒答 / 编造 /
   其他」→ 拒答准确率 + 编造率——幻觉率在这里才有真实含义
 - chitchat：不计召回与忠实度统计
+
+数据集支持 v1 列表与 v2 schema（`expected_sources` / `reference_answer` /
+`expected_behavior`），可用 `--dataset` / `--corpus-dir` 指向 CRUD-RAG 或多格式集。
 
 运行：
     uv run python scripts/eval.py                       # 完整评估（需 DEEPSEEK_API_KEY）
@@ -22,18 +25,24 @@
     uv run python scripts/eval.py --resume              # 增量补跑（跳过报告中已完成模式）
     uv run python scripts/eval.py --rebuild             # 评估前清库重建索引
     uv run python scripts/eval.py --retrieval-only      # 检索层离线评估（不调 LLM，免 API）
+    uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
+        --corpus-dir data/demo --retrieval-only --skip-reranker
 输出：
     - 终端 rich 表格对比矩阵
     - reports/eval_report.json 完整报告（retrieval-only 输出 reports/eval_retrieval_report.json）
+    - 路径可分别用 --report / --retrieval-report 覆盖
 """
 
 import argparse
 import json
+import re
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
+import jieba
 from rich.console import Console
 from rich.table import Table
 
@@ -61,18 +70,21 @@ MODES = ["baseline", "linear_hybrid", "agent", "agent_reranker"]
 EVAL_K = 5  # 评估统一检索数量，与 recall_top5 指标口径一致
 
 
-def _build_base_artifacts(rebuild: bool = False) -> tuple[list, VectorStore, BM25Retriever]:
+def _build_base_artifacts(
+    rebuild: bool = False, corpus_dir: Path | str | None = None
+) -> tuple[list, VectorStore, BM25Retriever]:
     """解析文档、切分、构建向量/BM25 索引（所有模式共享）。
 
     Args:
         rebuild: 为 True 时清库重建向量索引，否则按指纹校验复用
+        corpus_dir: 评测语料目录；默认 settings.eval_data_dir
     """
     # 评测索引与 app 运行时索引隔离，避免互相按 count 重建
     settings.chroma_persist_dir = settings.eval_chroma_persist_dir
     settings.chroma_collection_name = settings.eval_chroma_collection_name
 
     parser = DocumentParser()
-    docs = parser.parse_directory(DATA_DIR)
+    docs = parser.parse_directory(Path(corpus_dir) if corpus_dir else DATA_DIR)
     chunker = TextChunker()
     chunks = chunker.split(docs)
     embedder = EmbeddingService()
@@ -104,18 +116,57 @@ def _doc_sources(state: dict) -> list[str]:
     ]
 
 
-def _chunk_hit_rank(docs: list, expected_source: str, gold_keywords: list[str]) -> int:
+def _expected_sources(item: dict) -> list[str]:
+    """兼容 v1 expected_source 与 v2 expected_sources。"""
+    sources = item.get("expected_sources")
+    if isinstance(sources, list) and sources:
+        return [str(source) for source in sources if str(source).strip()]
+    source = item.get("expected_source")
+    return [str(source)] if source else []
+
+
+_TOKEN_RE = re.compile(r"[A-Za-z0-9\u4e00-\u9fff]")
+
+
+def _answer_tokens(text: str) -> list[str]:
+    """中英混合分词，过滤纯标点 token。"""
+    return [
+        token
+        for token in jieba.lcut(str(text).lower())
+        if token.strip() and _TOKEN_RE.search(token)
+    ]
+
+
+def _answer_f1(prediction: str, reference: str | None) -> float | None:
+    """参考答案的词面 token F1；无参考答案时返回 None。"""
+    if not reference or not str(reference).strip():
+        return None
+    pred_tokens = _answer_tokens(prediction)
+    ref_tokens = _answer_tokens(reference)
+    if not pred_tokens or not ref_tokens:
+        return 0.0
+    overlap = sum((Counter(pred_tokens) & Counter(ref_tokens)).values())
+    precision = overlap / len(pred_tokens)
+    recall = overlap / len(ref_tokens)
+    if precision + recall == 0:
+        return 0.0
+    return 2 * precision * recall / (precision + recall)
+
+
+def _chunk_hit_rank(docs: list, expected_sources: list[str] | str, gold_keywords: list[str]) -> int:
     """chunk 级命中判定：返回第一个命中 chunk 的 1-based 排名，未命中返回 0。
 
-    命中条件（双条件，缺一不可）：来源文件匹配 expected_source，
-    且 chunk 内容包含任一 gold_keyword——相比纯文件名子串匹配，
-    在多文件语料下仍能定位到具体知识块（对齐 RAGAS 的 reference_contexts 惯例）。
+    命中条件：来源文件属于 expected_sources；若配置了 gold_keywords，
+    chunk 还需包含任一关键词。v2 公开集可只给来源、不给关键词。
     """
+    sources = [expected_sources] if isinstance(expected_sources, str) else expected_sources
+    names = {_source_filename(str(source)) for source in sources}
     for rank, doc in enumerate(docs, start=1):
         if not hasattr(doc, "page_content"):
             continue
         src = _source_filename(getattr(doc, "metadata", {}).get("source", ""))
-        if src == expected_source and any(kw in doc.page_content for kw in gold_keywords):
+        keyword_ok = not gold_keywords or any(kw in doc.page_content for kw in gold_keywords)
+        if src in names and keyword_ok:
             return rank
     return 0
 
@@ -144,9 +195,16 @@ class Evaluator:
         rebuild: 为 True 时评估前清库重建索引
     """
 
-    def __init__(self, dataset_path: Path | str = DATASET_PATH, rebuild: bool = False) -> None:
+    def __init__(
+        self,
+        dataset_path: Path | str = DATASET_PATH,
+        rebuild: bool = False,
+        corpus_dir: Path | str | None = None,
+    ) -> None:
         self.dataset = self._load_dataset(dataset_path)
-        self._chunks, self._vector_store, self._bm25 = _build_base_artifacts(rebuild)
+        self._chunks, self._vector_store, self._bm25 = _build_base_artifacts(
+            rebuild, corpus_dir
+        )
         self._llm: LLMClient | None = None
         self._reranker = Reranker()  # 单例，不可用时自动降级
         # 缓存各模式的执行管道
@@ -154,8 +212,10 @@ class Evaluator:
 
     @staticmethod
     def _load_dataset(path: Path | str) -> list[dict]:
-        """加载评估数据集。"""
+        """加载评估数据集（支持列表或 {"items": [...]}）。"""
         data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            data = data.get("items", [])
         logger.info(f"[eval] 数据集加载：{len(data)} 个 QA 对")
         return data
 
@@ -224,10 +284,11 @@ class Evaluator:
     def _run_single(self, mode: str, item: dict) -> dict:
         """对单个 QA 项执行指定模式，返回结果字典（按题型分层判定）。"""
         query = item["query"]
-        answerable = item.get("answerable", item.get("expected_source") is not None)
+        expected_sources = _expected_sources(item)
+        answerable = item.get("answerable", bool(expected_sources))
         is_chitchat = item.get("query_type") == "chitchat"
-        expected_source = item.get("expected_source")
         gold_keywords = item.get("gold_keywords", item.get("expected_answer_keywords", []))
+        reference_answer = item.get("reference_answer")
 
         t0 = time.perf_counter()
         retrieved_sources: list[str] = []
@@ -260,9 +321,9 @@ class Evaluator:
                 verify_result = final_state.get("is_faithful")
 
             # ── 按题型分层判定 ──
-            if expected_source:
+            if expected_sources:
                 # 可答题：chunk 级召回 + 忠实度
-                chunk_rank = _chunk_hit_rank(docs, expected_source, gold_keywords)
+                chunk_rank = _chunk_hit_rank(docs, expected_sources, gold_keywords)
                 if mode != "baseline" and verify_result is not None:
                     is_faithful, faith_source = verify_result, "llm_verify"
                 else:
@@ -285,15 +346,23 @@ class Evaluator:
         if error is None:
             get_current_collector().record_e2e_latency(e2e_ms)
 
+        answer_f1_score = (
+            _answer_f1(answer_text, reference_answer)
+            if expected_sources and reference_answer
+            else None
+        )
         return {
             "query": query,
             "query_type": item.get("query_type", "factual"),
             "answerable": answerable,
-            "expected_source": expected_source,
+            "expected_source": expected_sources[0] if expected_sources else None,
+            "expected_sources": expected_sources,
             "retrieved_sources": retrieved_sources,
             "chunk_rank": chunk_rank,
             "hit": chunk_rank > 0,
             "answer": answer_text,
+            "reference_answer": reference_answer,
+            "answer_f1": answer_f1_score,
             "is_faithful": is_faithful,
             "faithfulness_source": faith_source,
             "refusal_verdict": refusal_verdict,
@@ -338,7 +407,7 @@ class Evaluator:
             results.append(r)
             if r["error"]:
                 status = "E"
-            elif r["hit"] or not r["expected_source"]:
+            elif r["hit"] or not r["expected_sources"]:
                 status = "+"
             else:
                 status = "-"
@@ -346,10 +415,10 @@ class Evaluator:
 
         # ── 汇总：按题型分层统计，失败/未验证样本单独归类不进分母 ──
         valid = [r for r in results if not r.get("error")]
-        answerable = [r for r in valid if r["expected_source"]]
+        answerable = [r for r in valid if r["expected_sources"]]
         unanswerable = [
             r for r in valid
-            if not r["expected_source"] and r["query_type"] != "chitchat"
+            if not r["expected_sources"] and r["query_type"] != "chitchat"
         ]
         # 检索层：chunk 级召回 + MRR（排名质量，能区分检索策略的价值）
         hits = sum(1 for r in answerable if r["chunk_rank"] > 0)
@@ -369,6 +438,7 @@ class Evaluator:
         )
         refusal_accuracy = refusals / len(unanswerable) if unanswerable else 0.0
         fabrication_rate = fabrications / len(unanswerable) if unanswerable else 0.0
+        f1_values = [r["answer_f1"] for r in answerable if r["answer_f1"] is not None]
 
         summary = metrics.get_summary()
         e2e = summary.get("e2e_latency_ms", {})
@@ -385,6 +455,8 @@ class Evaluator:
             "mrr_at5": round(mrr, 4),
             "hallucination_rate": round(1.0 - faith_rate, 4),
             "faithfulness_rate": round(faith_rate, 4),
+            "answer_f1": round(sum(f1_values) / len(f1_values), 4) if f1_values else None,
+            "answer_f1_samples": len(f1_values),
             "refusal_accuracy": round(refusal_accuracy, 4),
             "fabrication_rate": round(fabrication_rate, 4),
             "latency_p50_ms": e2e.get("p50", 0.0),
@@ -431,6 +503,7 @@ class Evaluator:
         table.add_column("配置", style="cyan", no_wrap=True)
         table.add_column("Recall@5", justify="right")
         table.add_column("MRR@5", justify="right")
+        table.add_column("Ans F1", justify="right")
         table.add_column("幻觉率(可答)", justify="right")
         table.add_column("拒答准确率", justify="right")
         table.add_column("P50 延迟(ms)", justify="right")
@@ -451,6 +524,11 @@ class Evaluator:
                 m["mode"],
                 self._fmt(m["recall_top5"], recall_ok, percent=True),
                 self._fmt(m["mrr_at5"], mrr_ok, percent=True),
+                (
+                    f'{m["answer_f1"] * 100:.1f}%'
+                    if m.get("answer_f1") is not None
+                    else "—"
+                ),
                 self._fmt(m["hallucination_rate"], halluc_ok, percent=True),
                 self._fmt(m["refusal_accuracy"], refusal_ok, percent=True),
                 f'{m.get("latency_p50_ms", 0.0):.0f}',
@@ -491,17 +569,25 @@ class Evaluator:
         return path
 
 
-def run_retrieval_only(rebuild: bool = False) -> None:
+def run_retrieval_only(
+    rebuild: bool = False,
+    dataset_path: Path | str = DATASET_PATH,
+    corpus_dir: Path | str | None = None,
+    skip_reranker: bool = False,
+    report_path: Path | str = RETRIEVAL_REPORT_PATH,
+) -> None:
     """检索层离线评估：chunk 级 Recall@k + MRR@k，不调用 LLM（免 API key）。
 
     用于修复期间的快速回归验证；完整评估（忠实度/拒答/延迟/token）仍需完整模式。
     """
     console.rule("[bold]RAGForge 检索层离线评估（不调用 LLM）[/bold]")
-    chunks, vs, bm25 = _build_base_artifacts(rebuild)
-    dataset = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
-    items = [it for it in dataset if it.get("expected_source")]
+    chunks, vs, bm25 = _build_base_artifacts(rebuild, corpus_dir)
+    data = json.loads(Path(dataset_path).read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        data = data.get("items", [])
+    items = [it for it in data if _expected_sources(it)]
     if not items:
-        console.print("[red]数据集中没有带 expected_source 的样本，无法评估召回[/red]")
+        console.print("[red]数据集中没有带 expected_source(s) 的样本，无法评估召回[/red]")
         sys.exit(1)
 
     hybrid = HybridRetriever(vs, bm25)
@@ -516,6 +602,8 @@ def run_retrieval_only(rebuild: bool = False) -> None:
             top_n=EVAL_K,
         ),
     }
+    if skip_reranker:
+        strategies.pop("reranker")
 
     table = Table(show_lines=True, header_style="bold magenta")
     table.add_column("检索策略", style="cyan", no_wrap=True)
@@ -529,7 +617,7 @@ def run_retrieval_only(rebuild: bool = False) -> None:
         rr_sum = 0.0
         for it in items:
             docs = fn(it["query"])
-            rank = _chunk_hit_rank(docs, it["expected_source"], it.get("gold_keywords", []))
+            rank = _chunk_hit_rank(docs, _expected_sources(it), it.get("gold_keywords", []))
             if rank > 0:
                 hits += 1
                 rr_sum += 1.0 / rank
@@ -544,16 +632,19 @@ def run_retrieval_only(rebuild: bool = False) -> None:
     console.print(table)
     report = {
         "retrieval_only": True,
+        "dataset": str(dataset_path),
+        "corpus_dir": str(corpus_dir) if corpus_dir else str(DATA_DIR),
         "eval_k": EVAL_K,
         "samples": len(items),
         "modes": modes_report,
         "index": _index_fingerprint(chunks, vs),
     }
-    RETRIEVAL_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    RETRIEVAL_REPORT_PATH.write_text(
+    report_path = Path(report_path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    console.print(f"[green]报告已保存：{RETRIEVAL_REPORT_PATH}[/green]")
+    console.print(f"[green]报告已保存：{report_path}[/green]")
 
 
 def main() -> None:
@@ -565,15 +656,27 @@ def main() -> None:
         uv run python scripts/eval.py --resume           # 增量补跑
         uv run python scripts/eval.py --rebuild          # 清库重建后评估
         uv run python scripts/eval.py --retrieval-only   # 离线检索评估（免 API）
+        uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
+            --corpus-dir data/demo --retrieval-only --skip-reranker
     """
     parser = argparse.ArgumentParser(description="RAGForge 自动化评估")
     parser.add_argument("--mode", choices=MODES, help="只跑指定模式（默认全部）")
+    parser.add_argument("--dataset", type=Path, default=DATASET_PATH,
+                        help="评测数据集（v1 列表或 v2 schema）")
+    parser.add_argument("--corpus-dir", type=Path, default=None,
+                        help="评测语料目录；默认 settings.eval_data_dir")
+    parser.add_argument("--report", type=Path, default=REPORT_PATH,
+                        help="完整评估报告路径")
+    parser.add_argument("--retrieval-report", type=Path, default=RETRIEVAL_REPORT_PATH,
+                        help="离线检索报告路径")
     parser.add_argument("--resume", action="store_true",
                         help="增量模式：读取已有报告，跳过已完成的模式，只补未完成的")
     parser.add_argument("--rebuild", action="store_true",
                         help="评估前清库重建向量索引（不校验指纹直接重建）")
     parser.add_argument("--retrieval-only", action="store_true",
                         help="只评估各检索策略的召回率，不调用 LLM（免 API key）")
+    parser.add_argument("--skip-reranker", action="store_true",
+                        help="检索层评估跳过 CrossEncoder 重排")
     args = parser.parse_args()
 
     # 统一评估口径：检索数量对齐 recall_top5 指标
@@ -584,19 +687,31 @@ def main() -> None:
         settings.retrieval_k = EVAL_K
 
     console.rule("[bold]RAGForge 自动化评估[/bold]")
-    console.print(f"数据集：{DATASET_PATH}")
+    console.print(f"数据集：{args.dataset}")
+    if args.corpus_dir:
+        console.print(f"语料：{args.corpus_dir}")
 
     if args.retrieval_only:
-        run_retrieval_only(rebuild=args.rebuild)
+        run_retrieval_only(
+            rebuild=args.rebuild,
+            dataset_path=args.dataset,
+            corpus_dir=args.corpus_dir,
+            skip_reranker=args.skip_reranker,
+            report_path=args.retrieval_report,
+        )
         return
 
-    evaluator = Evaluator(rebuild=args.rebuild)
+    evaluator = Evaluator(
+        dataset_path=args.dataset,
+        rebuild=args.rebuild,
+        corpus_dir=args.corpus_dir,
+    )
 
     # 决定要跑哪些模式
     existing_report: dict | None = None
-    if args.resume and REPORT_PATH.exists():
+    if args.resume and args.report.exists():
         try:
-            existing_report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+            existing_report = json.loads(args.report.read_text(encoding="utf-8"))
             done_modes = {m["mode"] for m in existing_report.get("modes", [])}
             if args.mode:
                 # resume + 指定 mode：只补该模式（若已完成则跳过）
@@ -653,7 +768,7 @@ def main() -> None:
         }
 
     evaluator.print_report(report)
-    evaluator.save_report(report)
+    evaluator.save_report(report, args.report)
 
     # 摘要
     best_recall = max(report["modes"], key=lambda m: m["recall_top5"])

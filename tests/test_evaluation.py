@@ -195,6 +195,34 @@ def test_retrieval_gate_thresholds():
     ) == ["没有找到模式 missing"]
 
 
+def test_eval_script_accepts_v1_and_v2_sources():
+    from langchain_core.documents import Document
+
+    from scripts.eval import _chunk_hit_rank, _expected_sources
+
+    assert _expected_sources({"expected_source": "a.md"}) == ["a.md"]
+    assert _expected_sources(
+        {"expected_source": "a.md", "expected_sources": ["a.md", "b.md"]}
+    ) == ["a.md", "b.md"]
+
+    docs = [
+        Document(page_content="alpha", metadata={"source": "a.md"}),
+        Document(page_content="beta", metadata={"source": "b.md"}),
+    ]
+    assert _chunk_hit_rank(docs, ["b.md"], []) == 2
+    assert _chunk_hit_rank(docs, ["b.md"], ["needle"]) == 0
+    assert _chunk_hit_rank(docs, ["b.md"], ["beta"]) == 2
+
+
+def test_answer_f1_lexical_metric():
+    from scripts.eval import _answer_f1
+
+    assert _answer_f1("USB-C charging takes 90 minutes", "USB-C charging takes 90 minutes") == 1.0
+    assert _answer_f1("foo bar", "foo baz") == 0.5
+    assert _answer_f1("", "参考回答") == 0.0
+    assert _answer_f1("回答", None) is None
+
+
 def test_dataset_hash_stable():
     items = [EvalItem(query="q", expected_source="a.md", gold_keywords=["a"])]
     assert dataset_hash(items) == dataset_hash(items)

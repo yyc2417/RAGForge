@@ -111,6 +111,11 @@ uv run python scripts/eval_v2.py \
 # 检索层 v2 基线
 uv run python scripts/eval_v2.py --dataset tests/eval_dataset.json --corpus-dir data/sample
 
+# 端到端 v2（4 模式，需 LLM；有 reference_answer 时附词面 token F1）
+uv run python scripts/eval.py \
+  --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo \
+  --rebuild --report reports/eval_e2e_multiformat.json
+
 # clarify 判定 + 多轮会话（需真实 LLM）
 uv run python scripts/eval_interaction.py --mode both --limit 5
 uv run python scripts/eval_interaction.py --mode clarify --with-followup
@@ -169,7 +174,7 @@ uv run python scripts/eval.py --rebuild
 ## 8. 待办
 
 - RGB 噪声/拒答/反事实子集适配；
-- CRUD-RAG / 多格式集端到端生成评测与结果报表；
+- CRUD-RAG / 多格式集端到端生成评测（`eval.py` 已支持 v2 字段与 answer F1，跑分待执行）；
 - 多轮 / clarify 真实 LLM 跑分（数据与 `eval_interaction.py` 已就绪）；
 - 评测 v2 端到端矩阵与 README 报表；
 - 本地 + API 双跑。

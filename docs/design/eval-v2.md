@@ -196,6 +196,17 @@ P50 143.8s，max 188.4s。clarify 16 例带 follow-up：准确率 87.5%、过度
 不作为模型结论。报告：`reports/local_e2e_crud_smoke.json`、
 `reports/local_clarify_followup.json`、`reports/local_multiturn_full.json`。
 
+### 本地全量 4 模式（2026-10-20）
+
+CRUD-RAG 120 题：baseline / linear / agent / agent_reranker 的 Recall@5 为
+100.0 / 100.0 / 99.2 / 98.3%，MRR 98.2 / 96.5 / 94.2 / 97.1%，忠实度
+100 / 100 / 100 / 99.2%，P50 80.4 / 62.3 / 91.5 / 132.4s。
+
+多格式 45 题：baseline / linear / agent / agent_reranker 的 Recall@5 为
+100.0 / 100.0 / 80.0 / 80.0%，MRR 94.4 / 91.1 / 76.7 / 78.9%。Agent 的
+80% 来自 9/45 题被 clarify（题目缺少主体），检索基线仍是 100%。
+报告：`reports/local_e2e_crud_full.json`、`reports/local_e2e_multiformat_full.json`。
+
 ## 8. 待办
 
 - RGB 噪声/拒答/反事实子集适配；

@@ -1,0 +1,4718 @@
+{
+  "modes": [
+    {
+      "mode": "baseline",
+      "samples": 45,
+      "errors": 0,
+      "unverified": 0,
+      "answerable_count": 45,
+      "unanswerable_count": 0,
+      "recall_top5": 1.0,
+      "mrr_at5": 0.9444,
+      "hallucination_rate": 0.0,
+      "faithfulness_rate": 1.0,
+      "answer_f1": null,
+      "answer_f1_samples": 0,
+      "refusal_accuracy": 0.0,
+      "fabrication_rate": 0.0,
+      "latency_p50_ms": 32832.12,
+      "latency_max_ms": 56660.91,
+      "latency_p95_ms": 42961.94,
+      "latency_p99_ms": 51445.67,
+      "avg_token": 1441,
+      "total_token": 129691,
+      "details": [
+        {
+          "query": "星云科技员工每周最多可以申请几天远程办公？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，星云科技员工每周最多可以申请**2天**远程办公。在此期间，员工需保持在线状态并在团队日历中标注；此外，处于试用期的员工需事先获得直属主管的批准方可申请。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 34456.88240000163
+        },
+        {
+          "query": "试用期员工远程办公需要谁批准？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "team_roles.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，试用期员工申请远程办公需要先获得**直属主管**的批准。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 21682.434600006673
+        },
+        {
+          "query": "入职满三年的员工有几天带薪年假？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册规定，入职满三年的员工可享受**15天**带薪年假。如需使用，请记得提前3个工作日在系统中提交申请。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 27677.356799991685
+        },
+        {
+          "query": "年假需要提前几个工作日提交申请？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的规定，年假申请需提前 **3个工作日** 在系统中提交。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 24905.681200005347
+        },
+        {
+          "query": "差旅报销需要在行程结束后多久提交？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的规定，差旅报销应在行程结束后的**10个工作日内**完成提交。若逾期超过30天仍未提交，则需部门负责人额外签字确认。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 33870.57579999964
+        },
+        {
+          "query": "超过 30 天未提交的报销单需要谁额外签字？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "product_faq.html",
+            "team_roles.md",
+            "faq.jsonl",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料内容，超过30天未提交的报销单需要由**部门负责人**进行额外签字。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 24678.328300011344
+        },
+        {
+          "query": "谁负责需求优先级、验收标准和跨团队沟通？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料说明，上述职责由**产品经理**承担。该角色主要负责把控需求优先级、明确验收标准以及协调跨团队沟通。同时，在版本正式发布前，产品经理还需要对验收清单进行最终确认。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 30903.901900004712
+        },
+        {
+          "query": "版本发布前需要产品经理确认什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，在版本发布前，产品经理需要确认的是**验收清单**。此外，产品经理还负责需求优先级排序、制定验收标准以及跨团队的沟通协调工作。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26565.052599995397
+        },
+        {
+          "query": "核心模块变更需要几位工程师评审？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，核心模块变更至少需要**一位同组工程师**进行评审。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 35562.62399999832
+        },
+        {
+          "query": "谁负责回归测试和发布前质量检查？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的团队角色说明，**测试工程师**负责回归测试和发布前的质量检查工作。此外，该角色还需进行缺陷跟踪，并在每次版本发布时给出通过或阻塞的最终结论。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 36028.27419999812
+        },
+        {
+          "query": "每次发布时测试工程师需要给出什么结论？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的文档内容，每次发布时测试工程师需要给出**通过**或**阻塞**的结论，以此作为该版本是否具备发布条件的质量判定依据。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26936.574499995913
+        },
+        {
+          "query": "生产变更需要提前登记什么，并准备什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料内容，进行生产变更时，需要提前登记**变更窗口**，并准备好**回滚方案**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 29583.17180001177
+        },
+        {
+          "query": "杭州的最佳旅行季节是什么时候？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州的最佳旅行季节是**春季（3月至5月）**和**秋季（9月至11月）**。这两个时段气候较为舒适，非常适合安排步行、环湖骑行等户外活动。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28954.58150000195
+        },
+        {
+          "query": "西湖建议在一天中的什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据资料建议，前往西湖的最佳时间通常是**清晨或傍晚**。这两个时段不仅气候较为舒适，还能有效避开周末的人流高峰。此外，清晨也非常适合进行环湖骑行活动。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 39723.692999992636
+        },
+        {
+          "query": "环西湖骑行大约需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "product_faq.html",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据资料，环西湖骑行大约需要2小时。建议选择在清晨或傍晚前往，沿途可以经过断桥、白堤和苏堤等景点。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 35221.755399994436
+        },
+        {
+          "query": "环湖骑行沿途会经过哪些景点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据资料介绍，在杭州西湖进行环湖骑行时，沿途可以游览断桥、白堤以及苏堤等景点。该路线全程大约需要两小时，推荐在清晨或傍晚时段前往体验更佳。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 42022.76909998909
+        },
+        {
+          "query": "杭州市区交通如何安排？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "faq.jsonl",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州市区的交通安排建议如下：\n\n* **地铁为主**：市区地铁已覆盖主要景点，是出行最便捷的方式。\n* **景区接驳**：前往各景点周边时，建议优先使用公共交通工具。\n* **节假日注意**：若逢节假日，西湖周边会实施交通管制，需提前规划路线或预留更多通勤时间。\n* **骑行体验**：游览西湖时，清晨或傍晚环湖骑行约2小时是不错的交通与观光结合方式，但建议尽量避开周末高峰。\n\n整体而言，以地铁和公交为核心，结合节假日管制提示灵活安排即可顺畅游览。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 35234.45030000585
+        },
+        {
+          "query": "杭州有哪些本地美食推荐？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料推荐，杭州比较地道的本地美食包括片儿川、龙井虾仁和定胜糕。另外提醒一下，景区内的餐饮价格普遍偏高，建议您前往湖滨或武林路附近用餐，这样选择更多且性价比更高。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 40030.41320000193
+        },
+        {
+          "query": "杭州住宿选择湖滨和灵隐各有什么特点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州住宿在这两个区域的特点如下：\n\n- **湖滨**：地处商圈，交通十分便利，便于出行与前往各景点。\n- **灵隐**：环境相对清幽安静，更适合偏好宁静氛围、希望远离喧嚣的旅客。\n\n您可以根据自身对交通便利性或环境安静程度的偏好进行选择。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 43196.72910000372
+        },
+        {
+          "query": "成都大熊猫基地建议什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料建议，前往成都大熊猫基地最好选择**上午**时段。因为上午大熊猫的活动状态更为活跃，此时前往观赏体验会更好。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 33441.87629999942
+        },
+        {
+          "query": "苏州园林推荐哪两个园子？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，苏州园林推荐**拙政园**和**留园**。此外，建议安排在工作日前往，这样游客相对较少，游览体验会更加舒适。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 32832.11889999802
+        },
+        {
+          "query": "苏州园林什么时候去人比较少？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料建议，前往苏州园林（如拙政园、留园）时，选择**工作日**前往游客会相对较少，能更好地避开人流高峰，获得更舒适的游览体验。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 33769.51709999412
+        },
+        {
+          "query": "杭州西湖适合清晨进行什么活动？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州西湖非常适合在清晨进行**环湖骑行**。建议骑行全程约需两小时，沿途可以依次经过断桥、白堤和苏堤等经典景观。此外，清晨前往还能有效避开周末的人流高峰，游览体验会更加舒适。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 36707.8130000009
+        },
+        {
+          "query": "星云笔记免费版最多支持几台设备同步？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html",
+            "faq.jsonl",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，星云笔记免费版最多支持 3 台设备同步。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28890.461599992705
+        },
+        {
+          "query": "忘记密码后如何重置？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "product_faq.html",
+            "product_manual.pdf",
+            "faq.jsonl",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，如果您忘记了密码，只需前往登录页面点击“找回密码”选项，随后按照提示完成邮箱验证，即可重新设置新密码。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 25277.03029999975
+        },
+        {
+          "query": "团队版如何计费，年付有优惠吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "company_handbook.md",
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，团队版采用**按席位**的方式进行计费。如果选择年付，可以享受**8折优惠**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28736.482499996782
+        },
+        {
+          "query": "商品购买后几天内可以无理由退货？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "product_manual.pdf"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，商品在购买后 **7 天内** 可以无理由退货。需要注意的是，申请退货时商品必须保持包装完整，且已激活的软件授权不支持退货。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 35012.77000000118
+        },
+        {
+          "query": "激活后的软件授权可以退货吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "faq.jsonl",
+            "faq.jsonl",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "不可以。根据星云笔记的退货政策，虽然购买后7天内且商品包装完整可以办理无理由退货，但明确说明**激活后的软件授权不支持退货**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 27675.637799999095
+        },
+        {
+          "query": "现货商品付款后多久发出？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "company_handbook.md",
+            "product_faq.html",
+            "company_handbook.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，现货商品在付款后的 **48小时内** 即可安排发出。具体送达时间会因地区有所不同，江浙沪地区通常2至3天送达，偏远地区则可能需要5至7天。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 32696.441899999627
+        },
+        {
+          "query": "偏远地区配送大概需要几天？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料中的配送说明，偏远地区的商品送达时间通常需要5到7天。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 40911.25560000364
+        },
+        {
+          "query": "硬件产品提供多长的保修期？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_manual.pdf",
+            "product_faq.html",
+            "product_manual.pdf",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "硬件产品提供**12个月**的保修期。需要注意的是，人为损坏、进水以及私自拆机等非正常使用情况不在保修范围内。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 34710.32769999874
+        },
+        {
+          "query": "哪些情况不在硬件保修范围内？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "product_manual.pdf",
+            "company_handbook.md",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，以下情况不在硬件保修范围内：\n- 人为造成的损坏\n- 设备进水\n- 私自拆机\n\n上述情况均无法享受保修服务。如有其他问题，欢迎继续提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 29671.31540000264
+        },
+        {
+          "query": "Nebula Note 的电池典型续航是多久？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 在典型使用场景下的电池续航时间最长可达 10 小时。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26825.97039999382
+        },
+        {
+          "query": "Nebula Note 充满电需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，Nebula Note 使用 USB-C 接口充电，完全充满大约需要 90 分钟。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28192.550400010077
+        },
+        {
+          "query": "Nebula Note 的内置存储和扩展存储分别有多大？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "faq.jsonl",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，Nebula Note 的内置存储为 **128 GB**，同时设备配备 microSD 卡槽，最高支持扩展至 **1 TB** 的存储容量。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 23583.553200005554
+        },
+        {
+          "query": "设备无法开机时应该怎么处理？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "product_faq.html",
+            "faq.jsonl",
+            "project_brief.docx",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，如果设备无法开机，建议您**长按电源键 10 秒钟**进行排查处理。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26121.561299994937
+        },
+        {
+          "query": "说明书中的硬件保修范围是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_manual.pdf",
+            "product_faq.html",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据文档内容，星云笔记产品的硬件保修期为12个月。需要注意的是，人为损坏、进水以及私自拆机等非正常使用情况不在保修范围内。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 33039.5079000009
+        },
+        {
+          "query": "Project Nebula 计划在什么时候发布？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，Project Nebula 计划在**第三季度（Q3）**发布。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 25158.29200000735
+        },
+        {
+          "query": "项目计划收集多少份 beta 用户报告？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "team_roles.md",
+            "team_roles.md",
+            "faq.jsonl",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据项目计划，该项目旨在收集 **100 份** beta 用户报告。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 34592.61669999978
+        },
+        {
+          "query": "Project Nebula 最大的两个风险是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Project Nebula 面临的最大两个风险是**供应链延迟**和**固件稳定性**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 30833.842599997297
+        },
+        {
+          "query": "Nebula Note 的硬件保修期在购买说明和产品手册里分别是多久？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "product_faq.html",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 的硬件保修期在《产品手册》（User Manual）与《保修FAQ》中均明确为 **12个月**。检索内容中未单独列出“购买说明”章节，但现有资料中的保修时长保持一致。此外，该保修不包含人为损坏、进水及私自拆机等意外情况。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 56660.908999998355
+        },
+        {
+          "query": "杭州西湖和成都熊猫基地分别适合什么时间游玩？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，这两个景点的推荐游玩时间如下：\n\n* **成都大熊猫基地**：建议安排在**上午**前往。此时大熊猫的活动状态更为活跃，观赏体验更佳。\n* **杭州西湖**：\n  * **最佳季节**：春季（3月至5月）和秋季（9月至11月）。这两个时段气候最为舒适，非常适合步行或骑行游览。\n  * **最佳时段**：建议选择在**清晨或傍晚**前往。此时段不仅能有效避开周末的人流高峰，清晨还特别适合进行环湖骑行（全程约2小时）。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 44808.104199997615
+        },
+        {
+          "query": "苏州园林推荐与杭州住宿选择分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，为您整理如下：\n\n- **苏州园林推荐**：主要推荐拙政园和留园。建议尽量安排在工作日前往，此时游客相对较少，游览体验会更舒适。\n- **杭州住宿选择**：若您看重交通与出行便利，推荐选择湖滨商圈；若您更偏好安静的环境，则可以选择杨公堤或灵隐附近的区域。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 36277.46979999938
+        },
+        {
+          "query": "团队版折扣和免费版设备数分别是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "faq.jsonl",
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容：\n- **团队版折扣**：采用按席位计费模式，若选择年付可享受8折优惠。\n- **免费版设备数**：最多支持3台设备进行多端同步。\n\n如有其他疑问，欢迎随时提出。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 31754.389900001115
+        },
+        {
+          "query": "项目发布目标与电池续航指标分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "project_brief.docx",
+            "team_roles.md"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据检索到的文档内容，相关信息如下：\n\n- **项目发布目标**：项目计划在第三季度推出一款轻量级笔记设备。具体的发布目标包括交付首批硬件批次、验证电池续航表现，并收集100份测试用户的反馈报告。\n- **电池续航指标**：在典型使用场景下，该设备的电池续航最长可达10小时。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 41212.602699990384
+        }
+      ]
+    },
+    {
+      "mode": "linear_hybrid",
+      "samples": 45,
+      "errors": 0,
+      "unverified": 0,
+      "answerable_count": 45,
+      "unanswerable_count": 0,
+      "recall_top5": 1.0,
+      "mrr_at5": 0.9111,
+      "hallucination_rate": 0.0,
+      "faithfulness_rate": 1.0,
+      "answer_f1": null,
+      "answer_f1_samples": 0,
+      "refusal_accuracy": 0.0,
+      "fabrication_rate": 0.0,
+      "latency_p50_ms": 33369.58,
+      "latency_max_ms": 51236.95,
+      "latency_p95_ms": 46882.36,
+      "latency_p99_ms": 50806.54,
+      "avg_token": 1498,
+      "total_token": 134827,
+      "details": [
+        {
+          "query": "星云科技员工每周最多可以申请几天远程办公？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据《星云科技员工手册》的规定，星云科技员工每周最多可以申请**2天**远程办公。在此期间需保持在线状态，并记得在团队日历中做好标注。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 41223.32089999691
+        },
+        {
+          "query": "试用期员工远程办公需要谁批准？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "team_roles.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的相关规定，试用期员工申请远程办公需要先获得**直属主管**的批准。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 30266.242099998635
+        },
+        {
+          "query": "入职满三年的员工有几天带薪年假？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的规定，入职满三年的员工享有**15天**带薪年假。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 30420.841900006053
+        },
+        {
+          "query": "年假需要提前几个工作日提交申请？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据星云科技员工手册的规定，申请年假需要提前 **3 个工作日** 在系统中提交。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26267.183499992825
+        },
+        {
+          "query": "差旅报销需要在行程结束后多久提交？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库中的员工手册规定，差旅报销需要在行程结束后的**10个工作日内**提交。提交时请记得附上发票和审批记录；若超过30天未提交，则需部门负责人额外签字确认。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 27810.03700000292
+        },
+        {
+          "query": "超过 30 天未提交的报销单需要谁额外签字？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库中的员工手册规定，差旅报销单若超过30天未提交，需要由**部门负责人**进行额外签字审批。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28093.915000004927
+        },
+        {
+          "query": "谁负责需求优先级、验收标准和跨团队沟通？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，星云科技团队中的**产品经理**负责需求优先级、验收标准以及跨团队沟通工作。此外，在版本发布前还需由产品经理确认验收清单。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 24699.855300001218
+        },
+        {
+          "query": "版本发布前需要产品经理确认什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，版本发布前需要产品经理确认的是**验收清单**。此外，产品经理还负责需求优先级管理、验收标准制定以及跨团队沟通等工作。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 41227.997099995264
+        },
+        {
+          "query": "核心模块变更需要几位工程师评审？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，核心模块变更需要**至少一位同组工程师**进行评审。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28134.883799997624
+        },
+        {
+          "query": "谁负责回归测试和发布前质量检查？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，回归测试和发布前质量检查由**测试工程师**负责。该角色还需承担缺陷跟踪工作，并在每次版本发布时给出明确的通过或阻塞结论。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 42489.611400000285
+        },
+        {
+          "query": "每次发布时测试工程师需要给出什么结论？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库中的团队角色说明，每次版本发布时，测试工程师需要明确给出该版本是**“通过”**还是**“阻塞”**的最终结论。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 27834.765799998422
+        },
+        {
+          "query": "生产变更需要提前登记什么，并准备什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，生产变更需要提前登记**变更窗口**，并准备**回滚方案**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 30122.26780000492
+        },
+        {
+          "query": "杭州的最佳旅行季节是什么时候？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料，杭州的最佳旅行季节是**春季（3月至5月）**和**秋季（9月至11月）**。这两个时段气候较为舒适，非常适合安排步行或骑行等户外活动。建议出行前关注具体天气变化，并合理规划行程。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 36507.11570000567
+        },
+        {
+          "query": "西湖建议在一天中的什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据检索到的资料，建议您在**清晨或傍晚**前往杭州西湖。这个时间段不仅适合步行或环湖骑行，还能有效避开周末的游客高峰，游览体验更佳。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 40216.31850000995
+        },
+        {
+          "query": "环西湖骑行大约需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "company_handbook.md",
+            "product_faq.html",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据资料内容，环西湖骑行大约需要 **2小时**。建议您可以选择在清晨或傍晚前往，这样既能避开周末的人流高峰，沿途也能顺路欣赏断桥、白堤和苏堤等经典景观。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 31023.36869999999
+        },
+        {
+          "query": "环湖骑行沿途会经过哪些景点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据资料，在杭州西湖进行环湖骑行时，沿途可以经过**断桥、白堤和苏堤**等经典景点。建议尽量安排在清晨或傍晚前往，以避开周末人流高峰并更好地欣赏沿途风光。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 38605.10310000973
+        },
+        {
+          "query": "杭州市区交通如何安排？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "faq.jsonl",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，杭州市区的交通安排建议如下：\n\n- **市区出行**：地铁网络已覆盖主要景点，是市区内便捷的首选方式。\n- **景区周边**：前往西湖等景区时，建议优先使用公共交通工具，以减少拥堵。\n- **特色出行**：若计划游览西湖，清晨或傍晚环湖骑行约需2小时，是体验当地风光的推荐方式。\n- **注意事项**：节假日期间西湖周边会实施交通管制，出行前请务必留意最新路况并提前规划路线。\n- **住宿参考**：若希望交通更便利，可选择湖滨商圈附近住宿。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 43480.41460000968
+        },
+        {
+          "query": "杭州有哪些本地美食推荐？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料推荐，杭州值得尝试的本地特色美食主要包括**片儿川、龙井虾仁和定胜糕**。\n\n另外，景区内的餐饮消费普遍偏高，建议您将用餐地点安排在**湖滨商圈或武林路附近**，这样既能品尝地道风味，又能获得更好的性价比。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 51236.95179999049
+        },
+        {
+          "query": "杭州住宿选择湖滨和灵隐各有什么特点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，杭州住宿选择湖滨和灵隐的特点如下：\n\n- **湖滨**：位于商圈范围内，交通十分便利，适合注重出行效率与便捷性的旅客。\n- **灵隐**：周边氛围相对清幽，更适合偏好安静环境、希望远离喧嚣的游客。\n\n您可以根据自己对出行便利度或住宿安静程度的偏好来做出选择。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 37586.08739999181
+        },
+        {
+          "query": "成都大熊猫基地建议什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "product_faq.html",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料建议，前往成都大熊猫基地最好选择**上午时段**。因为大熊猫在上午通常更为活跃，此时参观能更好地观察到它们的日常活动状态。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 29540.309700008947
+        },
+        {
+          "query": "苏州园林推荐哪两个园子？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料推荐，苏州园林可以优先选择**拙政园**和**留园**。建议尽量安排在工作日前往，这样游客相对较少，游览体验会更加舒适。如有其他旅行问题，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 45296.3763000007
+        },
+        {
+          "query": "苏州园林什么时候去人比较少？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，建议您在**工作日**前往苏州园林（如拙政园、留园），此时游客相对较少，游览体验会更舒适。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 32582.30840000033
+        },
+        {
+          "query": "杭州西湖适合清晨进行什么活动？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州西湖非常适合在清晨进行**环湖骑行**。此时前往不仅能避开周末的人流高峰，还能在约两小时的骑行途中，沿途欣赏断桥、白堤和苏堤等经典景观。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 36633.470499989926
+        },
+        {
+          "query": "星云笔记免费版最多支持几台设备同步？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，星云笔记免费版最多支持 **3 台** 设备进行同步。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 33369.57679998886
+        },
+        {
+          "query": "忘记密码后如何重置？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "product_faq.html",
+            "company_handbook.md",
+            "product_manual.pdf",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，您可以在登录页面点击“找回密码”选项，完成邮箱验证后即可重新设置密码。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 42166.08169999381
+        },
+        {
+          "query": "团队版如何计费，年付有优惠吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，团队版采用**按席位计费**的模式。如果选择按年支付，即可享受**8折优惠**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 24649.97470000526
+        },
+        {
+          "query": "商品购买后几天内可以无理由退货？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "product_faq.html",
+            "faq.jsonl",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料内容，商品在购买后的 **7天内** 可以无理由退货，但需保持包装完整。需要注意的是，软件授权一旦激活则不支持退货。如有其他疑问，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 35192.225699996925
+        },
+        {
+          "query": "激活后的软件授权可以退货吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "faq.jsonl",
+            "company_handbook.md",
+            "faq.jsonl",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库中的退货政策，激活后的软件授权**不支持退货**。通常情况下，购买后7天内且包装完整的商品可以申请无理由退货，但软件授权一旦被激活，便无法办理退货手续。如有其他疑问，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 35112.30909998994
+        },
+        {
+          "query": "现货商品付款后多久发出？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，现货商品通常在付款后的48小时内安排发货。如有其他相关问题，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 28854.671699999017
+        },
+        {
+          "query": "偏远地区配送大概需要几天？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，发往偏远地区的商品配送通常需要 5 到 7 天左右。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 33840.14220000245
+        },
+        {
+          "query": "硬件产品提供多长的保修期？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，硬件产品提供**12个月**的保修期。需要注意的是，人为损坏、进水以及私自拆机等情况不在保修范围内。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 23815.80749999557
+        },
+        {
+          "query": "哪些情况不在硬件保修范围内？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "product_manual.pdf",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，以下情况不在硬件保修范围内：\n- 人为造成的损坏\n- 设备进水\n- 未经授权的私自拆机行为\n\n这些情形均被明确排除在保修服务之外。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 34517.12490001228
+        },
+        {
+          "query": "Nebula Note 的电池典型续航是多久？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 在典型使用场景下的电池续航最长可达 10 小时。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26201.48450000852
+        },
+        {
+          "query": "Nebula Note 充满电需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 采用 USB-C 接口充电，大约需要 **90 分钟** 即可充满电。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 24318.461200004094
+        },
+        {
+          "query": "Nebula Note 的内置存储和扩展存储分别有多大？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "product_manual.pdf",
+            "faq.jsonl",
+            "project_brief.docx",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 的内置存储为 **128 GB**，同时配备 microSD 卡槽，最高支持扩展至 **1 TB** 的存储容量。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 31367.15409999306
+        },
+        {
+          "query": "设备无法开机时应该怎么处理？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "product_manual.pdf",
+            "product_faq.html",
+            "faq.jsonl",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据检索到的资料，当设备无法开机时，建议您尝试**长按电源键10秒**进行处理。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 41201.08720001008
+        },
+        {
+          "query": "说明书中的硬件保修范围是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "product_manual.pdf",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 4,
+          "hit": true,
+          "answer": "根据检索到的资料，星云笔记产品的硬件保修期为12个月。该保修范围明确排除了人为损坏、进水、私自拆机以及意外损坏等情况。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 42591.76710000611
+        },
+        {
+          "query": "Project Nebula 计划在什么时候发布？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "team_roles.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Project Nebula 计划在**第三季度（Q3）**发布其轻量级笔记设备。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 22174.729099991964
+        },
+        {
+          "query": "项目计划收集多少份 beta 用户报告？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "team_roles.md",
+            "team_roles.md",
+            "faq.jsonl",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，该项目计划收集 **100 份** beta 用户报告。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 24313.294000006863
+        },
+        {
+          "query": "Project Nebula 最大的两个风险是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Project Nebula 面临的最大两个风险是**供应链延迟**和**固件稳定性**问题。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 26792.562399990857
+        },
+        {
+          "query": "Nebula Note 的硬件保修期在购买说明和产品手册里分别是多久？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "product_manual.pdf",
+            "project_brief.docx",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，星云笔记（Nebula Note）的硬件保修期在购买说明（产品FAQ）中为 **12个月**，在产品手册中同样为 **12个月**。两份文档对该硬件保修时长的规定完全一致。此外，文档也提示人为损坏、进水及意外损坏等情形通常不在保修范围内。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 50258.731900001294
+        },
+        {
+          "query": "杭州西湖和成都熊猫基地分别适合什么时间游玩？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "成都大熊猫基地：建议安排在上午前往，此时大熊猫更为活跃。\n\n杭州西湖：最佳游览季节为春季（3月至5月）和秋季（9月至11月），气候较为舒适。具体时段建议选在清晨或傍晚，以避开周末客流高峰；清晨时段尤其适合进行环湖骑行。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 47129.70339998719
+        },
+        {
+          "query": "苏州园林推荐与杭州住宿选择分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料：\n\n- **苏州园林推荐**：主要推荐拙政园和留园。建议尽量安排在工作日前往，这样游客相对较少，游览体验会更舒适。\n- **杭州住宿选择**：若看重交通便利性，推荐选择湖滨商圈；若偏好安静舒适的环境，则建议考虑杨公堤或灵隐附近的区域。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 39159.693299996434
+        },
+        {
+          "query": "团队版折扣和免费版设备数分别是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "faq.jsonl",
+            "team_roles.md",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料：\n- **团队版折扣**：采用按席位计费模式，若选择年付可享受 **8 折优惠**。\n- **免费版设备数**：星云笔记免费版支持多设备同步，但最多仅允许绑定 **3 台设备**。\n\n如有其他产品或政策疑问，欢迎继续提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 30559.380600010627
+        },
+        {
+          "query": "项目发布目标与电池续航指标分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "chunk_rank": 4,
+          "hit": true,
+          "answer": "根据检索到的文档内容，项目发布目标与电池续航指标如下：\n\n- **项目发布目标**：计划在第三季度（Q3）推出一款轻量级笔记设备。具体目标包括交付首批硬件批次、验证电池续航表现，并收集100份Beta用户的反馈报告。\n- **电池续航指标**：在典型使用场景下，设备的电池续航最长可达10小时。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 45893.00820000062
+        }
+      ]
+    },
+    {
+      "mode": "agent",
+      "samples": 45,
+      "errors": 0,
+      "unverified": 0,
+      "answerable_count": 45,
+      "unanswerable_count": 0,
+      "recall_top5": 0.8,
+      "mrr_at5": 0.7667,
+      "hallucination_rate": 0.0667,
+      "faithfulness_rate": 0.9333,
+      "answer_f1": null,
+      "answer_f1_samples": 0,
+      "refusal_accuracy": 0.0,
+      "fabrication_rate": 0.0,
+      "latency_p50_ms": 78067.01,
+      "latency_max_ms": 202417.15,
+      "latency_p95_ms": 97256.47,
+      "latency_p99_ms": 200335.47,
+      "avg_token": 1755,
+      "total_token": 301827,
+      "details": [
+        {
+          "query": "星云科技员工每周最多可以申请几天远程办公？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据星云科技员工手册的相关规定，员工每周最多可申请2天远程办公。此外，远程办公期间需保持在线状态并在团队日历中做好标注，试用期员工还需事先获得直属主管的批准。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 86487.52290000266
+        },
+        {
+          "query": "试用期员工远程办公需要谁批准？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "team_roles.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的相关规定，试用期员工在申请远程办公前，需先取得**直属主管**的批准。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 78428.20120000397
+        },
+        {
+          "query": "入职满三年的员工有几天带薪年假？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库中的员工手册规定，入职满三年的员工享有 **15天** 带薪年假。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 74958.48849999311
+        },
+        {
+          "query": "年假需要提前几个工作日提交申请？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的规定，年假申请需提前 **3个工作日** 在系统中完成提交。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 78854.00490000029
+        },
+        {
+          "query": "差旅报销需要在行程结束后多久提交？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，差旅报销需要在行程结束后的**10个工作日内**提交。若逾期超过30天未提交，则需由部门负责人额外签字确认。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 70285.61360000458
+        },
+        {
+          "query": "超过 30 天未提交的报销单需要谁额外签字？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的规定，差旅报销单若超过30天未提交，需要由**部门负责人**进行额外签字审批。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 73714.28790000209
+        },
+        {
+          "query": "谁负责需求优先级、验收标准和跨团队沟通？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，这些职责由**产品经理**承担。该角色主要负责梳理需求优先级、制定验收标准以及协调跨团队沟通，并且需要在版本发布前核对并确认验收清单。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 83921.43960000249
+        },
+        {
+          "query": "版本发布前需要产品经理确认什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，版本发布前需要产品经理确认的是**验收清单**。\n\n此外，产品经理在该环节中的核心职责还包括明确需求优先级、制定验收标准以及负责跨团队的沟通协调。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 75851.02590000315
+        },
+        {
+          "query": "核心模块变更需要几位工程师评审？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料说明，核心模块的变更至少需要由一位同组工程师参与评审。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 72862.7034999954
+        },
+        {
+          "query": "谁负责回归测试和发布前质量检查？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，**测试工程师**负责回归测试和发布前质量检查。此外，该角色还需进行缺陷跟踪，并在每次版本发布时给出通过或阻塞的最终结论。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 85237.90670000017
+        },
+        {
+          "query": "每次发布时测试工程师需要给出什么结论？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，每次发布时，测试工程师需要给出**通过**或**阻塞**的结论。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 80402.8638000018
+        },
+        {
+          "query": "生产变更需要提前登记什么，并准备什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，生产变更需要提前登记**变更窗口**，并准备**回滚方案**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 80284.25609999977
+        },
+        {
+          "query": "杭州的最佳旅行季节是什么时候？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料，春季（3月至5月）和秋季（9月至11月）是游览杭州的最佳时节。这两个时段气候温和舒适，非常适合安排步行游览或骑行等户外活动。建议出行前留意具体天气变化，以便更好地规划行程。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 80337.82030000293
+        },
+        {
+          "query": "西湖建议在一天中的什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据提供的旅行指南信息，建议您在**清晨或傍晚**前往西湖，这样可以有效避开周末的客流高峰。此外，清晨时段也特别适合进行环湖骑行等休闲活动。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 79039.91049999604
+        },
+        {
+          "query": "环西湖骑行大约需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "company_handbook.md",
+            "product_faq.html",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据资料，环西湖骑行大约需要 **2小时**。建议您可以选择在清晨或傍晚时段前往，这样既能避开周末的人流高峰，沿途也能顺路游览断桥、白堤和苏堤等经典景点。出行时请注意，节假日西湖周边可能会实施交通管制，建议优先使用公共交通前往。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 83238.24990000867
+        },
+        {
+          "query": "环湖骑行沿途会经过哪些景点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 50735.044000000926
+        },
+        {
+          "query": "杭州市区交通如何安排？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "faq.jsonl",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，杭州市区的交通安排建议如下：\n\n- **市区出行**：地铁网络已覆盖大部分主要景点，是市区游览的便捷首选。\n- **景区周边**：建议优先乘坐公共交通工具，避免自驾带来的不便。\n- **骑行与步行**：春秋两季气候宜人，非常适合步行或骑行。例如环西湖骑行大约需要2小时，建议安排在清晨或傍晚，既能避开周末人流高峰，体验也更舒适。\n- **特殊提醒**：节假日期间西湖周边会实行交通管制，出行前请务必提前规划路线或留意最新通告。\n\n综合来看，采用“地铁+公交”结合骑行或步行的方式，是游览杭州市区及景区较为理想的交通安排。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 197686.07260000135
+        },
+        {
+          "query": "杭州有哪些本地美食推荐？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州的本地常见美食推荐包括**片儿川、龙井虾仁和定胜糕**。此外，资料也提示景区内的餐饮价格普遍偏高，如果您想品尝地道风味或寻找性价比更高的用餐选择，建议前往**湖滨商圈或武林路附近**就餐。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 78067.00969999656
+        },
+        {
+          "query": "杭州住宿选择湖滨和灵隐各有什么特点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州这两处住宿区域的特点如下：\n\n* **湖滨**：位于商圈核心，**交通十分便利**，适合注重出行效率和便捷性的旅客。\n* **灵隐**：周边**环境清幽安静**，更适合偏好宁静氛围、希望远离城市喧嚣的游客。\n\n您可以根据自身对“出行便捷度”与“环境安静度”的偏好来做出选择。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 94849.23610000988
+        },
+        {
+          "query": "成都大熊猫基地建议什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "product_faq.html",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料建议，前往成都大熊猫基地最好安排在**上午**。因为在这个时间段，大熊猫的活动状态更为活跃，观赏体验会更好。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 77739.77830000513
+        },
+        {
+          "query": "苏州园林推荐哪两个园子？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，苏州园林推荐前往**拙政园**和**留园**。此外，建议尽量安排在工作日游览，这样游客相对较少，体验会更舒适。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 73759.37839999096
+        },
+        {
+          "query": "苏州园林什么时候去人比较少？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料建议，如果您想避开人流高峰，可以选择在**工作日**前往苏州园林（如拙政园、留园等），此时游客相对较少，游览体验会更加舒适。如有其他旅行相关问题，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 73822.79429999471
+        },
+        {
+          "query": "杭州西湖适合清晨进行什么活动？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索资料，杭州西湖非常适合在清晨进行**环湖骑行**。全程大约需要2小时，骑行途中可以依次经过断桥、白堤和苏堤等经典景点。此外，清晨前往还能有效避开周末的人流高峰，游览体验更佳。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 91681.24819999503
+        },
+        {
+          "query": "星云笔记免费版最多支持几台设备同步？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，星云笔记的免费版最多支持 3 台设备进行同步。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 72425.83849999937
+        },
+        {
+          "query": "忘记密码后如何重置？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 56412.144699992496
+        },
+        {
+          "query": "团队版如何计费，年付有优惠吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，团队版采用**按席位**的方式进行计费。在付款周期方面，如果选择**按年支付**，可以享受**8折**优惠。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 64951.175900001545
+        },
+        {
+          "query": "商品购买后几天内可以无理由退货？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "product_faq.html",
+            "faq.jsonl",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，商品在购买后 **7天内** 可以无理由退货。需要注意的是，办理退货时商品需保持包装完整，且已激活的软件授权不支持退货。如有其他疑问，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 78628.08729999233
+        },
+        {
+          "query": "激活后的软件授权可以退货吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "faq.jsonl",
+            "company_handbook.md",
+            "faq.jsonl",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，激活后的软件授权**不支持退货**。通常情况下，商品需在购买后7天内且保持包装完整方可申请无理由退货，但软件授权一旦激活，便无法办理退货。如有其他疑问，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 77092.08640000725
+        },
+        {
+          "query": "现货商品付款后多久发出？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，现货商品在付款后的48小时内即可安排发出。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 79263.73449999664
+        },
+        {
+          "query": "偏远地区配送大概需要几天？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 56256.03850001062
+        },
+        {
+          "query": "硬件产品提供多长的保修期？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 48932.72449998767
+        },
+        {
+          "query": "哪些情况不在硬件保修范围内？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "product_manual.pdf",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料内容，星云笔记硬件产品虽提供12个月的保修服务，但以下情况不在保修范围内：\n- 人为造成的损坏\n- 设备进水\n- 未经授权的私自拆机行为\n\n建议在日常使用中注意保护设备，避免上述情况发生。如有其他疑问，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 95462.80000000843
+        },
+        {
+          "query": "Nebula Note 的电池典型续航是多久？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据产品手册说明，Nebula Note 在典型使用场景下的电池续航最长可达10小时。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 67648.4380000038
+        },
+        {
+          "query": "Nebula Note 充满电需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 使用 USB-C 接口充电，完全充满电大约需要 90 分钟。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 74792.46660000354
+        },
+        {
+          "query": "Nebula Note 的内置存储和扩展存储分别有多大？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "product_manual.pdf",
+            "faq.jsonl",
+            "project_brief.docx",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 的内置存储为 128 GB，同时配备 microSD 卡槽，最高支持扩展至 1 TB 的存储空间。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 82377.0380999922
+        },
+        {
+          "query": "设备无法开机时应该怎么处理？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 95654.36650000629
+        },
+        {
+          "query": "说明书中的硬件保修范围是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 49482.50649998954
+        },
+        {
+          "query": "Project Nebula 计划在什么时候发布？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "team_roles.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的项目简报，Project Nebula 计划于**第三季度（Q3）**推出其首款轻量级笔记设备。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 67841.966100008
+        },
+        {
+          "query": "项目计划收集多少份 beta 用户报告？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 66149.86810000846
+        },
+        {
+          "query": "Project Nebula 最大的两个风险是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，Project Nebula 面临的最大两个风险是**供应链延迟**和**固件稳定性**问题。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 97656.99480001058
+        },
+        {
+          "query": "Nebula Note 的硬件保修期在购买说明和产品手册里分别是多久？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_manual.pdf",
+            "product_faq.html",
+            "faq.jsonl",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的文档内容，星云笔记（Nebula Note）的硬件保修期在保修说明（产品FAQ）与产品手册（User Manual）中均为 **12个月**。\n\n文档同时注明，人为损坏、进水、私自拆机（或意外损坏）不在保修范围内。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 202417.145600004
+        },
+        {
+          "query": "杭州西湖和成都熊猫基地分别适合什么时间游玩？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，两个景点的推荐游玩时间如下：\n\n- **成都大熊猫基地**：建议安排在**上午**前往，此时熊猫的活动状态更为活跃，观赏体验更佳。\n- **杭州西湖**：\n  - **最佳季节**：推荐在**春季（3月至5月）和秋季（9月至11月）**前往，此时气候最为舒适宜人。\n  - **具体时段**：建议选择在**清晨或傍晚**游览，以错开周末的客流高峰。清晨时段也特别适合进行环湖骑行。\n\n希望这些信息能帮助您合理规划行程！",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 95161.95239999797
+        },
+        {
+          "query": "苏州园林推荐与杭州住宿选择分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，为您总结如下：\n\n- **苏州园林推荐**：首选拙政园和留园。建议安排在工作日前往，此时游客相对较少，游览体验会更舒适。\n- **杭州住宿选择**：若您看重交通便利性，推荐选择湖滨商圈；若您更偏好安静的环境，则可以选择杨公堤或灵隐附近的区域。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 89136.58599999326
+        },
+        {
+          "query": "团队版折扣和免费版设备数分别是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 58286.99950000737
+        },
+        {
+          "query": "项目发布目标与电池续航指标分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 62127.14330000745
+        }
+      ]
+    },
+    {
+      "mode": "agent_reranker",
+      "samples": 45,
+      "errors": 0,
+      "unverified": 0,
+      "answerable_count": 45,
+      "unanswerable_count": 0,
+      "recall_top5": 0.8,
+      "mrr_at5": 0.7889,
+      "hallucination_rate": 0.0667,
+      "faithfulness_rate": 0.9333,
+      "answer_f1": null,
+      "answer_f1_samples": 0,
+      "refusal_accuracy": 0.0,
+      "fabrication_rate": 0.0,
+      "latency_p50_ms": 78899.65,
+      "latency_max_ms": 206600.19,
+      "latency_p95_ms": 107273.84,
+      "latency_p99_ms": 200795.77,
+      "avg_token": 1761,
+      "total_token": 302835,
+      "details": [
+        {
+          "query": "星云科技员工每周最多可以申请几天远程办公？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据星云科技员工手册的规定，员工每周最多可以申请2天远程办公。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 79446.43179999548
+        },
+        {
+          "query": "试用期员工远程办公需要谁批准？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，试用期员工在申请远程办公时，需要先获得其**直属主管**的批准。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 80930.4351000028
+        },
+        {
+          "query": "入职满三年的员工有几天带薪年假？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据《星云科技员工手册》年假规定，员工入职满三年后，带薪年假天数将增加至 **15天**。如需使用年假，请记得提前3个工作日在系统中提交申请。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 76333.89579999493
+        },
+        {
+          "query": "年假需要提前几个工作日提交申请？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据员工手册的规定，申请年假需要至少提前 3 个工作日在系统中提交。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 68717.36070000043
+        },
+        {
+          "query": "差旅报销需要在行程结束后多久提交？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据星云科技员工手册的规定，差旅报销需要在行程结束后的 **10个工作日内** 提交，并需附上对应的发票和审批记录。若因特殊情况超过30天未提交，则还需部门负责人额外签字确认。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 70724.49920000508
+        },
+        {
+          "query": "超过 30 天未提交的报销单需要谁额外签字？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "company_handbook.md",
+          "expected_sources": [
+            "company_handbook.md"
+          ],
+          "retrieved_sources": [
+            "company_handbook.md",
+            "team_roles.md",
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，超过30天未提交的报销单需要由**部门负责人**额外签字。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 79470.8951000066
+        },
+        {
+          "query": "谁负责需求优先级、验收标准和跨团队沟通？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，负责需求优先级、验收标准以及跨团队沟通的是**产品经理**。此外，该角色还需在版本发布前确认验收清单。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 70947.14820000809
+        },
+        {
+          "query": "版本发布前需要产品经理确认什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，版本发布前需要产品经理确认的是**验收清单**。此外，产品经理还主要负责需求优先级排序、制定验收标准以及跨团队沟通等工作。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 82511.36619999306
+        },
+        {
+          "query": "核心模块变更需要几位工程师评审？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据研发工程师的职责说明，核心模块变更至少需要由同组的一位工程师进行评审。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 72821.380399997
+        },
+        {
+          "query": "谁负责回归测试和发布前质量检查？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，回归测试和发布前质量检查由**测试工程师**负责。此外，该角色还需同步进行缺陷跟踪，并在每次版本发布时给出通过或阻塞的结论。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 85800.25600000226
+        },
+        {
+          "query": "每次发布时测试工程师需要给出什么结论？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，每次发布时测试工程师需要给出**“通过”或“阻塞”**的结论，以此明确当前版本是否满足发布的质量要求。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 85024.31989999604
+        },
+        {
+          "query": "生产变更需要提前登记什么，并准备什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "team_roles.md",
+          "expected_sources": [
+            "team_roles.md"
+          ],
+          "retrieved_sources": [
+            "team_roles.md",
+            "company_handbook.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，进行生产变更前需预先登记**变更窗口**，同时准备好相应的**回滚方案**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 72143.52679999138
+        },
+        {
+          "query": "杭州的最佳旅行季节是什么时候？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "company_handbook.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，杭州的最佳旅行季节是**春季和秋季**。具体而言，3月至5月以及9月至11月期间气候最为舒适，非常适合安排步行或骑行等户外活动。出行时建议避开周末高峰，并优先选择公共交通。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 80971.66179999476
+        },
+        {
+          "query": "西湖建议在一天中的什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "product_faq.html",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，建议将游览时间安排在**清晨或傍晚**。这样安排有助于避开周末的客流高峰，同时也能从容地体验约两小时的环湖骑行，沿途欣赏断桥、白堤和苏堤等风景。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 90324.14179999614
+        },
+        {
+          "query": "环西湖骑行大约需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "product_faq.html",
+            "travel_guide.txt",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 2,
+          "hit": true,
+          "answer": "根据知识库内容，环西湖骑行大约需要 **2小时**。建议您可以选择在清晨或傍晚前往，以避开周末的高峰时段。骑行路线沿途会经过断桥、白堤和苏堤等经典景点。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 72989.31750000338
+        },
+        {
+          "query": "环湖骑行沿途会经过哪些景点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 56982.09489999863
+        },
+        {
+          "query": "杭州市区交通如何安排？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，杭州市区的交通安排建议如下：\n\n- **市区出行**：地铁网络已覆盖市区主要景点，日常通勤与游览较为便利。\n- **景区周边**：前往西湖等核心景区时，建议优先乘坐公交车等公共交通工具。\n- **节假日提示**：西湖周边在节假日会实施交通管制，出行前建议提前规划路线或关注实时路况，尽量避开高峰时段。\n- **慢行交通**：杭州气候舒适时非常适合步行或骑行，例如环西湖骑行约需2小时，沿途可串联断桥、白堤、苏堤等景点，是一种兼顾交通与观光的游览方式。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 206600.18979999586
+        },
+        {
+          "query": "杭州有哪些本地美食推荐？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料推荐，杭州的本地特色美食主要包括**片儿川、龙井虾仁和定胜糕**。此外，景区内的餐饮价格普遍偏高，建议您前往湖滨商圈或武林路附近用餐，选择更多且性价比更高。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 89540.15539999818
+        },
+        {
+          "query": "杭州住宿选择湖滨和灵隐各有什么特点？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州在这两个区域的住宿特点如下：\n\n- **湖滨商圈**：交通十分便利，出行和前往其他景点都比较方便。\n- **灵隐附近**：环境较为清幽安静，更适合偏好宁静、想要避开喧闹的游客选择。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 97111.28729999473
+        },
+        {
+          "query": "成都大熊猫基地建议什么时间前往？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料建议，您最好在**上午**前往成都大熊猫基地。因为上午时段大熊猫的活动更为活跃，此时前往观赏体验会更好。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 84984.37700000068
+        },
+        {
+          "query": "苏州园林推荐哪两个园子？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料推荐，苏州园林首选**拙政园**和**留园**。此外，建议尽量安排在工作日前往，这样游客相对较少，游览体验会更舒适。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 68239.2506999895
+        },
+        {
+          "query": "苏州园林什么时候去人比较少？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料建议，前往苏州园林游玩时，选择**工作日**前往会比较清静，人流量相对较少。如果您计划游览，可以优先考虑拙政园和留园。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 84330.32910000475
+        },
+        {
+          "query": "杭州西湖适合清晨进行什么活动？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，杭州西湖非常适合在清晨进行**环湖骑行**。建议早上前往不仅可以避开周末的高峰人流，骑行全程也大约需要两小时，沿途还能依次欣赏断桥、白堤和苏堤等经典景观。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 76294.57290000573
+        },
+        {
+          "query": "星云笔记免费版最多支持几台设备同步？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，星云笔记免费版最多支持 **3 台**设备同步。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 73606.2765000097
+        },
+        {
+          "query": "忘记密码后如何重置？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 68869.12790000497
+        },
+        {
+          "query": "团队版如何计费，年付有优惠吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [
+            "faq.jsonl",
+            "team_roles.md",
+            "company_handbook.md",
+            "team_roles.md",
+            "company_handbook.md"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料内容，团队版采用**按席位**收费的模式。若选择**按年支付**，能够享受**8折**的优惠。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 74522.40100000927
+        },
+        {
+          "query": "商品购买后几天内可以无理由退货？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "company_handbook.md",
+            "product_faq.html",
+            "product_faq.html",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据知识库内容，商品在购买后**7天内**可以无理由退货，但需保持包装完整。此外，软件授权一旦激活则不支持退货。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 78899.6521000081
+        },
+        {
+          "query": "激活后的软件授权可以退货吗？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "company_handbook.md",
+            "faq.jsonl",
+            "faq.jsonl",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料中的退货规定，软件授权一旦激活便无法办理退货。如果商品尚未激活且包装完好，一般可以在购买后7天内申请无理由退货。如有其他疑问，欢迎随时咨询。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 82496.14829999337
+        },
+        {
+          "query": "现货商品付款后多久发出？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "company_handbook.md",
+            "faq.jsonl"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料，现货商品一般在付款后的48小时内安排发货。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 75057.24320000445
+        },
+        {
+          "query": "偏远地区配送大概需要几天？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 59187.37410000176
+        },
+        {
+          "query": "硬件产品提供多长的保修期？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 59511.450000005425
+        },
+        {
+          "query": "哪些情况不在硬件保修范围内？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_faq.html",
+            "company_handbook.md",
+            "product_manual.pdf",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，硬件产品的保修范围**不包括**以下几种情况：\n- 人为造成的损坏\n- 设备进水\n- 未经授权的私自拆机行为\n\n如有其他问题，欢迎随时提问。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 86325.42609999655
+        },
+        {
+          "query": "Nebula Note 的电池典型续航是多久？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "project_brief.docx",
+            "product_faq.html",
+            "project_brief.docx",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，Nebula Note 在典型使用场景下的电池续航最长可达 10 小时。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 79080.8326999977
+        },
+        {
+          "query": "Nebula Note 充满电需要多长时间？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "product_manual.pdf",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据资料内容，Nebula Note 采用 USB-C 接口充电，大约需要 90 分钟即可充满。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 74762.21979998809
+        },
+        {
+          "query": "Nebula Note 的内置存储和扩展存储分别有多大？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_manual.pdf",
+            "faq.jsonl",
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Nebula Note 的内置存储为 **128 GB**，同时设备配备了 microSD 卡槽，支持将存储空间扩展至最高 **1 TB**。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 81756.99230001192
+        },
+        {
+          "query": "设备无法开机时应该怎么处理？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 94322.10580000537
+        },
+        {
+          "query": "说明书中的硬件保修范围是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "product_manual.pdf",
+          "expected_sources": [
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 50364.02459999954
+        },
+        {
+          "query": "Project Nebula 计划在什么时候发布？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "team_roles.md",
+            "product_manual.pdf"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，Project Nebula 计划在**第三季度（Q3）**发布。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 76201.95740000054
+        },
+        {
+          "query": "项目计划收集多少份 beta 用户报告？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 68711.00959999603
+        },
+        {
+          "query": "Project Nebula 最大的两个风险是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx"
+          ],
+          "retrieved_sources": [
+            "project_brief.docx",
+            "project_brief.docx",
+            "project_brief.docx",
+            "product_manual.pdf",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，Project Nebula 面临的最大两个风险是**供应链延迟**和**固件稳定性**问题。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 108085.30020000762
+        },
+        {
+          "query": "Nebula Note 的硬件保修期在购买说明和产品手册里分别是多久？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "product_faq.html",
+          "expected_sources": [
+            "product_faq.html",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [
+            "product_faq.html",
+            "product_manual.pdf",
+            "product_faq.html",
+            "faq.jsonl",
+            "project_brief.docx"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据提供的资料，星云笔记（Nebula Note）的硬件保修期在购买说明（产品FAQ）和产品手册中**均为12个月**。需要说明的是，该保修范围不包含人为损坏、进水或私自拆机等非自然损坏情况。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 193408.33240000939
+        },
+        {
+          "query": "杭州西湖和成都熊猫基地分别适合什么时间游玩？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "travel_guide.txt",
+          "expected_sources": [
+            "travel_guide.txt",
+            "city_guide.csv"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "product_faq.html"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料，两地游玩时间建议如下：\n\n* **成都大熊猫基地**：建议安排在**上午**前往，此时大熊猫的活动更为活跃，观赏体验更佳。\n* **杭州西湖**：\n  * **最佳季节**：春季（3月至5月）和秋季（9月至11月），此时气候舒适，非常适合步行或骑行游览。\n  * **具体时段**：推荐在**清晨或傍晚**前往，既能避开周末的人流高峰，也特别适合安排环湖骑行（全程约2小时）。另外，节假日西湖周边可能会实施交通管制，建议优先使用公共交通出行。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 98731.89060000004
+        },
+        {
+          "query": "苏州园林推荐与杭州住宿选择分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "city_guide.csv",
+          "expected_sources": [
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "retrieved_sources": [
+            "city_guide.csv",
+            "travel_guide.txt",
+            "city_guide.csv",
+            "city_guide.csv",
+            "travel_guide.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的资料：\n\n- **苏州园林推荐**：主要推荐拙政园和留园。建议安排在工作日前往，此时游客相对较少，游览体验更佳。\n- **杭州住宿选择**：若看重交通便利性，可选择湖滨商圈；若偏好安静舒适的环境，则推荐杨公堤或灵隐附近区域。",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 104028.02359999623
+        },
+        {
+          "query": "团队版折扣和免费版设备数分别是什么？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "faq.jsonl",
+          "expected_sources": [
+            "faq.jsonl"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": false,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 58801.22660000052
+        },
+        {
+          "query": "项目发布目标与电池续航指标分别是什么？",
+          "query_type": "complex",
+          "answerable": true,
+          "expected_source": "project_brief.docx",
+          "expected_sources": [
+            "project_brief.docx",
+            "product_manual.pdf"
+          ],
+          "retrieved_sources": [],
+          "chunk_rank": 0,
+          "hit": false,
+          "answer": "",
+          "reference_answer": null,
+          "answer_f1": null,
+          "is_faithful": true,
+          "faithfulness_source": "llm_judge",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 62715.161399988574
+        }
+      ]
+    }
+  ],
+  "targets": {
+    "recall_top5": 0.9,
+    "mrr_at5": 0.7,
+    "hallucination_rate": 0.05,
+    "refusal_accuracy": 0.8,
+    "latency_p99_ms": 2000,
+    "avg_token": 800
+  },
+  "index": {
+    "chunks": 23,
+    "collection_count": 23,
+    "embedding_model": "./data/models/bge-m3",
+    "chunk_size": 220,
+    "chunk_overlap": 30,
+    "retrieval_k": 5,
+    "rrf_k": 60,
+    "reranker_top_n": 5
+  },
+  "llm": {
+    "base_url": "http://127.0.0.1:1919/v1",
+    "model": "Qwen3.6-35B-A3B-NVFP4",
+    "timeout_s": 180
+  },
+  "embedding": {
+    "model": "./data/models/bge-m3",
+    "device": "cuda"
+  },
+  "judge": {
+    "model": "Qwen3.6-35B-A3B-NVFP4"
+  }
+}

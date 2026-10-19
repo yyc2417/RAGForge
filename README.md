@@ -473,7 +473,7 @@ bge-m3 保留为默认：多格式 hybrid 最稳、跨语言均衡；Qwen3 在 C
 
 ### 本地模型 smoke（Qwen3.6-35B-A3B-NVFP4）
 
-- **clarify**：16 例（11 歧义 + 5 清晰/寒暄），澄清准确率 93.8%，过度澄清率 20.0%，问题关键词命中率 100%（`reports/local_clarify_report.json`）；
+- **clarify**：16 例（11 歧义 + 5 清晰/寒暄），带 follow-up 的最新跑分：澄清准确率 87.5%，过度澄清率 20.0%，问题关键词命中率 90.9%，补充后解决率 83.3%（5/6）；前一次无 follow-up 跑分为 93.8%。报告：`reports/local_clarify_followup.json`、`reports/local_clarify_report.json`；
 - **多轮**：2 会话 × 3 轮 smoke，轮级来源命中 100%，会话成功率 100%（`reports/local_multiturn_smoke.json`）；
 - **CRUD-RAG e2e**：agent 模式前 2 题（bge-m3），Recall@5 / MRR@5 100%，忠实度 100%，answer F1 81.9%，P50 143.8s、max 188.4s（`reports/local_e2e_crud_smoke.json`）。
 

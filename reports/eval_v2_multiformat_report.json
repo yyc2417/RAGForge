@@ -5,6 +5,8 @@
   "dataset_license": "internal",
   "dataset_hash": "5846bc120a9cce7c",
   "corpus_dir": "data\\demo",
+  "embedding_model": "./data/models/bge-m3",
+  "embedding_device": "cuda",
   "samples": 45,
   "k": 5,
   "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",
@@ -46,5 +48,5 @@
       "hit_all_count": 44
     }
   ],
-  "elapsed_ms": 12007.0
+  "elapsed_ms": 11498.2
 }

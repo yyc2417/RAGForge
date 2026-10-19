@@ -1,0 +1,52 @@
+{
+  "dataset": "data\\public_eval\\crud_read_eval.json",
+  "dataset_name": "CRUD-RAG-Read",
+  "dataset_version": "crud_split_2024",
+  "dataset_license": "Apache-2.0",
+  "dataset_hash": "2b087ab38af08ad2",
+  "corpus_dir": "data\\public_eval\\crud_corpus",
+  "embedding_model": "./data/models/bge-large-zh-v1.5",
+  "embedding_device": "cuda",
+  "samples": 120,
+  "k": 5,
+  "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",
+  "modes": [
+    {
+      "mode": "vector",
+      "hit_any": 1.0,
+      "hit_all": 0.8833333333333333,
+      "mrr_any": 0.9805555555555555,
+      "ndcg_at5": 0.9529859728745617,
+      "hit_any_count": 120,
+      "hit_all_count": 106
+    },
+    {
+      "mode": "bm25",
+      "hit_any": 0.9916666666666667,
+      "hit_all": 0.9,
+      "mrr_any": 0.9694444444444444,
+      "ndcg_at5": 0.946566156992164,
+      "hit_any_count": 119,
+      "hit_all_count": 108
+    },
+    {
+      "mode": "hybrid",
+      "hit_any": 1.0,
+      "hit_all": 0.8916666666666667,
+      "mrr_any": 0.9736111111111112,
+      "ndcg_at5": 0.9505830173835045,
+      "hit_any_count": 120,
+      "hit_all_count": 107
+    },
+    {
+      "mode": "reranker",
+      "hit_any": 1.0,
+      "hit_all": 0.95,
+      "mrr_any": 0.9791666666666666,
+      "ndcg_at5": 0.968592949456467,
+      "hit_any_count": 120,
+      "hit_all_count": 114
+    }
+  ],
+  "elapsed_ms": 33616.3
+}

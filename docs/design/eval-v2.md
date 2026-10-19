@@ -171,6 +171,20 @@ CUDA embedding（BAAI/bge-m3）：
 换 bge-m3 后 vector/hybrid hit_any 到 100%，跨语言失败消除；reranker MRR 97.8%。
 报告：`reports/eval_v2_multiformat_report.json`。
 
+### Embedding 选型对照
+
+三个候选均为 1024 维、CUDA、normalize、相同 chunk 与语料：
+
+| 模型 | 体积 | CRUD vector hit_all | CRUD reranker hit_all | 多格式 hybrid hit_any | 多格式 reranker NDCG@5 |
+|---|---:|---:|---:|---:|---:|
+| **bge-m3（当前）** | 2.2GB | **95.0%** | 94.2% | **100.0%** | 97.5% |
+| bge-large-zh-v1.5 | 1.3GB | 88.3% | 95.0% | 100.0% | 97.5% |
+| Qwen3-Embedding-0.6B | 1.2GB | 93.3% | **95.8%** | 97.8% | 97.5% |
+
+选型：bge-m3 在多格式 hybrid 与跨语言均衡上最好；Qwen3 的 CRUD reranker 略高，
+但多格式 hybrid hit_any 下降，因此保留 bge-m3。报告：
+`reports/eval_v2_{crud,multiformat}_{bge_large_zh,qwen3_06b}.json`。
+
 ### 本地模型 smoke（2026-10-18）
 
 本地 `Qwen3.6-35B-A3B-NVFP4`（OpenAI 兼容 endpoint）+ agent 模式，CRUD-RAG

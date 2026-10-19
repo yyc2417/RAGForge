@@ -458,6 +458,18 @@ RAGForge/
 
 换 bge-m3 后多格式集 vector/hybrid hit_any 均到 100%，此前的跨语言失败消失；reranker 把 MRR 拉到 97.8%。明细见 `reports/eval_v2_multiformat_report.json`。
 
+### Embedding 选型对照
+
+三个候选均为 1024 维、CUDA、normalize、相同 chunk 与语料；只替换 embedding 后重跑：
+
+| 模型 | 体积 | CRUD vector hit_all | CRUD reranker hit_all | 多格式 hybrid hit_any | 多格式 reranker NDCG@5 |
+|---|---:|---:|---:|---:|---:|
+| **bge-m3（当前）** | 2.2GB | **95.0%** | 94.2% | **100.0%** | 97.5% |
+| bge-large-zh-v1.5 | 1.3GB | 88.3% | 95.0% | 100.0% | 97.5% |
+| Qwen3-Embedding-0.6B | 1.2GB | 93.3% | **95.8%** | 97.8% | 97.5% |
+
+bge-m3 保留为默认：多格式 hybrid 最稳、跨语言均衡；Qwen3 在 CRUD reranker 略高，但多格式 hybrid 下降。报告分别见 `reports/eval_v2_crud_bge_large_zh.json`、`eval_v2_crud_qwen3_06b.json` 及对应 multiformat 文件。
+
 ### 本地模型 smoke（Qwen3.6-35B-A3B-NVFP4）
 
 - **clarify**：16 例（11 歧义 + 5 清晰/寒暄），澄清准确率 93.8%，过度澄清率 20.0%，问题关键词命中率 100%（`reports/local_clarify_report.json`）；
@@ -468,9 +480,9 @@ RAGForge/
 
 ## 未来工作
 
-- **Embedding 多模型 ablation**：本地已切到 bge-m3（1024 维，CUDA），CRUD-RAG
-  vector hit_any 60.0%→100.0%。`bge-large-zh-v1.5` / `Qwen3-Embedding-0.6B`
-  的对照尚未跑；如需最终选型，在相同 dev/test 与 chunk 配置下比较 Recall/MRR/延迟/显存。
+- **Embedding 选型**：bge-m3 已选定并作为本地默认；bge-large-zh-v1.5 与
+  Qwen3-Embedding-0.6B 已完成同条件对照（见上表）。后续可针对 Qwen3 加查询
+  instruction 再测，但当前多格式 hybrid 指标不如 bge-m3。
 - **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
   （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。

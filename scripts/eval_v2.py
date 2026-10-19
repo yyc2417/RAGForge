@@ -165,6 +165,8 @@ def main() -> None:
         "dataset_license": args.dataset_license,
         "dataset_hash": dataset_hash(items),
         "corpus_dir": str(corpus_dir),
+        "embedding_model": settings.embedding_model,
+        "embedding_device": settings.embedding_device,
         "samples": len(samples),
         "k": EVAL_K,
         "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",

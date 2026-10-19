@@ -25,26 +25,45 @@ export PYTHONIOENCODING=utf-8
 
 PY=".venv/Scripts/python.exe"
 TARGET="${1:-all}"
+MODES=(baseline linear_hybrid agent agent_reranker)
 
 if [[ ! -x "$PY" ]]; then
   echo "找不到 $PY；请先创建项目虚拟环境并安装 CUDA torch" >&2
   exit 1
 fi
 
+run_dataset() {
+  local dataset="$1"
+  local corpus="$2"
+  local report="$3"
+  local first=1
+  for mode in "${MODES[@]}"; do
+    local args=(
+      scripts/eval.py
+      --dataset "$dataset"
+      --corpus-dir "$corpus"
+      --mode "$mode"
+      --resume
+      --report "$report"
+    )
+    if [[ "$first" == "1" ]]; then
+      args+=(--rebuild)
+      first=0
+    fi
+    "$PY" "${args[@]}"
+  done
+}
+
 run_crud() {
-  "$PY" scripts/eval.py \
-    --dataset data/public_eval/crud_read_eval.json \
-    --corpus-dir data/public_eval/crud_corpus \
-    --rebuild --resume \
-    --report reports/local_e2e_crud_full.json
+  run_dataset "data/public_eval/crud_read_eval.json" \
+    "data/public_eval/crud_corpus" \
+    "reports/local_e2e_crud_full.json"
 }
 
 run_multiformat() {
-  "$PY" scripts/eval.py \
-    --dataset tests/eval_dataset_multiformat.json \
-    --corpus-dir data/demo \
-    --rebuild --resume \
-    --report reports/local_e2e_multiformat_full.json
+  run_dataset "tests/eval_dataset_multiformat.json" \
+    "data/demo" \
+    "reports/local_e2e_multiformat_full.json"
 }
 
 case "$TARGET" in

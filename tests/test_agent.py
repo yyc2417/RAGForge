@@ -54,6 +54,14 @@ def test_schema_aliases_for_local_model_variants():
     })
     assert no_ambiguity.ambiguity_type is None
 
+    generated_subtype = AnalyzeResult.model_validate({
+        "query_type": "factual",
+        "needs_retrieval": True,
+        "needs_clarification": True,
+        "ambiguity_type": "missing_device_model",
+    })
+    assert generated_subtype.ambiguity_type == "missing_slot"
+
     evaluate = EvaluateResult.model_validate({
         "failure_mode": "insufficient",
         "suggested_action": "continue",

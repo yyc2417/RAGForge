@@ -116,6 +116,13 @@ def _normalize_enum(value: object) -> object:
         value = value.strip().lower()
         if value in {"", "none", "null", "n/a", "not_applicable", "无"}:
             return None
+        # 本地模型常自造 missing_xxx / ambiguous_xxx 子类，按前缀归入三类歧义
+        if value.startswith("missing_") or value.startswith("pronoun"):
+            return "missing_slot"
+        if value.startswith("unspecified_") or value.startswith("ambiguous_"):
+            return "multiple_interpretations"
+        if value.startswith("conflicting_"):
+            return "conflicting_constraints"
         value = _ENUM_ALIASES.get(value, value)
     return value
 

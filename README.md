@@ -177,6 +177,7 @@ uv run python scripts/eval.py                  # 完整评估（4 套模式，�
 uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM，免 API）
 uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
   --corpus-dir data/demo --rebuild --report reports/eval_e2e_multiformat.json  # v2 端到端（需 LLM）
+bash scripts/run_local_full_eval.sh all   # 本地模型全量 4 模式（长任务，使用 127.0.0.1 本地服务）
 uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
 uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线

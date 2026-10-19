@@ -191,10 +191,10 @@ CUDA embedding（BAAI/bge-m3）：
 前 2 题（bge-m3）：Recall@5 / MRR@5 100%，忠实度 100%，answer F1 81.9%，
 P50 143.8s，max 188.4s。clarify 16 例带 follow-up：准确率 87.5%、过度澄清
 20.0%、问题关键词 90.9%、补充后解决率 83.3%（前一次无 follow-up 为 93.8%）。
-多轮 2 会话 × 3 轮 smoke：轮级命中 100%，会话成功率 100%。样本仅用于验证
-v2 e2e harness、clarify 与多轮链路，不作为模型结论。
-报告：`reports/local_e2e_crud_smoke.json`、`reports/local_clarify_followup.json`、
-`reports/local_multiturn_smoke.json`。
+多轮全量 10 会话 × 3 轮：轮级命中 100%、会话成功率 100%；修正前 v1 为
+63.3% / 50%，根因是首轮缺主体与 condense 丢实体。样本仅用于本地链路验证，
+不作为模型结论。报告：`reports/local_e2e_crud_smoke.json`、
+`reports/local_clarify_followup.json`、`reports/local_multiturn_full.json`。
 
 ## 8. 待办
 

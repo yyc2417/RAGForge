@@ -29,7 +29,7 @@
     "conversation_id": "c2-policy",
     "turns": [
       {
-        "query": "公司远程办公有什么规定？",
+        "query": "星云科技远程办公有什么规定？",
         "resolved_query": "星云科技远程办公有什么规定？",
         "answerable": true,
         "expected_sources": ["company_handbook.md"],
@@ -81,8 +81,8 @@
     "conversation_id": "c4-team",
     "turns": [
       {
-        "query": "谁负责发布前的质量检查？",
-        "resolved_query": "星云科技谁负责发布前的质量检查？",
+        "query": "星云科技的发布前质量检查由谁负责？",
+        "resolved_query": "星云科技的发布前质量检查由谁负责？",
         "answerable": true,
         "expected_sources": ["team_roles.md"],
         "gold_keywords": ["测试工程师", "质量"]
@@ -107,7 +107,7 @@
     "conversation_id": "c5-account",
     "turns": [
       {
-        "query": "免费版可以同步几台设备？",
+        "query": "星云笔记免费版可以同步几台设备？",
         "resolved_query": "星云笔记免费版可以同步几台设备？",
         "answerable": true,
         "expected_sources": ["faq.jsonl"],
@@ -133,8 +133,8 @@
     "conversation_id": "c6-manual",
     "turns": [
       {
-        "query": "PDF 说明书里电池能用多久？",
-        "resolved_query": "Nebula Note 电池典型续航是多久？",
+        "query": "Nebula Note 的 PDF 说明书里电池能用多久？",
+        "resolved_query": "Nebula Note 的 PDF 说明书里电池能用多久？",
         "answerable": true,
         "expected_sources": ["product_manual.pdf"],
         "gold_keywords": ["10 hours", "battery"]
@@ -237,7 +237,7 @@
     "conversation_id": "c10-sales",
     "turns": [
       {
-        "query": "商品可以退货吗？",
+        "query": "星云笔记商品可以退货吗？",
         "resolved_query": "星云笔记商品可以退货吗？",
         "answerable": true,
         "expected_sources": ["product_faq.html"],

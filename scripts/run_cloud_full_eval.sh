@@ -32,6 +32,7 @@ MODES=(baseline linear_hybrid agent agent_reranker)
 REQUIRED_LOCAL=(
   reports/local_e2e_crud_full.json
   reports/local_e2e_multiformat_full.json
+  reports/local_full_eval.done
 )
 
 if [[ ! -x "$PY" ]]; then

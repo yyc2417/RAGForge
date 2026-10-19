@@ -26,6 +26,7 @@ export PYTHONIOENCODING=utf-8
 PY=".venv/Scripts/python.exe"
 TARGET="${1:-all}"
 MODES=(baseline linear_hybrid agent agent_reranker)
+MARKER="reports/local_full_eval.done"
 
 if [[ ! -x "$PY" ]]; then
   echo "找不到 $PY；请先创建项目虚拟环境并安装 CUDA torch" >&2
@@ -70,8 +71,11 @@ case "$TARGET" in
   crud) run_crud ;;
   multiformat) run_multiformat ;;
   all)
+    rm -f "$MARKER"
     run_crud
     run_multiformat
+    touch "$MARKER"
+    echo "本地全量完成：$MARKER"
     ;;
   *)
     echo "用法：$0 [all|crud|multiformat]" >&2

@@ -171,6 +171,22 @@ def _chunk_hit_rank(docs: list, expected_sources: list[str] | str, gold_keywords
     return 0
 
 
+def _run_metadata() -> dict:
+    """报告元数据：区分本地 / 云端模型与 embedding 配置。"""
+    return {
+        "llm": {
+            "base_url": settings.deepseek_base_url,
+            "model": settings.deepseek_model,
+            "timeout_s": settings.llm_timeout,
+        },
+        "embedding": {
+            "model": settings.embedding_model,
+            "device": settings.embedding_device,
+        },
+        "judge": {"model": settings.deepseek_model},
+    }
+
+
 def _index_fingerprint(chunks: list, vector_store: VectorStore) -> dict:
     """索引指纹：写入报告，保证评估结果可归因、可复现。"""
     return {
@@ -638,6 +654,7 @@ def run_retrieval_only(
         "samples": len(items),
         "modes": modes_report,
         "index": _index_fingerprint(chunks, vs),
+        **_run_metadata(),
     }
     report_path = Path(report_path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -764,12 +781,14 @@ def main() -> None:
             "modes": merged_modes,
             "targets": Evaluator._targets(),
             "index": _index_fingerprint(evaluator._chunks, evaluator._vector_store),
+            **_run_metadata(),
         }
     else:
         report = {
             "modes": new_results,
             "targets": Evaluator._targets(),
             "index": _index_fingerprint(evaluator._chunks, evaluator._vector_store),
+            **_run_metadata(),
         }
 
     evaluator.print_report(report)

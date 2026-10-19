@@ -11,6 +11,7 @@ wheels/
 
 # Environment variables
 .env
+.env.cloud
 
 # ChromaDB persistence
 chroma_db/

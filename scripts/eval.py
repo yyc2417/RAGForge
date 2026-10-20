@@ -690,6 +690,8 @@ def main() -> None:
                         help="离线检索报告路径")
     parser.add_argument("--resume", action="store_true",
                         help="增量模式：读取已有报告，跳过已完成的模式，只补未完成的")
+    parser.add_argument("--force", action="store_true",
+                        help="与 --mode 联用：强制重跑该模式并覆盖报告中的结果")
     parser.add_argument("--rebuild", action="store_true",
                         help="评估前清库重建向量索引（不校验指纹直接重建）")
     parser.add_argument("--retrieval-only", action="store_true",
@@ -697,6 +699,8 @@ def main() -> None:
     parser.add_argument("--skip-reranker", action="store_true",
                         help="检索层评估跳过 CrossEncoder 重排")
     args = parser.parse_args()
+    if args.force and not args.mode:
+        parser.error("--force 需要同时指定 --mode")
 
     # 统一评估口径：检索数量对齐 recall_top5 指标
     if settings.retrieval_k < EVAL_K:
@@ -736,8 +740,8 @@ def main() -> None:
             existing_report = json.loads(args.report.read_text(encoding="utf-8"))
             done_modes = {m["mode"] for m in existing_report.get("modes", [])}
             if args.mode:
-                # resume + 指定 mode：只补该模式（若已完成则跳过）
-                if args.mode in done_modes:
+                # resume + 指定 mode：只补该模式（若已完成则跳过，--force 除外）
+                if args.mode in done_modes and not args.force:
                     console.print(f"[green]{args.mode} 已在报告中，无需重跑[/green]")
                     evaluator.print_report(existing_report)
                     return

@@ -55,7 +55,7 @@ repair_dataset() {
   local attempt
   for attempt in 1 2; do
     local modes
-    modes="$(report_errored_modes "$report" | tr '\n' ' ')"
+    modes="$(report_errored_modes "$report" | tr -d '\r' | tr '\n' ' ')"
     echo "[repair] $report attempt=$attempt errored_modes=${modes:-none}"
     [[ -z "${modes// /}" ]] && return
 
@@ -73,7 +73,7 @@ repair_dataset() {
   done
 
   local remaining
-  remaining="$(report_errored_modes "$report" | tr '\n' ' ')"
+  remaining="$(report_errored_modes "$report" | tr -d '\r' | tr '\n' ' ')"
   if [[ -n "${remaining// /}" ]]; then
     echo "[repair] 仍有错误模式：$remaining" >&2
     return 1

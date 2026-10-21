@@ -207,6 +207,18 @@ CRUD-RAG 120 题：baseline / linear / agent / agent_reranker 的 Recall@5 为
 80% 来自 9/45 题被 clarify（题目缺少主体），检索基线仍是 100%。
 报告：`reports/local_e2e_crud_full.json`、`reports/local_e2e_multiformat_full.json`。
 
+### 云端全量 4 模式（2026-10-21）
+
+USTC `deepseek-flash`，云端生成 + 本地 bge-m3 检索。补跑后两份报告均 0 errors：
+
+- CRUD 120 题：baseline / linear / agent / agent_reranker 的 Recall@5 为
+  100.0 / 100.0 / 97.5 / 97.5%，MRR 98.2 / 96.5 / 95.4 / 96.3%，
+  忠实度 100%，answer F1 55.2 / 55.6 / 55.0 / 53.6%。
+- 多格式 45 题：Recall@5 为 100.0 / 100.0 / 68.9 / 68.9%；
+  Agent 的 68.9% 来自 14/45 clarify，检索基线仍为 100%。
+- 云端总 token 约 2.19M；服务端拥堵导致 51 条超时/降级日志，延迟不作为性能结论。
+  报告：`reports/cloud_e2e_crud_full.json`、`reports/cloud_e2e_multiformat_full.json`。
+
 ## 8. 待办
 
 - RGB 噪声/拒答/反事实子集适配；

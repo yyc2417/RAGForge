@@ -503,6 +503,28 @@ CRUD-RAG 120 题、4 模式：
 
 多格式 Agent 的 80% 召回来自 **9/45 题被 clarify**（题目缺少产品/城市主体），不是检索未命中；原始检索基线仍为 100%。报告：`reports/local_e2e_crud_full.json`、`reports/local_e2e_multiformat_full.json`。
 
+### 云端全量矩阵（USTC deepseek-flash）
+
+CRUD-RAG 120 题、4 模式（补跑后 0 errors）：
+
+| 模式 | Recall@5 | MRR@5 | 忠实度 | answer F1 | P50 |
+|---|---:|---:|---:|---:|---:|
+| baseline | 100.0% | 98.2% | 100.0% | 55.2% | 10.6s |
+| linear_hybrid | 100.0% | 96.5% | 100.0% | 55.6% | 12.5s |
+| agent | 97.5% | 95.4% | 100.0% | 55.0% | 29.5s |
+| agent_reranker | 97.5% | 96.3% | 100.0% | 53.6% | 162.6s |
+
+多格式 45 题、4 模式（0 errors）：
+
+| 模式 | Recall@5 | MRR@5 | 忠实度 | P50 |
+|---|---:|---:|---:|---:|
+| baseline | 100.0% | 94.4% | 100.0% | 170.3s |
+| linear_hybrid | 100.0% | 91.1% | 100.0% | 137.8s |
+| agent | 68.9% | 64.4% | 93.3% | 248.6s |
+| agent_reranker | 68.9% | 67.8% | 100.0% | 30.0s |
+
+云端总 token 约 **2.19M**。多格式 Agent 的 68.9% 同样来自 clarify（云端 14/45），检索基线仍是 100%。测试期间服务端拥堵明显，出现 51 条超时/降级日志；延迟数据不作为 API 性能结论。报告：`reports/cloud_e2e_crud_full.json`、`reports/cloud_e2e_multiformat_full.json`。
+
 ## 未来工作
 
 - **Embedding 选型**：bge-m3 已选定并作为本地默认；bge-large-zh-v1.5 与

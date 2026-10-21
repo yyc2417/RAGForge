@@ -2,6 +2,8 @@
 >
 > **本文具体过时点**：get_graph 惰性单例已改为 lifespan 预热 + 未就绪 503；LANGCHAIN_* 环境变量已改名 LANGSMITH_*；sources 事件改在 retrieve 节点完成时推送。
 
+> **2026-10 拓扑更新**：固定 hybrid（7 主链路 + clarify 终止分支，共 8 节点）、多格式入库与评测 v2 schema 已落地；本文仍是 2026-06 学习快照，现行设计以 `docs/modules/` 与 ADR-007/008 为准。
+
 # Task 7：API 服务（FastAPI + SSE）
 
 ## 阶段概述

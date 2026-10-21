@@ -1,12 +1,11 @@
-"""LangGraph 状态机组装：8 节点 + 条件边
+"""LangGraph 状态机组装：7 节点主链路 + clarify 终止分支
 
-状态机拓扑：
-  START → analyze → decide
+状态机拓扑（固定 hybrid + clarify）：
+  START → analyze ─(needs_clarification)→ clarify → END
+                   └(else)→ decide
   decide ─(strategy=none)──→ generate ──→ END（chitchat 跳过 verify）
-  decide ─(strategy≠none)──→ retrieve → evaluate
+  decide ─(strategy=hybrid)──→ retrieve → evaluate
   evaluate ──(proceed)──→ generate → verify
-  evaluate ──(switch_strategy & 未达上限)──→ switch_strategy → retrieve（循环）
-  evaluate ──(switch_strategy & 已是 hybrid)──→ generate（切换无效，短路）
   evaluate ──(reformulate)──→ reformulate ─(改写有效)──→ retrieve（循环）
   reformulate ─(改写无效)──→ generate（跳过注定重复检索的无效循环）
   verify ──(忠实/未验证)──→ END
@@ -18,6 +17,8 @@
 - verify_failures 由 verify 节点唯一递增（幻觉重试 +1），为「改写无效短路」
   后不经过 retrieve 的 verify→reformulate→generate 循环提供独立终止保证
 - 调用方需传 recursion_limit（第二道防线）
+
+拓扑口径：旧 8 节点含 switch_strategy；当前 8 节点含 clarify（7 主链路 + 1 终止分支）。
 """
 
 from functools import partial
@@ -26,15 +27,16 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agent.nodes import (
     analyze_node,
+    clarify_node,
     decide_node,
     evaluate_node,
     generate_node,
     reformulate_node,
     retrieve_node,
-    switch_strategy_node,
     verify_node,
 )
 from src.agent.state import AgentState
+from src.config import settings
 from src.generation.llm_client import LLMClient
 from src.generation.prompts import PromptManager
 from src.retrieval import BM25Retriever, VectorStore
@@ -42,6 +44,13 @@ from src.utils.logger import logger
 
 
 # ── 路由函数 ──────────────────────────────────────────────────────
+def route_after_analyze(state: AgentState) -> str:
+    """analyze 后：需要澄清走 clarify，否则进入 decide。"""
+    if settings.clarify_enabled and state.get("needs_clarification", False):
+        return "clarify"
+    return "decide"
+
+
 def route_after_decide(state: AgentState) -> str:
     """decide 后：strategy=none 跳过检索直接生成，否则检索。"""
     return "generate" if state.get("retrieval_strategy") == "none" else "retrieve"
@@ -60,7 +69,7 @@ def route_after_generate(state: AgentState) -> str:
 
 
 def route_after_evaluate(state: AgentState) -> str:
-    """evaluate 后：根据诊断结果三路分支（达上限强制生成）。"""
+    """evaluate 后：proceed 直接生成；否则改写查询重试（达上限强制生成）。"""
     action = state.get("suggested_action", "proceed")
     iter_count = state.get("iteration_count", 0)
     max_iter = state.get("max_iterations", 3)
@@ -71,14 +80,7 @@ def route_after_evaluate(state: AgentState) -> str:
         # 达到检索次数上限，强制进入生成（防死循环）
         logger.warning(f"[route] iter={iter_count}≥{max_iter}，强制 generate")
         return "generate"
-    if action == "switch_strategy":
-        if state.get("retrieval_strategy") == "hybrid":
-            # 已是最强策略，切换无效（相同查询+相同策略=相同结果），
-            # 直接生成，避免 switch→retrieve→evaluate 空转
-            logger.warning("[route] 已是 hybrid 策略，switch 无效，强制 generate")
-            return "generate"
-        return "switch_strategy"
-    return "reformulate"  # action == "reformulate"
+    return "reformulate"
 
 
 def route_after_reformulate(state: AgentState) -> str:
@@ -136,6 +138,7 @@ def build_agent_graph(
 
     # ── 添加节点（partial 注入依赖）──
     graph.add_node("analyze", partial(analyze_node, llm=llm_client, prompts=prompt_manager))
+    graph.add_node("clarify", clarify_node)
     graph.add_node("decide", decide_node)
     graph.add_node(
         "retrieve",
@@ -149,13 +152,19 @@ def build_agent_graph(
     )
     graph.add_node("evaluate", partial(evaluate_node, llm=llm_client, prompts=prompt_manager))
     graph.add_node("reformulate", partial(reformulate_node, llm=llm_client, prompts=prompt_manager))
-    graph.add_node("switch_strategy", switch_strategy_node)
     graph.add_node("generate", partial(generate_node, llm=llm_client))
     graph.add_node("verify", partial(verify_node, llm=llm_client, prompts=prompt_manager))
 
     # ── 边定义 ──
     graph.add_edge(START, "analyze")
-    graph.add_edge("analyze", "decide")
+
+    # 条件边 0：analyze 后 clarify / decide
+    graph.add_conditional_edges(
+        "analyze",
+        route_after_analyze,
+        {"clarify": "clarify", "decide": "decide"},
+    )
+    graph.add_edge("clarify", END)
 
     # 条件边 1：decide 后是否检索
     graph.add_conditional_edges(
@@ -165,23 +174,18 @@ def build_agent_graph(
     )
     graph.add_edge("retrieve", "evaluate")
 
-    # 条件边 2：evaluate 后三路分支
+    # 条件边 2：evaluate 后两路分支（proceed / reformulate）
     graph.add_conditional_edges(
         "evaluate",
         route_after_evaluate,
-        {
-            "generate": "generate",
-            "reformulate": "reformulate",
-            "switch_strategy": "switch_strategy",
-        },
+        {"generate": "generate", "reformulate": "reformulate"},
     )
-    # 循环边：改写/切策略后重新检索（改写无效时短路直达 generate）
+    # 循环边：改写后重新检索（改写无效时短路直达 generate）
     graph.add_conditional_edges(
         "reformulate",
         route_after_reformulate,
         {"retrieve": "retrieve", "generate": "generate"},
     )
-    graph.add_edge("switch_strategy", "retrieve")
 
     # 生成 → 条件边：chitchat 跳过 verify，其他走 verify
     graph.add_conditional_edges(
@@ -198,7 +202,7 @@ def build_agent_graph(
     )
 
     compiled = graph.compile()
-    logger.info("[graph] LangGraph 状态机构建完成（8 节点）")
+    logger.info("[graph] LangGraph 状态机构建完成（7 节点主链路 + clarify 终止分支，固定 hybrid）")
     return compiled
 
 

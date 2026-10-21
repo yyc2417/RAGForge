@@ -1,0 +1,41 @@
+{
+  "dataset": "D:\\ai-test\\RAGForge\\tests\\eval_dataset.json",
+  "dataset_hash": "a07fba4c991ad03d",
+  "corpus_dir": "data\\sample",
+  "samples": 30,
+  "modes": [
+    {
+      "mode": "vector",
+      "hit_any": 0.8333333333333334,
+      "hit_all": 0.8333333333333334,
+      "mrr_any": 0.7333333333333333,
+      "hit_any_count": 25,
+      "hit_all_count": 25
+    },
+    {
+      "mode": "bm25",
+      "hit_any": 1.0,
+      "hit_all": 1.0,
+      "mrr_any": 0.9833333333333333,
+      "hit_any_count": 30,
+      "hit_all_count": 30
+    },
+    {
+      "mode": "hybrid",
+      "hit_any": 0.9666666666666667,
+      "hit_all": 0.9666666666666667,
+      "mrr_any": 0.8166666666666667,
+      "hit_any_count": 29,
+      "hit_all_count": 29
+    },
+    {
+      "mode": "reranker",
+      "hit_any": 1.0,
+      "hit_all": 1.0,
+      "mrr_any": 0.9733333333333333,
+      "hit_any_count": 30,
+      "hit_all_count": 30
+    }
+  ],
+  "elapsed_ms": 82339.1
+}

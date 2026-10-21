@@ -7,7 +7,11 @@
 3. EmbeddingService：向量维度、批量一致性、model_name 不一致报错
 """
 
+import json
+import zipfile
+
 import tiktoken
+from langchain_core.documents import Document
 
 from src.config import settings
 from src.ingestion import DocumentParser, EmbeddingService, TextChunker
@@ -35,13 +39,116 @@ def test_parser_directory(sample_docs):
 
 
 def test_parser_rejects_unsupported(tmp_path):
-    bad = tmp_path / "a.txt"
+    bad = tmp_path / "a.xyz"
     bad.write_text("hello", encoding="utf-8")
     try:
         DocumentParser().parse(bad)
-        raise AssertionError(".txt 应被拒绝")
+        raise AssertionError(".xyz 应被拒绝")
     except ValueError as e:
         assert "不支持的文件格式" in str(e)
+
+
+def test_parser_txt_and_encoding_fallback(tmp_path):
+    path = tmp_path / "guide.txt"
+    path.write_text("旅行指南：提前预订。", encoding="utf-8")
+    docs = DocumentParser().parse(path)
+    assert len(docs) == 1
+    assert docs[0].metadata["file_type"] == "text"
+    assert docs[0].metadata["title"] == "guide"
+    assert "提前预订" in docs[0].page_content
+
+
+def test_parser_html_headings_and_script_removed(tmp_path):
+    path = tmp_path / "faq.html"
+    path.write_text(
+        "<html><head><title>FAQ</title><style>.x{}</style></head><body>"
+        "<h1>常见问题</h1><p>退货政策是七天。</p>"
+        "<script>alert(1)</script><h2>配送</h2><p>三天内送达。</p>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    docs = DocumentParser().parse(path)
+    assert len(docs) == 2
+    assert docs[0].metadata["h1"] == "常见问题"
+    assert docs[1].metadata["h2"] == "配送"
+    assert all("alert" not in d.page_content for d in docs)
+    assert docs[0].metadata["title"] == "FAQ"
+
+
+def test_parser_csv_requires_text_column(tmp_path):
+    path = tmp_path / "faq.csv"
+    path.write_text("text,title,category\n退货政策是七天,退货,售后\n", encoding="utf-8")
+    docs = DocumentParser().parse(path)
+    assert len(docs) == 1
+    assert docs[0].metadata["file_type"] == "csv"
+    assert docs[0].metadata["category"] == "售后"
+    assert docs[0].metadata["row_index"] == 0
+
+    bad = tmp_path / "bad.csv"
+    bad.write_text("question,answer\nq,a\n", encoding="utf-8")
+    try:
+        DocumentParser().parse(bad)
+        raise AssertionError("缺少 text/content 列应报错")
+    except ValueError as e:
+        assert "text/content" in str(e)
+
+
+def test_parser_jsonl_skips_bad_lines(tmp_path):
+    path = tmp_path / "faq.jsonl"
+    lines = [
+        json.dumps({"text": "退款三天到账", "title": "退款", "category": "售后"}, ensure_ascii=False),
+        "{bad json",
+        json.dumps({"content": "配送三天送达", "title": "配送"}, ensure_ascii=False),
+    ]
+    path.write_text("\n".join(lines), encoding="utf-8")
+    docs = DocumentParser().parse(path)
+    assert len(docs) == 2
+    assert docs[0].metadata["file_type"] == "jsonl"
+    assert docs[0].metadata["category"] == "售后"
+    assert docs[1].metadata["title"] == "配送"
+
+
+def test_parser_docx_headings(tmp_path):
+    path = tmp_path / "brief.docx"
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        "<w:body>"
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>产品手册</w:t></w:r></w:p>'
+        "<w:p><w:r><w:t>这是第一段。</w:t></w:r></w:p>"
+        '<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>安装</w:t></w:r></w:p>'
+        "<w:p><w:r><w:t>运行安装命令。</w:t></w:r></w:p>"
+        "</w:body></w:document>"
+    )
+    styles_xml = (
+        '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        '<w:style w:styleId="Heading1"><w:name w:val="heading 1"/></w:style>'
+        '<w:style w:styleId="Heading2"><w:name w:val="heading 2"/></w:style>'
+        "</w:styles>"
+    )
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("word/document.xml", document_xml)
+        zf.writestr("word/styles.xml", styles_xml)
+
+    docs = DocumentParser().parse(path)
+    assert len(docs) == 2
+    assert docs[0].metadata["h1"] == "产品手册"
+    assert docs[1].metadata["h2"] == "安装"
+    assert "运行安装命令" in docs[1].page_content
+
+
+def test_parser_pdf_page_metadata(tmp_path):
+    import fitz
+
+    path = tmp_path / "manual.pdf"
+    with fitz.open() as pdf:
+        page = pdf.new_page()
+        page.insert_text((72, 72), "PDF text content")
+        pdf.save(path)
+    docs = DocumentParser().parse(path)
+    assert len(docs) == 1
+    assert docs[0].metadata["file_type"] == "pdf"
+    assert docs[0].metadata["page_number"] == 1
 
 
 # ── TextChunker ───────────────────────────────────────────────────
@@ -81,6 +188,18 @@ def test_chunker_header_context(chunks):
     for chunk in with_headers[:5]:
         prefix = chunk.page_content.split("\n\n", 1)[0]
         assert " > " in prefix, f"正文前缀应含标题路径: {prefix!r}"
+
+
+def test_chunker_prepends_parser_metadata_headings():
+    """HTML/DOCX 解析器把标题放在 metadata，切块时应注入正文前缀。"""
+    doc = Document(
+        page_content="配送三天送达。",
+        metadata={"source": "faq.html", "file_type": "html", "h1": "FAQ", "h2": "配送"},
+    )
+    chunks = TextChunker().split([doc])
+    assert len(chunks) == 1
+    assert chunks[0].page_content.startswith("FAQ > 配送")
+    assert chunks[0].metadata["h1"] == "FAQ"
 
 
 def test_chunker_deterministic(sample_docs):

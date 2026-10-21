@@ -2,7 +2,9 @@
 
 ## 模块职责
 
-Agent 决策层基于 LangGraph 构建 8 节点状态机，自主决策检索策略，包含诊断式评估（`failure_mode` + `suggested_action` 驱动策略切换/查询改写）和幻觉检测闭环。
+Agent 决策层基于 LangGraph 构建 **7 节点主链路 + clarify 终止分支**（共 8 节点），固定 hybrid 检索，包含诊断式评估（`failure_mode` + `suggested_action` 驱动查询改写）、澄清分支和幻觉检测闭环。
+
+> 拓扑口径：旧 8 节点含 `switch_strategy`；当前 8 节点含 `clarify`（7 主链路 + 1 终止分支），见 ADR-007/008。
 
 ## 状态设计
 
@@ -15,11 +17,14 @@ class AgentState(TypedDict, total=False):
     query: str                                    # 用户输入
     query_type: QueryType                         # factual | reasoning | chitchat | complex
     needs_retrieval: bool                         # 是否需要检索
-    retrieval_strategy: RetrievalStrategy          # vector | bm25 | hybrid | none
+    needs_clarification: bool                     # 是否需要先澄清
+    ambiguity_type: AmbiguityType | None           # missing_slot | multiple_interpretations | conflicting_constraints
+    clarification_question: str | None             # 澄清问题
+    retrieval_strategy: RetrievalStrategy          # hybrid | none（固定 hybrid）
     documents: list[Document]                     # 检索结果
     retrieval_scores: list[float]                 # 检索分数
     failure_mode: FailureMode                     # low_recall | irrelevant | sufficient
-    suggested_action: SuggestedAction              # reformulate | switch_strategy | proceed
+    suggested_action: SuggestedAction              # reformulate | proceed
     diagnosis_reason: str                         # 诊断原因
     reformulated_query: str                       # 改写后的查询
     rewrite_effective: bool                       # 改写是否有效（False → 路由直接生成）
@@ -33,7 +38,7 @@ class AgentState(TypedDict, total=False):
 ```
 
 **关键字段**：
-- `failure_mode` + `suggested_action`：诊断式评估核心，驱动策略切换/查询改写
+- `failure_mode` + `suggested_action`：诊断式评估核心，驱动查询改写
 - `iteration_count` / `verify_failures`：双预算防死循环（见「安全机制」）
 - `is_faithful: None`：LLM 校验失败的「未验证」状态，路由层视为通过（不因验证器故障误触发重检索），评估层单独归类
 - `messages: Annotated[list, add]`：LangGraph 自动追加，记录完整决策轨迹
@@ -50,19 +55,18 @@ def initial_state(query: str, max_iterations: int = 3) -> AgentState:
 ```mermaid
 graph TD
     START --> Analyze[analyze]
-    Analyze --> Decide[decide]
+    Analyze -->|needs_clarification| Clarify[clarify]
+    Clarify --> END
+    Analyze -->|else| Decide[decide]
     Decide -->|strategy=none| Generate[generate]
-    Decide -->|strategy!=none| Retrieve[retrieve]
+    Decide -->|strategy=hybrid| Retrieve[retrieve]
     Retrieve --> Evaluate[evaluate]
-    Evaluate -->|proceed| Generate
-    Evaluate -->|switch_strategy & 未达上限| Switch[switch_strategy]
-    Evaluate -->|switch_strategy & 已是 hybrid| Generate
+    Evaluate -->|proceed / 达上限| Generate
     Evaluate -->|reformulate| Reformulate[reformulate]
-    Switch --> Retrieve
     Reformulate -->|改写有效| Retrieve
     Reformulate -->|改写无效| Generate
     Generate -->|strategy=none| END
-    Generate -->|strategy!=none| Verify[verify]
+    Generate -->|strategy=hybrid| Verify[verify]
     Verify -->|is_faithful / 未验证| END
     Verify -->|幻觉 & 双预算未达上限| Reformulate
 ```
@@ -71,16 +75,23 @@ graph TD
 
 | 节点 | 需要 LLM | 职责 |
 |------|----------|------|
-| `analyze` | 是 | 分析查询意图，判断 `query_type` 和 `needs_retrieval`，LLM 失败时降级为 factual+需检索 |
-| `decide` | 否 | 纯规则决策：chitchat→none，factual→vector，reasoning→bm25，complex→hybrid |
-| `retrieve` | 否 | 按 `retrieval_strategy` 调用对应检索器，优先使用 `reformulated_query`；`iteration_count` 唯一递增点（每轮真实检索 +1） |
-| `evaluate` | 是 | 诊断检索质量：规则层（空结果硬规则；绝对分数阈值仅对 vector 策略生效，见 ADR-006）+ LLM 层（语义判断，不注入分数），输出 `failure_mode` + `suggested_action` |
+| `analyze` | 是 | 分析查询意图，判断 `query_type`、`needs_retrieval` 与 `needs_clarification`；LLM 失败时降级为 factual+需检索 |
+| `clarify` | 否 | 终止节点：返回 `clarification_question`，不检索、不生成；下一轮带历史重新进图 |
+| `decide` | 否 | 纯规则决策：chitchat / 无需检索 → none，其余 → hybrid |
+| `retrieve` | 否 | 固定 hybrid（向量 + BM25 + RRF，可选重排），优先使用 `reformulated_query`；`iteration_count` 唯一递增点（每轮真实检索 +1） |
+| `evaluate` | 是 | 诊断检索质量：空结果硬规则 + LLM 语义判断（不注入 RRF 分数），输出 `failure_mode` + `suggested_action`（proceed / reformulate） |
 | `reformulate` | 是 | 根据 `failure_mode` 改写查询；输出 `rewrite_effective`（LLM 失败或改写 == 原查询时为 False） |
-| `switch_strategy` | 否 | 纯规则升级策略：vector→bm25→hybrid，单向升级不回退 |
 | `generate` | 是 | 基于检索上下文调用 LLM 生成回答；LLM 失败时返回降级文案（状态机总能产出答案） |
 | `verify` | 是 | 幻觉检测；确认幻觉时 `verify_failures += 1`（唯一递增点），校验失败标记 `is_faithful=None` |
 
 ## 条件边（路由函数）
+
+### route_after_analyze
+
+```python
+def route_after_analyze(state: AgentState) -> str:
+    """needs_clarification=True 且 clarify_enabled → clarify，否则 → decide。"""
+```
 
 ### route_after_decide
 
@@ -93,10 +104,8 @@ def route_after_decide(state: AgentState) -> str:
 
 ```python
 def route_after_evaluate(state: AgentState) -> str:
-    """三路分支 + 两处短路：
+    """两路分支：
     - proceed → generate
-    - switch_strategy 且已是 hybrid → generate（切换无效，避免空转）
-    - switch_strategy（其余策略）→ switch_strategy
     - reformulate → reformulate
     - iteration_count >= max_iterations → 强制 generate（防死循环）"""
 ```
@@ -139,7 +148,7 @@ def route_after_verify(state: AgentState) -> str:
 - `retrieve_node`：每轮真实检索时 `iteration_count += 1`（含首次）
 - `verify_node`：确认幻觉时 `verify_failures += 1`
 
-**最坏路径推演（按现行路由条件）**：理论最坏为 **18 次节点执行**——analyze、decide、3×(retrieve→evaluate)、4×reformulate（2 次改写有效耗满检索预算 + 2 次改写无效消耗幻觉预算）、3×generate、3×verify，`iteration_count` 与 `verify_failures` 恰好同时耗尽后强制 END（可证上界：检索 ≤3、评估 ≤3、改写 ≤4、生成 ≤3、验证 ≤3）。恒幻觉 + 恒 switch 场景为 12 次（检索预算耗尽后首次幻觉验证即终止）。两者均远低于 `recursion_limit=50`，余量充足。
+**最坏路径**：由 `iteration_count`（检索预算）与 `verify_failures`（幻觉重试预算）双预算强制收敛，`recursion_limit=50` 是第二道防线。旧 `switch_strategy` 场景已删除，不再展开具体节点次数。
 
 ## 依赖注入
 
@@ -169,15 +178,15 @@ def build_agent_graph(
 ```mermaid
 graph LR
     Q[用户查询] --> A[analyze]
-    A --> D[decide]
+    A -->|needs_clarification| C[clarify]
+    C --> CLR[澄清问题]
+    A -->|else| D[decide]
     D --> R[retrieve]
     R --> E[evaluate]
     E -->|proceed| G[generate]
     E -->|reformulate| RF[reformulate]
-    E -->|switch| SS[switch_strategy]
     RF -->|有效| R
     RF -->|无效| G
-    SS --> R
     G --> V[verify]
     V -->|faithful| ANS[最终回答]
     V -->|hallucination| RF

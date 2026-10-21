@@ -1,0 +1,52 @@
+{
+  "dataset": "tests\\eval_dataset_multiformat.json",
+  "dataset_name": "multiformat-demo",
+  "dataset_version": "2026-10-18",
+  "dataset_license": "internal",
+  "dataset_hash": "5846bc120a9cce7c",
+  "corpus_dir": "data\\demo",
+  "embedding_model": "./data/models/bge-m3",
+  "embedding_device": "cuda",
+  "samples": 45,
+  "k": 5,
+  "metric": "doc-level hit_any/hit_all/MRR_any/NDCG@5",
+  "modes": [
+    {
+      "mode": "vector",
+      "hit_any": 1.0,
+      "hit_all": 1.0,
+      "mrr_any": 0.9555555555555556,
+      "ndcg_at5": 0.9671937558730185,
+      "hit_any_count": 45,
+      "hit_all_count": 45
+    },
+    {
+      "mode": "bm25",
+      "hit_any": 0.9333333333333333,
+      "hit_all": 0.9111111111111111,
+      "mrr_any": 0.8740740740740741,
+      "ndcg_at5": 0.8808192490455843,
+      "hit_any_count": 42,
+      "hit_all_count": 41
+    },
+    {
+      "mode": "hybrid",
+      "hit_any": 1.0,
+      "hit_all": 1.0,
+      "mrr_any": 0.912962962962963,
+      "ndcg_at5": 0.9410683371438792,
+      "hit_any_count": 45,
+      "hit_all_count": 45
+    },
+    {
+      "mode": "reranker",
+      "hit_any": 1.0,
+      "hit_all": 0.9777777777777777,
+      "mrr_any": 0.9777777777777777,
+      "ndcg_at5": 0.9750001488868528,
+      "hit_any_count": 45,
+      "hit_all_count": 44
+    }
+  ],
+  "elapsed_ms": 11498.2
+}

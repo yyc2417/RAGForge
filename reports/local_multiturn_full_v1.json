@@ -1,0 +1,75 @@
+{
+  "generated_at": "2026-10-19T01:46:23.662189+00:00",
+  "commit": "ea2ed41",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "base_url": "http://127.0.0.1:1919/v1",
+  "mode": "multiturn",
+  "multiturn": {
+    "conversations": 10,
+    "turns": 30,
+    "turn_hit_rate": 0.6333,
+    "conversation_success_rate": 0.5,
+    "details": [
+      {
+        "conversation_id": "c1-travel",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      },
+      {
+        "conversation_id": "c2-policy",
+        "turns": 3,
+        "turn_hits": 2,
+        "success": false
+      },
+      {
+        "conversation_id": "c3-product",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      },
+      {
+        "conversation_id": "c4-team",
+        "turns": 3,
+        "turn_hits": 2,
+        "success": false
+      },
+      {
+        "conversation_id": "c5-account",
+        "turns": 3,
+        "turn_hits": 0,
+        "success": false
+      },
+      {
+        "conversation_id": "c6-manual",
+        "turns": 3,
+        "turn_hits": 0,
+        "success": false
+      },
+      {
+        "conversation_id": "c7-project",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      },
+      {
+        "conversation_id": "c8-city",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      },
+      {
+        "conversation_id": "c9-food",
+        "turns": 3,
+        "turn_hits": 3,
+        "success": true
+      },
+      {
+        "conversation_id": "c10-sales",
+        "turns": 3,
+        "turn_hits": 0,
+        "success": false
+      }
+    ]
+  }
+}

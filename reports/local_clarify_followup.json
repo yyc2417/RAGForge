@@ -1,0 +1,163 @@
+{
+  "generated_at": "2026-10-19T02:36:24.510547+00:00",
+  "commit": "62445d7",
+  "model": "Qwen3.6-35B-A3B-NVFP4",
+  "base_url": "http://127.0.0.1:1919/v1",
+  "mode": "clarify",
+  "clarify": {
+    "samples": 16,
+    "clarify_cases": 11,
+    "clear_cases": 5,
+    "clarify_accuracy": 0.875,
+    "over_clarification_rate": 0.2,
+    "question_keyword_hit_rate": 0.9091,
+    "followup_tried": 6,
+    "followup_resolution_rate": 0.8333,
+    "details": [
+      {
+        "query": "它怎么配置？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您具体指的是哪个产品或系统的配置？例如：Nginx、Docker 还是某个特定的软件/框架？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": true
+      },
+      {
+        "query": "那个版本有什么变化？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您具体指的是哪个软件或产品的版本？例如：Python 3.12、Windows 11 23H2 还是 MySQL 8.0？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "帮我查一下最近的。",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您具体想查询哪类事物的最新信息？例如：最新电影、热点新闻、科技产品还是其他？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": false
+      },
+      {
+        "query": "怎么设置权限，但又不要让所有人都能看到？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您具体指的是哪个平台或软件的权限设置？例如：微信朋友圈、GitHub仓库、还是百度网盘？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "这个和那个哪个更好？",
+        "expected_behavior": "clarify",
+        "detected": false,
+        "question": "",
+        "keyword_ok": false,
+        "decision_ok": false,
+        "followup_ok": null
+      },
+      {
+        "query": "退款要多久？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您是在哪个平台（如淘宝/京东/拼多多），以及使用什么支付方式（如支付宝/微信/银行卡）退款？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": true
+      },
+      {
+        "query": "它支持多少台设备？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您指的是哪款产品或服务？（例如：某路由器、某软件账号或某云服务）",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": true
+      },
+      {
+        "query": "这个怎么导入？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您具体指的是导入什么内容？例如：Python 模块、CSV 数据文件、还是其他软件/格式？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "它和它有什么区别？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您具体想比较哪两个概念或事物？例如：Transformer 和 RNN、Python 和 Java、还是其他？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "杭州那边有什么推荐？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您主要想了解哪方面的推荐？例如：特色美食、必游景点，还是住宿攻略？",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": true
+      },
+      {
+        "query": "报销要多久？",
+        "expected_behavior": "clarify",
+        "detected": true,
+        "question": "请问您指的是哪种类型的报销？（如：差旅费、日常办公费、项目经费）",
+        "keyword_ok": true,
+        "decision_ok": true,
+        "followup_ok": true
+      },
+      {
+        "query": "杭州西湖适合什么季节去？",
+        "expected_behavior": "answer",
+        "detected": false,
+        "question": "",
+        "keyword_ok": false,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "星云笔记免费版最多同步几台设备？",
+        "expected_behavior": "answer",
+        "detected": false,
+        "question": "",
+        "keyword_ok": false,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "Project Nebula 什么时候发布？",
+        "expected_behavior": "answer",
+        "detected": false,
+        "question": "",
+        "keyword_ok": false,
+        "decision_ok": true,
+        "followup_ok": null
+      },
+      {
+        "query": "团队版怎么收费？",
+        "expected_behavior": "answer",
+        "detected": true,
+        "question": "请问您具体指的是哪个产品的团队版？例如：飞书、钉钉、Notion 或其他？",
+        "keyword_ok": false,
+        "decision_ok": false,
+        "followup_ok": null
+      },
+      {
+        "query": "你好",
+        "expected_behavior": "chitchat",
+        "detected": false,
+        "question": "",
+        "keyword_ok": false,
+        "decision_ok": true,
+        "followup_ok": null
+      }
+    ]
+  }
+}

@@ -11,14 +11,24 @@ wheels/
 
 # Environment variables
 .env
+.env.cloud
 
 # ChromaDB persistence
 chroma_db/
+chroma_db_eval/
+
+# Runtime knowledge library / sessions / feedback (never publish user data)
+data/library/
+data/sessions/
+data/feedback/
+data/public_eval/
+data/models/
 
 # IDE
 .vscode/
 .idea/
 .qoder/
+.qoder-credits/
 .workbuddy/
 
 # OS
@@ -32,6 +42,10 @@ reusable-project-template.md
 
 # Logs
 logs/
+
+# CI 运行时产物
+reports/ci_retrieval_report.json
+reports/local_full_eval.done
 
 # 本地验证截图产物（浏览器/手动测试生成，勿提交）
 screenshot_*.png

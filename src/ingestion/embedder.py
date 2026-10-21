@@ -1,5 +1,6 @@
 """Embedding 生成与索引构建（线程安全单例）"""
 
+import os
 import threading
 
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -26,11 +27,29 @@ class EmbeddingService:
                 instance = super().__new__(cls)
                 instance._model_name = model_name or settings.embedding_model
                 logger.info(f"[embedder] 加载模型: {instance._model_name}")
-                instance._model = HuggingFaceEmbeddings(
-                    model_name=instance._model_name,
-                    model_kwargs={"device": settings.embedding_device},
-                    encode_kwargs={"batch_size": settings.embedding_batch_size},
-                )
+                model_kwargs = {"device": settings.embedding_device}
+                if settings.embedding_trust_remote_code:
+                    model_kwargs["trust_remote_code"] = True
+                encode_kwargs = {"batch_size": settings.embedding_batch_size}
+                if settings.embedding_normalize:
+                    encode_kwargs["normalize_embeddings"] = True
+                try:
+                    instance._model = HuggingFaceEmbeddings(
+                        model_name=instance._model_name,
+                        model_kwargs=model_kwargs,
+                        encode_kwargs=encode_kwargs,
+                    )
+                except Exception as e:  # noqa: BLE001 - 网络异常时回退本地缓存
+                    logger.warning(
+                        f"[embedder] 在线加载失败，改用本地缓存重试：{type(e).__name__}: {e}"
+                    )
+                    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+                    instance._model = HuggingFaceEmbeddings(
+                        model_name=instance._model_name,
+                        model_kwargs=model_kwargs,
+                        encode_kwargs=encode_kwargs,
+                    )
                 logger.info("[embedder] 模型加载完成")
                 cls._instance = instance
             elif model_name and model_name != cls._instance._model_name:
@@ -49,8 +68,10 @@ class EmbeddingService:
         return self._model.embed_documents(texts)
 
     def embed_query(self, text: str) -> list[float]:
-        """生成单条查询向量。"""
-        return self._model.embed_query(text)
+        """生成单条查询向量；BGE 等模型可配置查询指令前缀。"""
+        instruction = settings.embedding_query_instruction.strip()
+        query = f"{instruction}{text}" if instruction else text
+        return self._model.embed_query(query)
 
     @property
     def embedding_function(self) -> HuggingFaceEmbeddings:

@@ -1,0 +1,262 @@
+[
+  {
+    "conversation_id": "c1-travel",
+    "turns": [
+      {
+        "query": "杭州西湖怎么玩？",
+        "resolved_query": "杭州西湖怎么玩？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["骑行", "西湖"]
+      },
+      {
+        "query": "它适合什么季节去？",
+        "resolved_query": "杭州西湖适合什么季节去？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["春季", "秋季"]
+      },
+      {
+        "query": "那住宿住哪里比较方便？",
+        "resolved_query": "杭州西湖附近住宿住哪里比较方便？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["湖滨", "住宿"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c2-policy",
+    "turns": [
+      {
+        "query": "星云科技远程办公有什么规定？",
+        "resolved_query": "星云科技远程办公有什么规定？",
+        "answerable": true,
+        "expected_sources": ["company_handbook.md"],
+        "gold_keywords": ["远程办公", "两天"]
+      },
+      {
+        "query": "那报销呢？",
+        "resolved_query": "星云科技差旅报销有什么规定？",
+        "answerable": true,
+        "expected_sources": ["company_handbook.md"],
+        "gold_keywords": ["报销", "发票"]
+      },
+      {
+        "query": "年假有多少天？",
+        "resolved_query": "星云科技年假有多少天？",
+        "answerable": true,
+        "expected_sources": ["company_handbook.md"],
+        "gold_keywords": ["10 天", "15 天"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c3-product",
+    "turns": [
+      {
+        "query": "星云笔记可以退货吗？",
+        "resolved_query": "星云笔记可以退货吗？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["退货", "7 天"]
+      },
+      {
+        "query": "配送要多久？",
+        "resolved_query": "星云笔记的配送要多久？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["48 小时", "2 到 3 天"]
+      },
+      {
+        "query": "保修多久？",
+        "resolved_query": "星云笔记硬件保修多久？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["12 个月", "保修"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c4-team",
+    "turns": [
+      {
+        "query": "星云科技的发布前质量检查由谁负责？",
+        "resolved_query": "星云科技的发布前质量检查由谁负责？",
+        "answerable": true,
+        "expected_sources": ["team_roles.md"],
+        "gold_keywords": ["测试工程师", "质量"]
+      },
+      {
+        "query": "生产变更需要准备什么？",
+        "resolved_query": "星云科技生产变更需要准备什么？",
+        "answerable": true,
+        "expected_sources": ["team_roles.md"],
+        "gold_keywords": ["变更窗口", "回滚"]
+      },
+      {
+        "query": "发布前验收谁确认？",
+        "resolved_query": "星云科技版本发布前验收清单由谁确认？",
+        "answerable": true,
+        "expected_sources": ["team_roles.md"],
+        "gold_keywords": ["产品经理", "验收清单"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c5-account",
+    "turns": [
+      {
+        "query": "星云笔记免费版可以同步几台设备？",
+        "resolved_query": "星云笔记免费版可以同步几台设备？",
+        "answerable": true,
+        "expected_sources": ["faq.jsonl"],
+        "gold_keywords": ["3 台", "同步"]
+      },
+      {
+        "query": "团队版怎么收费？",
+        "resolved_query": "星云笔记团队版怎么收费？",
+        "answerable": true,
+        "expected_sources": ["faq.jsonl"],
+        "gold_keywords": ["席位", "8 折"]
+      },
+      {
+        "query": "忘记密码怎么办？",
+        "resolved_query": "星云笔记忘记密码怎么办？",
+        "answerable": true,
+        "expected_sources": ["faq.jsonl"],
+        "gold_keywords": ["找回密码", "邮箱验证"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c6-manual",
+    "turns": [
+      {
+        "query": "Nebula Note 的 PDF 说明书里电池能用多久？",
+        "resolved_query": "Nebula Note 的 PDF 说明书里电池能用多久？",
+        "answerable": true,
+        "expected_sources": ["product_manual.pdf"],
+        "gold_keywords": ["10 hours", "battery"]
+      },
+      {
+        "query": "充电呢？",
+        "resolved_query": "Nebula Note 充满电需要多久？",
+        "answerable": true,
+        "expected_sources": ["product_manual.pdf"],
+        "gold_keywords": ["90 minutes", "USB-C"]
+      },
+      {
+        "query": "存储可以扩展吗？",
+        "resolved_query": "Nebula Note 存储可以扩展吗？",
+        "answerable": true,
+        "expected_sources": ["product_manual.pdf"],
+        "gold_keywords": ["microSD", "1 TB"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c7-project",
+    "turns": [
+      {
+        "query": "Project Nebula 什么时候发布？",
+        "resolved_query": "Project Nebula 计划在什么时候发布？",
+        "answerable": true,
+        "expected_sources": ["project_brief.docx"],
+        "gold_keywords": ["Q3", "launch"]
+      },
+      {
+        "query": "要收集多少 beta 报告？",
+        "resolved_query": "Project Nebula 要收集多少 beta 用户报告？",
+        "answerable": true,
+        "expected_sources": ["project_brief.docx"],
+        "gold_keywords": ["100 beta user reports"]
+      },
+      {
+        "query": "主要风险是什么？",
+        "resolved_query": "Project Nebula 的主要风险是什么？",
+        "answerable": true,
+        "expected_sources": ["project_brief.docx"],
+        "gold_keywords": ["supply chain delay", "firmware stability"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c8-city",
+    "turns": [
+      {
+        "query": "成都熊猫基地什么时候去？",
+        "resolved_query": "成都大熊猫基地建议什么时候去？",
+        "answerable": true,
+        "expected_sources": ["city_guide.csv"],
+        "gold_keywords": ["上午", "熊猫"]
+      },
+      {
+        "query": "苏州园林推荐哪两个？",
+        "resolved_query": "苏州园林推荐哪两个园子？",
+        "answerable": true,
+        "expected_sources": ["city_guide.csv"],
+        "gold_keywords": ["拙政园", "留园"]
+      },
+      {
+        "query": "杭州西湖适合清晨做什么？",
+        "resolved_query": "杭州西湖适合清晨做什么？",
+        "answerable": true,
+        "expected_sources": ["city_guide.csv"],
+        "gold_keywords": ["清晨", "骑行"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c9-food",
+    "turns": [
+      {
+        "query": "杭州有什么本地美食？",
+        "resolved_query": "杭州有哪些本地美食推荐？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["片儿川", "龙井虾仁"]
+      },
+      {
+        "query": "西湖怎么玩？",
+        "resolved_query": "杭州西湖怎么玩？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["骑行", "断桥"]
+      },
+      {
+        "query": "住哪里比较安静？",
+        "resolved_query": "杭州住哪里比较安静？",
+        "answerable": true,
+        "expected_sources": ["travel_guide.txt"],
+        "gold_keywords": ["杨公堤", "灵隐"]
+      }
+    ]
+  },
+  {
+    "conversation_id": "c10-sales",
+    "turns": [
+      {
+        "query": "星云笔记商品可以退货吗？",
+        "resolved_query": "星云笔记商品可以退货吗？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["7 天", "无理由退货"]
+      },
+      {
+        "query": "多久发货？",
+        "resolved_query": "星云笔记付款后多久发货？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["48 小时", "发货"]
+      },
+      {
+        "query": "哪些情况不保修？",
+        "resolved_query": "星云笔记哪些情况不保修？",
+        "answerable": true,
+        "expected_sources": ["product_faq.html"],
+        "gold_keywords": ["人为损坏", "进水", "私自拆机"]
+      }
+    ]
+  }
+]

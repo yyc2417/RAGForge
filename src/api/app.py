@@ -18,6 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src import __version__
+from src.api.middleware import AccessControlMiddleware, RequestContextMiddleware
 from src.api.routes import router
 from src.config import settings
 from src.utils.logger import logger
@@ -64,6 +65,9 @@ def create_app() -> FastAPI:
         version=__version__,
         lifespan=lifespan,
     )
+    # 顺序：最后 add 的最外层；CORS 最外层以正确处理 preflight
+    application.add_middleware(AccessControlMiddleware)
+    application.add_middleware(RequestContextMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.api_cors_origins,

@@ -4,24 +4,28 @@
 
 > Agentic RAG —— LangGraph 状态机驱动的自适应检索增强生成系统
 
-RAGForge 是一个**会自主决策的 RAG Agent**：基于 LangGraph 8 节点状态机分析查询意图，按需选择检索策略（向量 / BM25 / 混合 RRF / 重排序），对检索结果做**诊断式评估**（区分“召回不足”还是“结果无关”），不达标时自动改写查询或切换策略并重新检索，最后生成答案并做**幻觉检测**——一旦发现答案未忠实于上下文，会触发新一轮改写检索，直到通过验证或达到迭代上限。
+RAGForge 是一个**基于 LangGraph 的可控 Agentic RAG 系统**：7 节点主链路分析查询意图，需要检索时固定使用 **hybrid**（向量 + BM25 + RRF，可选重排），对检索结果做**诊断式评估**（区分“召回不足”还是“结果无关”），不达标时自动改写查询并重新检索，最后生成答案并做**幻觉检测**——一旦发现答案未忠实于上下文，会触发新一轮改写检索，直到通过验证或达到迭代上限。
+
+交互侧支持多轮会话与历史、clarify 澄清分支、消息点赞/点踩与来源面板；图外会话层负责把追问改写成独立问题，图本身保持无状态。
+
+知识库入口支持 MD / TXT / PDF / HTML / DOCX / CSV / JSONL，统一解析为 `Document` 后切块；`data/demo/` 是多格式演示语料，`data/library/` 承接运行时上传与后续优质库。
 
 ## 架构
 
-8 节点 LangGraph 状态机，含 5 条条件边和 2 个自愈循环（reformulate / switch_strategy）：
+7 节点主链路，固定 hybrid 检索；旧 8 节点（含 `switch_strategy`）为历史口径：
 
 ```mermaid
 flowchart TD
     START([START]) --> analyze[analyze<br/>意图分析]
-    analyze --> decide{decide<br/>策略决策}
+    analyze -->|需要澄清| clarify[clarify<br/>澄清追问]
+    clarify --> END([END])
+    analyze -->|继续| decide{decide<br/>检索决策}
     decide -->|chitchat / 无需检索| generate[generate<br/>答案生成]
-    decide -->|factual / reasoning / complex| retrieve[retrieve<br/>执行检索]
+    decide -->|需要检索| retrieve[retrieve<br/>固定 hybrid 检索]
     retrieve --> evaluate{evaluate<br/>诊断式评估}
     evaluate -->|proceed / 达上限| generate
     evaluate -->|reformulate| reformulate[reformulate<br/>查询改写]
-    evaluate -->|switch_strategy| switch[switch_strategy<br/>策略升级]
     reformulate --> retrieve
-    switch --> retrieve
     generate -->|strategy≠none| verify{verify<br/>幻觉检测}
     generate -->|chitchat（strategy=none）| END([END])
     verify -->|忠实| END
@@ -32,16 +36,18 @@ flowchart TD
 
 | 节点 | LLM | 职责 |
 |------|:---:|------|
-| analyze | ✅ | 判断 query_type（factual/reasoning/chitchat/complex）+ needs_retrieval |
-| decide | ❌ | 纯规则路由：chitchat→none, factual→vector, reasoning→bm25, complex→hybrid |
-| retrieve | ❌ | 按 strategy 调用对应检索器；iteration_count 唯一递增点（每轮真实检索 +1） |
-| evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action；分数规则仅对 vector 策略生效（详见 ADR-006） |
+| analyze | ✅ | 判断 query_type（factual/reasoning/chitchat/complex）+ needs_retrieval + 是否需要澄清 |
+| clarify | ❌ | 终止分支：返回澄清问题，不检索、不生成；下一轮带历史重新进图 |
+| decide | ❌ | 纯规则路由：chitchat / 无需检索 → none，其余 → hybrid |
+| retrieve | ❌ | 固定调用 HybridRetriever；iteration_count 唯一递增点（每轮真实检索 +1） |
+| evaluate | ✅ | **诊断式**：输出 failure_mode（low_recall/irrelevant/sufficient）+ suggested_action（proceed / reformulate）；RRF 分不进绝对阈值 |
 | reformulate | ✅ | 按 failure_mode 选择改写策略；改写无效（LLM 失败或改写 == 原查询）时路由直接生成，跳过无效重检索 |
-| switch_strategy | ❌ | 纯规则策略升级：vector → bm25 → hybrid；已是 hybrid 时路由短路直达生成 |
 | generate | ✅ | 基于检索上下文生成回答（LLM 失败时降级兜底） |
 | verify | ✅ | 幻觉检测；确认幻觉时递增 verify_failures 并触发 reformulate 重试 |
 
 **安全机制**：双预算防死循环——`iteration_count`（检索总次数上限，retrieve 唯一递增）与 `verify_failures`（幻觉重试上限，verify 唯一递增）均默认 3；外加 LangGraph `recursion_limit`（第二道防线）。
+
+> 拓扑口径：旧 8 节点含 `switch_strategy`；当前为 7 节点主链路 + clarify 终止分支（共 8 节点，含 clarify，不含 switch）。
 
 ## 技术栈
 
@@ -49,14 +55,14 @@ flowchart TD
 |----|------|------|
 | 语言 | Python ≥ 3.11 | 类型注解、TypedDict 状态 |
 | 包管理 | uv | 极速依赖解析 |
-| Agent 框架 | LangGraph ≥ 1.2.4 | 8 节点状态机、条件边、astream_events |
+| Agent 框架 | LangGraph ≥ 1.2.4 | 7 节点主链路、条件边、astream_events |
 | LLM 编排 | LangChain ≥ 1.3.4 | LCEL chain、ChatPromptTemplate |
 | LLM | DeepSeek（OpenAI 兼容） | deepseek-flash，60s 超时 + tenacity 瞬时故障重试 |
 | 向量检索 | ChromaDB + langchain-chroma | 持久化、cosine relevance、确定性 ID + 指纹校验 |
 | 关键词检索 | rank-bm25 | BM25Okapi，jieba/regex 双分词（小写归一） |
 | 混合检索 | RRF（自实现） | `score = Σ 1/(k+rank)`，top-2k 候选融合 |
 | 重排序 | sentence-transformers | CrossEncoder bge-reranker-v2-m3，优雅降级（600s 冷却重试） |
-| Embedding | langchain-huggingface | all-MiniLM-L6-v2（384 维） |
+| Embedding | langchain-huggingface | 本地 BAAI/bge-m3（1024 维，CUDA）；测试/CI 用 all-MiniLM 基线 |
 | 分块 | tiktoken + MarkdownHeaderTextSplitter | token 预算切分（220/30）+ 标题上下文注入 |
 | API | FastAPI + sse-starlette | /chat + /chat/stream（SSE 逐 token） |
 | 日志 | loguru | 双输出（控制台 + 文件） |
@@ -71,12 +77,41 @@ flowchart TD
 uv sync
 ```
 
+> 默认 `RAGFORGE_HF_OFFLINE=1`，使用已缓存的 embedding / reranker 模型启动；
+> 首次下载模型时设置 `RAGFORGE_HF_OFFLINE=0`（或 `HF_HUB_OFFLINE=0`）。
+
 ### 2. 配置环境变量
 
 ```bash
 cp .env.example .env
 # 编辑 .env，填入 DEEPSEEK_API_KEY
 ```
+
+本地 OpenAI 兼容服务（如 FreeToken / vLLM / llama.cpp）可直接覆盖：
+
+```bash
+DEEPSEEK_BASE_URL=http://127.0.0.1:1919/v1
+DEEPSEEK_MODEL=<GET /v1/models 返回的 id>
+DEEPSEEK_API_KEY=local
+```
+
+结构化输出会校验并归一化常见枚举变体；本地模型若输出未知枚举，会重试一次后降级。
+本地大模型单次调用较慢时，可同时调高 `API_REQUEST_TIMEOUT`（如 300）与
+`LLM_TIMEOUT`（如 180），避免 `/chat` 在生成阶段触发 504。
+
+本地推荐使用 `BAAI/bge-m3`（1024 维，多语言）。将模型放到 `data/models/bge-m3` 后设置：
+
+```bash
+EMBEDDING_MODEL=./data/models/bge-m3
+EMBEDDING_DEVICE=cuda
+EMBEDDING_BATCH_SIZE=8
+EMBEDDING_NORMALIZE=true
+```
+
+本地 CUDA 需要安装与驱动匹配的 PyTorch（本项目验证 `torch 2.12.0+cu130`）。
+注意：裸 `uv run` 会按 lockfile 恢复 CPU torch；GPU 任务请用
+`.venv/Scripts/python.exe`（Windows）或 `UV_NO_SYNC=1 uv run ...` 运行。
+单测与 CI 固定轻量 `all-MiniLM-L6-v2`，不下载 bge-m3。
 
 ### 3. 运行
 
@@ -108,13 +143,52 @@ curl -N -X POST http://localhost:8000/chat/stream \
   -d '{"query": "什么是过拟合？"}'
 ```
 
+鉴权 / 限流 / 超时（可选）：
+
+```bash
+# .env
+API_AUTH_TOKEN=change-me
+API_RATE_LIMIT_PER_MINUTE=120
+API_REQUEST_TIMEOUT=120
+```
+
+设置 `API_AUTH_TOKEN` 后，`/chat` 与 `/chat/stream` 需要 `X-API-Key`；
+`/health` 仍开放。响应头与响应体都带 `X-Request-ID` / `request_id`。
+
+容器化启动：
+
+```bash
+docker build -t ragforge .
+docker run --rm -p 8000:8000 --env-file .env \
+  -v "$PWD/chroma_db:/app/chroma_db" ragforge
+```
+
+镜像构建时预取默认 embedding 模型（`all-MiniLM-L6-v2`），并强制 CPU 版
+PyTorch（跳过 CUDA 依赖）控制镜像体积；reranker 模型不内置，运行时不可用会按
+既有降级逻辑继续用 hybrid。容器默认仍用 all-MiniLM；如需 bge-m3，挂载
+`data/models/bge-m3` 并设置 `EMBEDDING_MODEL=/app/models/bge-m3`、
+`EMBEDDING_NORMALIZE=true`。已在 Docker Desktop 29.8 实测：镜像约 2.38GB，
+容器健康检查通过，`/chat` 调用本地模型返回 200。
+
 ### 5. 运行评估
 
 ```bash
 uv run python scripts/eval.py                  # 完整评估（4 套模式，需 API key）
 uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM，免 API）
+uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
+  --corpus-dir data/demo --rebuild --report reports/eval_e2e_multiformat.json  # v2 端到端（需 LLM）
+bash scripts/run_local_full_eval.sh all   # 本地模型全量 4 模式（长任务，使用 127.0.0.1 本地服务）
+bash scripts/run_cloud_full_eval.sh all   # 云端全量（需 .env.cloud，本地报告完成后）
+bash scripts/repair_eval_errors.sh        # 补跑报告中 errors>0 的模式（云端）
 uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
-# 输出：终端对比表 + reports/eval_report.json
+uv run python scripts/validate_eval_dataset.py --corpus-dir data/sample  # schema/来源校验
+uv run python scripts/eval_v2.py --corpus-dir data/sample                # v2 检索层基线
+uv run python scripts/import_crud_rag.py --limit 120                    # CRUD-RAG Read → 本地评测集
+uv run python scripts/eval_v2.py --dataset tests/eval_dataset_multiformat.json \
+  --corpus-dir data/demo --rebuild --report reports/eval_v2_multiformat_report.json \
+  --dataset-name multiformat-demo --dataset-version 2026-10-18 --dataset-license internal
+uv run python scripts/eval_interaction.py --mode both --limit 5          # clarify / 多轮交互（需 LLM）
+# 输出：终端对比表 + reports/eval_report.json / eval_v2_retrieval_report.json / eval_interaction_report.json
 ```
 
 ### 6. 可视化演示
@@ -123,35 +197,28 @@ uv run python scripts/eval.py --rebuild        # 评估前清库重建索引
 uv run --extra ui streamlit run src/ui/streamlit_app.py
 ```
 
-单文件 Streamlit 界面，进程内直调 LangGraph 状态机（不依赖 FastAPI）。
-呈现分三层：`event_view` 蒸馏事件流（纯逻辑）→ `html_view` 装配 HTML 片段（纯逻辑）
-→ `streamlit_app` 写占位符（唯一的 IO 层），前两层均可离线单测。
+Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 
-自上而下六个区块：
+- **侧栏**：新建会话、历史会话切换、知识库上传 / 文件夹导入 / 来源列表、运行参数（含 `max_iterations`）；
+- **主区**：消息流 + `st.chat_input`；
+- **多轮**：会话层把追问 condense 成独立问题，再交给图；
+- **clarify**：需要澄清时显示“需要澄清”消息，下一轮带历史继续；
+- **来源**：每条 assistant 消息可展开来源（文件名 / 页码 / chunk / 分数 / 摘要）；
+- **执行细节**：可展开状态机 trace 文本；
+- **反馈**：每条 assistant 消息支持赞 / 踩，点击只更新会话文件，不重跑查询。
 
-- **① 执行流程**：8 节点状态卡片（中文职责名 + 原节点名），四态配色
-  待执行 / 执行中 / 已完成 / 自愈动作，徽章显示重复执行次数——
-  `retrieve 3 次` 即自愈循环最直观的证据
-- **② 决策诊断**：按节点归属分组的三张卡片（意图与策略 / 检索质量诊断 / 改写与校验），
-  枚举值中文化并保留原始值便于对照日志；未产生的字段不占位
-- **③ 轮次时间线**：每执行一次检索记一行——本轮查询、策略、命中数与最高分、
-  诊断结论、下一步自愈动作。诊断字段只留终态（第二轮会覆盖第一轮），
-  逐轮归档是自愈因果链能被看见的唯一途径；轮次跑满预算时额外标注强制截断
-- **④ 回答**：`astream_events(v2)` 捕获 generate 节点逐 token 输出
-- **⑤ 检索来源**：按轮次分组折叠，每条一行显示文件名 + 分数条 + 分数，点开读全文；
-  分数语义随策略而变（ADR-006），故条形按本轮最高归一而不跨策略比较
-- **⑥ 运行摘要**：端到端状态 / 检索轮次 / 自愈动作 / 幻觉检测，均带口径说明
+`event_view` 仍负责蒸馏 `astream_events`（流式 token / 节点状态），`html_view`
+保留 CSS 与旧版流程卡片渲染（供测试与后续复用）；聊天页只使用 CSS 与 trace。
 
-侧边栏提供读图说明、节点职责表、诊断字段释义与运行参数（含 `max_iterations` 可调）。
-内置四个按实测路径命名的示例问题：寒暄（不检索）、向量单轮命中、
-**策略升级链（实测完整走出 vector → bm25 → hybrid）**、语料外拒答。
+会话落盘在 `data/sessions/`，历史回放不重新检索。
+内置示例问题：寒暄（不检索）、混合检索单轮、改写后命中、语料外拒答。
 按钮标签仅为实测参考：LLM 判定存在不确定性，同一问题多次运行可能走不同分支，
 实际路径以轮次时间线为准。
 
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（79 用例，强制 HF 离线，零网络）
+uv run pytest -q    # 离线单元套件（139 用例：135 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -162,7 +229,8 @@ uv run python -c "from sentence_transformers import SentenceTransformer; Sentenc
 ```
 
 集成测试真实调用 DeepSeek API，由 `RUN_INTEGRATION=1` 门控，默认跳过。
-GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型。
+GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型；随后用多格式集跑
+hybrid 检索回归门禁（跳过 reranker），低于阈值直接失败。
 
 ## 设计亮点
 
@@ -175,9 +243,9 @@ GitHub Actions CI 跑同一离线套件，并自动缓存预取的模型。
 
 不同 failure_mode 触发不同的自愈动作，而非盲目重试。
 
-### 2. 策略自动升级
+### 2. 固定混合检索
 
-`switch_strategy` 节点实现单向策略升级链：`vector → bm25 → hybrid`。当向量检索召回不足时自动补充关键词检索，混合检索是兜底方案。
+需要检索的查询直接使用 hybrid：向量 + BM25 + RRF，reranker 可用时再精排。固定单档策略省掉了 `vector → bm25 → hybrid` 的逐级试错，链路更短、基线更强；旧 8 节点（含 `switch_strategy`）只作为历史对照。
 
 ### 3. RRF 混合检索（无需调参）
 
@@ -193,7 +261,7 @@ score(d) = Σ_i  1 / (rrf_k + rank_i(d))
 
 ### 5. SSE 真正的逐 token 流
 
-`/chat/stream` 使用 `graph.astream_events(version="v2")`（而非 `astream`），捕获 `on_chat_model_stream` 事件实现真正的 LLM 逐 token 推送，同时推送 8 节点的执行进度事件。
+`/chat/stream` 使用 `graph.astream_events(version="v2")`（而非 `astream`），捕获 `on_chat_model_stream` 事件实现真正的 LLM 逐 token 推送，同时推送 7 节点主链路的执行进度事件。
 
 ### 6. 全链路优雅降级
 
@@ -201,6 +269,32 @@ score(d) = Σ_i  1 / (rrf_k + rank_i(d))
 - DeepSeek 结构化输出失败 → 带纠错提示重试 1 次，仍失败则节点降级到规则默认值
 - LLM 生成彻底失败 → generate 节点返回降级文案，状态机总能产出答案
 - LLM 调用 → tenacity 重试（仅连接/超时/限流/5xx 等瞬时故障，3 次指数退避；401/400 等永久错误直接抛出）
+
+### 7. 多格式入库
+
+`DocumentParser` 用格式注册表统一解析 MD / TXT / PDF / HTML / DOCX / CSV / JSONL：
+HTML/DOCX 保留标题层级，CSV/JSONL 按 `text/content` 约定导入，PDF 保留页码；
+切块后复用同一套 HybridRetriever，不改变检索链路。
+
+### 8. 多轮会话与 clarify
+
+图外 `ConversationService` 把追问 condense 成独立问题；`analyze` 判定歧义时走
+clarify 终止分支，先问清再检索。会话 JSON 落盘，历史回放不重新检索。
+
+### 9. 优质问答归档
+
+点“有用”会把问题、回答和参考来源写成 `library/quality/<message_id>.md`，
+chunk 标记 `source_type=qa_archive`；检索时走加权 RRF 优质通道，相似问题优先召回。
+侧栏可查看并移除归档，移除后重建索引。
+
+### 10. 难例池与评测 v2
+
+点“没用”会把问答写入 `data/feedback/hard_cases.jsonl`（按 message_id 去重）。
+`promote_hard_cases.py` 在补齐 `answerable / expected_source / gold_keywords`
+后把候选晋升到独立 hard 数据集；不自动污染冻结的 v1 45 题。
+评测 v2 统一 schema 支持 `expected_sources / evidence / expected_behavior`，
+`validate_eval_dataset.py` 校验标签与来源，`eval_v2.py` 跑离线检索基线；
+clarify 判定与多轮命中率由 `eval_interaction.py` 评测。
 
 ## 项目结构
 
@@ -212,7 +306,7 @@ RAGForge/
 │   ├── pipeline.py            # Agent 管道构建与执行（从 main.py 拆分）
 │   ├── cli.py                 # CLI / Server 启动模式（从 main.py 拆分）
 │   ├── ingestion/             # Task 2：文档处理层
-│   │   ├── parser.py          #   DocumentParser（MD/PDF 策略模式）
+│   │   ├── parser.py          #   DocumentParser（MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
 │   │   ├── chunker.py         #   TextChunker（token 预算切分 + 标题上下文）
 │   │   └── embedder.py        #   EmbeddingService（线程安全单例）
 │   ├── retrieval/             # Task 3/6：检索层
@@ -222,52 +316,89 @@ RAGForge/
 │   │   └── reranker.py        #   Reranker（CrossEncoder 优雅降级）
 │   ├── generation/            # Task 4/5：生成层
 │   │   ├── llm_client.py      #   LLMClient（tenacity 重试 + 结构化输出）
-│   │   ├── prompts.py         #   PromptManager（6 个 Prompt 模板）
+│   │   ├── prompts.py         #   PromptManager（7 个 Prompt 模板）
 │   │   └── schemas.py         #   结构化输出 Pydantic schema
+│   ├── conversation/          # 会话层：JSON 会话、多轮 condense、反馈
+│   │   ├── models.py          #   Session / SessionMessage
+│   │   ├── store.py           #   ConversationStore（原子写）
+│   │   └── service.py         #   ConversationService（condense / 落盘）
+│   ├── knowledge/             # 运行时知识库
+│   │   ├── service.py         #   demo + library 重建 / 上传 / 文件夹导入 / 删除
+│   │   ├── quality.py         #   优质库归档
+│   │   └── feedback.py        #   难例候选池
+│   ├── evaluation/            # 评测 v2 schema / 校验
+│   │   └── schema.py          #   EvalItem / validate_dataset / dataset_hash
 │   ├── agent/                 # Task 5：Agent 决策层
 │   │   ├── state.py           #   AgentState（TypedDict）+ initial_state
-│   │   ├── graph.py           #   LangGraph 状态机组装（8 节点 + 条件边）
+│   │   ├── graph.py           #   LangGraph 状态机组装（7 节点主链路 + clarify 终止分支）
 │   │   └── nodes/             #   8 个节点实现
-│   │       ├── analyze.py / decide.py
+│   │       ├── analyze.py / decide.py / clarify.py
 │   │       ├── retrieve.py / evaluate.py
-│   │       ├── reformulate.py / switch_strategy.py
+│   │       ├── reformulate.py
 │   │       └── generate.py / verify.py
 │   ├── api/                   # Task 7：FastAPI + SSE
 │   │   ├── app.py             #   应用工厂 + lifespan 启动预热 + CORS
 │   │   ├── routes.py          #   /health /chat(async) /chat/stream(SSE)
 │   │   ├── schemas.py         #   请求/响应 Pydantic 模型
+│   │   ├── middleware.py      #   请求 ID / 可选 API Key / 限流
+│   │   ├── request_context.py #   request_id ContextVar
 │   │   └── dependencies.py    #   graph 注入（lifespan 预热，未就绪 503）
 │   ├── ui/                    # 可视化演示（可选依赖 streamlit）
 │   │   ├── event_view.py      #   astream_events 事件流蒸馏器 + 逐轮归集（纯逻辑，可单测）
 │   │   ├── html_view.py       #   EventView → HTML 片段装配：字段释义 / 样式表（纯逻辑，可单测）
-│   │   └── streamlit_app.py   #   界面入口（占位符写入 + 侧边栏说明）
+│   │   └── streamlit_app.py   #   聊天式界面：会话历史 / 上传 / 反馈 / 来源面板
 │   └── utils/
 │       ├── logger.py          #   loguru 双输出（多 worker 安全）
-│       └── metrics.py         #   MetricsCollector（请求级实例 + ContextVar 注入）
+│       ├── metrics.py         #   MetricsCollector（请求级实例 + ContextVar 注入）
+│       └── token_budget.py    #   上下文 token 预算
 ├── tests/
 │   ├── conftest.py            #   共享 fixtures（临时 Chroma 目录 / Fake 工厂）
 │   ├── fakes.py               #   FakeLLM / FakeRetriever（无网络测试组件）
 │   ├── test_ingestion.py      #   Ingestion 单元测试（离线）
 │   ├── test_retrieval.py      #   检索层测试（离线，含索引一致性回归）
 │   ├── test_agent.py          #   Agent 状态机测试（全 mock，离线）
+│   ├── test_conversation.py   #   会话存储 / condense / 来源落盘测试（离线）
+│   ├── test_knowledge.py      #   运行时知识库 / 多格式导入测试（离线）
+│   ├── test_quality.py        #   优质库归档 / 加权通道测试（离线）
+│   ├── test_feedback.py       #   难例池 / 晋升测试（离线）
+│   ├── test_evaluation.py     #   评测 v2 schema / 校验测试（离线）
+│   ├── test_api.py            #   鉴权 / 限流 / 超时 / request_id 测试（离线）
 │   ├── test_stage1.py         #   结构与管道构建测试（离线）
 │   ├── test_token_budget.py   #   上下文 token 预算测试（离线）
 │   ├── test_ui.py             #   事件蒸馏 + 逐轮归集 + HTML 装配测试（离线）
 │   ├── test_integration.py    #   集成测试（真实 API，RUN_INTEGRATION=1 门控）
-│   └── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
+│   ├── eval_dataset.json      #   评估数据集（45 题：30 可答 + 10 不可答 + 5 寒暄）
+│   ├── eval_dataset_multiformat.json  # 多格式集（45 题，8 文件 / 7 格式）
+│   ├── eval_clarify.json      #   clarify 判定用例
+│   └── eval_multiturn.json    #   多轮会话用例
 ├── scripts/
-│   └── eval.py                # Task 8 评估脚本（4 套对比 + 增量模式）
-├── data/sample/               # 知识库（8 个语料 md：python_basics、machine_learning_faq、rag_techniques 等）
+│   ├── eval.py                # 4 套端到端对比（v1/v2 数据集，全量 LLM）
+│   ├── eval_v2.py             # 评测 v2 检索层基线（离线）
+│   ├── eval_interaction.py    # clarify / 多轮交互评测（需 LLM）
+│   ├── import_crud_rag.py     # CRUD-RAG Read → 本地评测集与语料
+│   ├── validate_eval_dataset.py  # schema / 标签 / 来源校验
+│   ├── adapt_public_eval.py   # 公开集字段映射 → 评测 v2 schema
+│   └── promote_hard_cases.py  # 难例候选半自动晋升
+├── data/sample/               # 旧评测/测试语料（8 个 md）
+├── data/demo/                 # 多格式通用 demo（8 篇：MD/TXT/PDF/HTML/DOCX/CSV/JSONL）
+├── data/library/              # 运行时上传与后续优质库（gitignore）
+├── data/sessions/             # 会话 JSON（运行时生成，gitignore）
+├── data/public_eval/          # 公开集下载 / 转换 / 本地语料（gitignore）
 ├── docs/
-│   ├── adr/                   # 架构决策记录（6 篇 ADR）
-│   ├── modules/               # 模块设计文档（5 篇）
+│   ├── adr/                   # 架构决策记录（8 篇 ADR）
+│   ├── modules/               # 模块设计文档（8 篇）
+│   ├── design/                # 交互与评测设计（2 篇）
+│   ├── reference/             # 格式支持 / 优质库格式（2 篇）
 │   ├── learning/              # 学习笔记（8 篇，按 Task 拆分）
 │   └── planning/              # 规划文档（.gitignore 排除，不提交）
+├── Dockerfile / .dockerignore # 容器化启动
 ├── pyproject.toml
 └── .env.example
 ```
 
 ## 评估指标对比
+
+> **历史口径（旧 8 节点拓扑）**：下表来自含 `switch_strategy` 的旧 8 节点版本，固定 hybrid 后尚未重跑全量 LLM 评测；旧数字只能作历史对照，不能当作当前现状。v2 检索层基线（CRUD-RAG Read / 多格式集）已补齐，端到端 LLM 双跑后置。
 
 运行 `uv run python scripts/eval.py --rebuild` 生成（数据集：45 题 = 30 可答 + 10 语料外不可答 + 5 寒暄；语料 8 文档 49 chunks；模型 deepseek-flash）：
 
@@ -291,7 +422,7 @@ RAGForge/
 
 **检索层区分度（本轮改造的核心目标）**：指标不再"人人 100%"——
 - **vector-only baseline 只有 73.3%**：all-MiniLM 是英文向量化模型，中文语料召回乏力（8 题 chunk 级未命中）；
-- **Agent 状态机把 73.3% 拉到 96.7%**：evaluate 诊断 low_recall → switch_strategy 切到 BM25 的自愈闭环，直接贡献 +23.4 个百分点——这是状态机价值的最直接证据；
+- **旧 8 节点拓扑把 73.3% 拉到 96.7%**：evaluate 诊断 low_recall → switch_strategy 切到 BM25 的自愈闭环，直接贡献 +23.4 个百分点；这是旧拓扑的历史结果，固定 hybrid 后已不可直接复用；
 - **hybrid 拿到 100%**：RRF 融合两路互补；
 - **MRR 上 reranker 现身（两套口径）**：离线检索对照（`--retrieval-only`，30 可答题、不调 LLM）中 hybrid 粗排 MRR 仅 76.3%，reranker 精排拉到 96.7%（见 `reports/eval_retrieval_report.json`）；45 题全量端到端评估中两者已接近（hybrid 95.8% vs reranker 95.0%，见上表）——hybrid 粗排质量提升后精排增益收窄。MRR 是排序质量指标，reranker 的价值体现在这里而非召回；
 - 真实失败案例：reranker 模式丢了「令牌桶限流」一题——CrossEncoder 精排把 gold chunk 挤出 top-5（hybrid 100% 命中），说明精排模型与标注的判断存在不一致，这正是评估体系该暴露的问题。
@@ -304,14 +435,115 @@ RAGForge/
 
 **延迟**：Agent 模式 P50 约 15s（多轮 LLM 调用），P99 长尾 27~33s；较旧基线（Agent P99 47.5s）大幅下降。优化方向：调低 `max_iterations`、缓存、流式输出。
 
+### 公开集检索基线（CRUD-RAG Read）
+
+120 题（1doc / 2docs / 3docs 各 40），文档级 top-5，CUDA embedding（BAAI/bge-m3，1024 维），独立评测索引，不调用 LLM：
+
+| 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
+|------|---:|---:|---:|---:|
+| vector | 100.0% | 95.0% | 98.2% | 97.3% |
+| bm25 | 99.2% | 90.0% | 96.9% | 94.7% |
+| hybrid | 100.0% | 92.5% | 96.5% | 95.5% |
+| reranker | 100.0% | 94.2% | 97.9% | 96.9% |
+
+换 bge-m3 后 vector 单路 hit_any 从 60.0% 提升到 100.0%，hybrid hit_all 从 65.8% 提升到 92.5%；BM25 作为关键词兜底保持稳定。明细见 `reports/eval_v2_crud_read_report.json`。
+
+### 多格式自定义集检索基线
+
+45 题覆盖 8 个 demo 文件、7 种格式（MD/TXT/CSV/JSONL/HTML/PDF/DOCX），含 4 道多跳、10 道中文 query 检索英文 PDF/DOCX 的跨语言样本；文档级 top-5，CUDA embedding（BAAI/bge-m3）：
+
+| 模式 | hit_any | hit_all | MRR_any | NDCG@5 |
+|------|---:|---:|---:|---:|
+| vector | 100.0% | 100.0% | 95.6% | 96.7% |
+| bm25 | 93.3% | 91.1% | 87.4% | 88.1% |
+| hybrid | 100.0% | 100.0% | 91.3% | 94.1% |
+| reranker | 100.0% | 97.8% | 97.8% | 97.5% |
+
+换 bge-m3 后多格式集 vector/hybrid hit_any 均到 100%，此前的跨语言失败消失；reranker 把 MRR 拉到 97.8%。明细见 `reports/eval_v2_multiformat_report.json`。
+
+### Embedding 选型对照
+
+三个候选均为 1024 维、CUDA、normalize、相同 chunk 与语料；只替换 embedding 后重跑：
+
+| 模型 | 体积 | CRUD vector hit_all | CRUD reranker hit_all | 多格式 hybrid hit_any | 多格式 reranker NDCG@5 |
+|---|---:|---:|---:|---:|---:|
+| **bge-m3（当前）** | 2.2GB | **95.0%** | 94.2% | **100.0%** | 97.5% |
+| bge-large-zh-v1.5 | 1.3GB | 88.3% | 95.0% | 100.0% | 97.5% |
+| Qwen3-Embedding-0.6B | 1.2GB | 93.3% | **95.8%** | 97.8% | 97.5% |
+
+bge-m3 保留为默认：多格式 hybrid 最稳、跨语言均衡；Qwen3 在 CRUD reranker 略高，但多格式 hybrid 下降。报告分别见 `reports/eval_v2_crud_bge_large_zh.json`、`eval_v2_crud_qwen3_06b.json` 及对应 multiformat 文件。
+
+### 本地模型 smoke（Qwen3.6-35B-A3B-NVFP4）
+
+- **clarify**：16 例（11 歧义 + 5 清晰/寒暄），带 follow-up 的最新跑分：澄清准确率 87.5%，过度澄清率 20.0%，问题关键词命中率 90.9%，补充后解决率 83.3%（5/6）；前一次无 follow-up 跑分为 93.8%。报告：`reports/local_clarify_followup.json`、`reports/local_clarify_report.json`；
+- **多轮**：全量 10 会话 × 3 轮，轮级来源命中 100%、会话成功率 100%（`reports/local_multiturn_full.json`）。修正前 v1 为 63.3% / 50%，问题集中在首轮缺主体与 condense 丢实体；已通过 prompt 与数据修正验证。
+- **CRUD-RAG e2e**：agent 模式前 2 题（bge-m3），Recall@5 / MRR@5 100%，忠实度 100%，answer F1 81.9%，P50 143.8s、max 188.4s（`reports/local_e2e_crud_smoke.json`）。
+
+三组都是小样本链路验证，不作为模型效果结论；全量 120 题 × 4 模式与 30 轮多轮待跑。
+
+### 本地全量矩阵（Qwen3.6-35B-A3B-NVFP4 + bge-m3）
+
+CRUD-RAG 120 题、4 模式：
+
+| 模式 | Recall@5 | MRR@5 | 忠实度 | answer F1 | P50 |
+|---|---:|---:|---:|---:|---:|
+| baseline | 100.0% | 98.2% | 100.0% | 43.6% | 80.4s |
+| linear_hybrid | 100.0% | 96.5% | 100.0% | 43.5% | 62.3s |
+| agent | 99.2% | 94.2% | 100.0% | 28.9% | 91.5s |
+| agent_reranker | 98.3% | 97.1% | 99.2% | 43.5% | 132.4s |
+
+多格式 45 题、4 模式：
+
+| 模式 | Recall@5 | MRR@5 | 忠实度 | P50 |
+|---|---:|---:|---:|---:|
+| baseline | 100.0% | 94.4% | 100.0% | 32.8s |
+| linear_hybrid | 100.0% | 91.1% | 100.0% | 33.4s |
+| agent | 80.0% | 76.7% | 93.3% | 78.1s |
+| agent_reranker | 80.0% | 78.9% | 93.3% | 78.9s |
+
+多格式 Agent 的 80% 召回来自 **9/45 题被 clarify**（题目缺少产品/城市主体），不是检索未命中；原始检索基线仍为 100%。报告：`reports/local_e2e_crud_full.json`、`reports/local_e2e_multiformat_full.json`。
+
+### 云端全量矩阵（USTC deepseek-flash）
+
+CRUD-RAG 120 题、4 模式（补跑后 0 errors）：
+
+| 模式 | Recall@5 | MRR@5 | 忠实度 | answer F1 | P50 |
+|---|---:|---:|---:|---:|---:|
+| baseline | 100.0% | 98.2% | 100.0% | 55.2% | 10.6s |
+| linear_hybrid | 100.0% | 96.5% | 100.0% | 55.6% | 12.5s |
+| agent | 97.5% | 95.4% | 100.0% | 55.0% | 29.5s |
+| agent_reranker | 97.5% | 96.3% | 100.0% | 53.6% | 162.6s |
+
+多格式 45 题、4 模式（0 errors）：
+
+| 模式 | Recall@5 | MRR@5 | 忠实度 | P50 |
+|---|---:|---:|---:|---:|
+| baseline | 100.0% | 94.4% | 100.0% | 170.3s |
+| linear_hybrid | 100.0% | 91.1% | 100.0% | 137.8s |
+| agent | 68.9% | 64.4% | 93.3% | 248.6s |
+| agent_reranker | 68.9% | 67.8% | 100.0% | 30.0s |
+
+云端总 token 约 **2.19M**。多格式 Agent 的 68.9% 同样来自 clarify（云端 14/45），检索基线仍是 100%。测试期间服务端拥堵明显，出现 51 条超时/降级日志；延迟数据不作为 API 性能结论。报告：`reports/cloud_e2e_crud_full.json`、`reports/cloud_e2e_multiformat_full.json`。
+
 ## 未来工作
 
-- **中文 Embedding 模型切换**：当前 all-MiniLM-L6-v2 为英文优化模型，评估显示
-  vector-only 检索在中文语料上 recall 仅 73.3%（混合检索已兜底）。切换 BGE 系列
-  或 bge-m3 预期可显著提升向量单路召回；需同步重建索引并重跑评估。
+- **Embedding 选型**：bge-m3 已选定并作为本地默认；bge-large-zh-v1.5 与
+  Qwen3-Embedding-0.6B 已完成同条件对照（见上表）。后续可针对 Qwen3 加查询
+  instruction 再测，但当前多格式 hybrid 指标不如 bge-m3。
 - **精排模型调参**：评估捕获到一例 reranker 将 gold chunk 挤出 top-5 的失败案例
   （CrossEncoder 相关性判断与标注不一致）。可从候选池比例（`reranker_top_n` 与
   检索 k 的配比）、CrossEncoder 输入截断策略入手分析。
+- **评测 v2 公开集**：CRUD-RAG Read 120 题已导入并完成离线检索基线
+  （见上表，报告 `reports/eval_v2_crud_read_report.json`）；RGB 子集尚未接入。
+  冻结 test 后跑本地与 API 双基线。
+- **多格式集与跨语言检索**：45 题多格式集已建；切 bge-m3 后 reranker hit_any
+  100%、NDCG@5 97.5%，跨语言失败已消除。
+- **多轮 / clarify 跑分**：clarify 16 例本地模型跑分已完成（准确率 93.8%、
+  过度澄清 20.0%）；多轮 2×3 smoke 通过，10×3 全量待跑。`--with-followup`
+  可统计补充后解决率。
+- **GPU embedding**：已安装 `torch 2.12.0+cu130`，bge-m3 在 RTX 5070 上实测
+  显存约 2.2GB、加载约 4s；本地 `.env` 使用 `EMBEDDING_DEVICE=cuda`，CPU 可回退。
+  裸 `uv run` 会按 lockfile 恢复 CPU torch，GPU 任务需用 `.venv/Scripts/python.exe`。
 
 ## License
 

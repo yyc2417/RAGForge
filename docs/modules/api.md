@@ -2,7 +2,7 @@
 
 ## 1. 模块定位与设计动机
 
-API 服务层（`src/api/`）是 RAGForge 的**唯一对外边界**，将 LangGraph 8 节点状态机封装为 HTTP 接口。其核心设计动机：
+API 服务层（`src/api/`）是 RAGForge 的**唯一对外边界**，将 LangGraph 7 节点主链路封装为 HTTP 接口（旧 8 节点含 `switch_strategy`，当前固定 hybrid 后为 7 节点）。其核心设计动机：
 
 > Agent 状态机的构建成本极高（解析文档 → 切分 → 嵌入 → 组装图），必须在**启动阶段（lifespan）预热构建并 fail-fast**，而非在首个请求内惰性构建；同时需要同时支持同步请求和 SSE 流式两种交互模式。
 
@@ -34,8 +34,18 @@ POST /chat/stream  (async + SSE)     → EventSourceResponse
 | 端点 | 调用方式 | 用途 |
 |------|----------|------|
 | `/health` | 同步 | 健康检查，`status=ok`（就绪）/ `starting`（构建中）+ `version` |
-| `/chat` | `graph.ainvoke()` | 完整执行状态机后返回结构化响应（answer + sources + trace + metrics）；执行失败返回结构化 502 |
+| `/chat` | `graph.ainvoke()` | 完整执行状态机后返回结构化响应（answer + clarification + sources + trace + metrics）；执行失败返回结构化 502 |
 | `/chat/stream` | `graph.astream_events(v2)` | SSE 流式，逐 token + 节点事件推送 |
+
+**clarify 响应**：当状态机走 clarify 终止分支时，`answer` 为空，`clarification` 字段返回 `{question, ambiguity_type}`；SSE `done` 事件也携带 `clarification_question` 与 `ambiguity_type`。多轮会话续接目前只在 Streamlit UI 中实现，API 仍是无状态单轮接口。
+
+**横切能力**：
+
+- `X-Request-ID`：请求头透传或服务端生成，响应头与 `/chat`/`done` 响应体回传；
+- `X-API-Key`：设置 `API_AUTH_TOKEN` 后 `/chat`/`/chat/stream` 需要鉴权，`/health` 豁免；
+- 限流：`API_RATE_LIMIT_PER_MINUTE` 进程内滑动窗口，超限 429；
+- 超时：`API_REQUEST_TIMEOUT` 控制 `/chat` 总超时（504），流式端点超时发送 error 事件；
+- 健康检查：`components` 返回 graph / auth / rate_limit / llm_model / embedding_model / collection。
 
 **关键设计取舍**：`/chat` 使用 `ainvoke` 而非 `invoke`，避免阻塞 FastAPI 的事件循环。`/chat/stream` 使用 `astream_events(version="v2")` 而非 `astream()`——后者只返回节点级状态快照，无法捕获 `on_chat_model_stream` 事件，无法实现真正的逐 token 推送。
 

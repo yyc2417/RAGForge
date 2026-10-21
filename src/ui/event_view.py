@@ -19,9 +19,9 @@ start/end 为轮次边界，把每轮的查询、策略、命中、诊断结论�
 from dataclasses import dataclass, field
 from typing import Any
 
-# 8 个业务节点（顺序即主流程拓扑）
-NODES = ["analyze", "decide", "retrieve", "evaluate",
-         "reformulate", "switch_strategy", "generate", "verify"]
+# 8 个业务节点（7 节点主链路 + clarify 终止分支）
+NODES = ["analyze", "clarify", "decide", "retrieve", "evaluate",
+         "reformulate", "generate", "verify"]
 _NODE_SET = set(NODES)
 
 # 节点状态三态
@@ -33,6 +33,9 @@ DONE = "done"
 _DIAGNOSTIC_FIELDS = (
     "query_type",
     "needs_retrieval",
+    "needs_clarification",
+    "ambiguity_type",
+    "clarification_question",
     "retrieval_strategy",
     "failure_mode",
     "suggested_action",
@@ -46,16 +49,14 @@ _DIAGNOSTIC_FIELDS = (
 )
 
 # 自愈动作节点（界面上高亮提示）
-_SELF_HEAL_NODES = {"reformulate", "switch_strategy"}
+_SELF_HEAL_NODES = {"reformulate"}
 
 # 事件引起的可见变更级别：界面据此选择重画范围（流式 token 仅刷答案区）
 LEVEL_FULL = "full"
 LEVEL_ANSWER = "answer"
 
-# 各策略的分数语义（详见 ADR-006）：量纲不同，界面不得跨策略直接比大小
+# 固定 hybrid 的分数语义（详见 ADR-006）：RRF 分只能在本轮内比较排序
 SCORE_SEMANTICS = {
-    "vector": "cosine relevance ∈ [0,1]，可与 0.3 阈值比较",
-    "bm25": "BM25 分数无上界，只能在本轮内比较排序",
     "hybrid": "RRF 融合分上限约 2/(rrf_k+1)，只能在本轮内比较排序",
     "none": "未检索",
 }
@@ -74,7 +75,7 @@ class Round:
     failure_mode: str | None = None
     suggested_action: str | None = None
     diagnosis_reason: str = ""
-    # 本轮之后依次触发的自愈动作：[(reformulate|switch_strategy, 动作内容)]
+    # 本轮之后依次触发的自愈动作：[("reformulate", 改写后的查询)]
     # 用列表而非单字段：幻觉重试路径可能在同一轮上追加第二个动作，覆盖会丢信息
     actions: list[tuple[str, str]] = field(default_factory=list)
     rewrite_effective: bool | None = None
@@ -174,7 +175,7 @@ class EventView:
 
     @property
     def self_heal_triggered(self) -> bool:
-        """是否触发过自愈动作（reformulate / switch_strategy 至少执行一次）。"""
+        """是否触发过自愈动作（reformulate 至少执行一次）。"""
         return any(self.node_runs[n] > 0 for n in _SELF_HEAL_NODES)
 
     @property
@@ -225,7 +226,7 @@ class EventView:
         )
 
     def _update_rounds(self, name: str, output: dict) -> None:
-        """把 retrieve / evaluate / reformulate / switch_strategy 的产出归到对应轮次。"""
+        """把 retrieve / evaluate / reformulate 的产出归到对应轮次。"""
         if name == "retrieve":
             if self._pending_round is None:
                 return
@@ -252,9 +253,6 @@ class EventView:
             rnd.actions.append(
                 ("reformulate", str(output.get("reformulated_query", "")))
             )
-        elif name == "switch_strategy":
-            new_strategy = str(output.get("retrieval_strategy", ""))
-            rnd.actions.append(("switch_strategy", f"{rnd.strategy} → {new_strategy}"))
 
     @staticmethod
     def _extract_sources(output: dict) -> list[dict[str, Any]]:

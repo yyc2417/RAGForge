@@ -45,9 +45,16 @@ class PromptManager:
 - chitchat：寒暄、打招呼、闲聊（如"你好""谢谢"）——此类不需要检索
 - complex：复杂查询，可能需要多角度信息
 
+澄清判断（needs_clarification）：
+- 只有当问题缺少关键槽位、存在多个合理解释、或约束互相冲突，且不澄清就无法可靠检索时才为 true；
+- 寒暄、语料外问题、已经足够具体的问题都不需要澄清；
+- 需要澄清时，clarification_question 给出一个简短、具体的问题，尽量带 2–3 个候选选项；
+- 不需要澄清时 clarification_question 为空，ambiguity_type 为空。
+
 用户查询：{query}
 
-请输出 query_type 和 needs_retrieval（寒暄类 needs_retrieval=False）。"""
+请输出 query_type、needs_retrieval、needs_clarification、ambiguity_type、
+clarification_question 和 reason（寒暄类 needs_retrieval=False）。"""
     )
 
     EVALUATE_PROMPT = ChatPromptTemplate.from_template(
@@ -61,8 +68,11 @@ class PromptManager:
 
 诊断维度（三选一）：
 - sufficient：检索结果与问题相关且信息充足，可 proceed 直接生成
-- low_recall：检索结果与问题部分相关但关键信息缺失，召回不足，建议 switch_strategy 切换检索策略
+- low_recall：检索结果与问题部分相关但关键信息缺失，召回不足，建议 reformulate 改写查询后重试
 - irrelevant：检索结果与问题无关（语义不匹配），建议 reformulate 改写查询
+
+当前系统固定使用 hybrid 检索，没有“切换检索策略”这个动作；suggested_action 只能是
+proceed 或 reformulate。
 
 请输出 failure_mode、suggested_action 和 reason。"""
     )
@@ -82,6 +92,31 @@ class PromptManager:
 - synonym_replace：用同义词替换关键词
 
 请输出改写后的 reformulated_query 和所用的 rewrite_strategy。改写后的查询保持与原查询相同的语言。"""
+    )
+
+    CONDENSE_PROMPT = ChatPromptTemplate.from_template(
+        """你是多轮对话的查询改写器。请根据对话历史，把用户的最新问题改写成一个
+不依赖上下文、可以独立检索的问题。
+
+规则：
+1. 保留专有名词、实体、数字和约束；
+2. 不回答问题，只改写问题；
+3. 不要替用户消除真正的歧义：如果历史中存在多个候选实体，保留歧义；
+4. 如果最新问题本身已经是独立问题，原样输出；
+5. 输出语言与最新问题一致；
+6. 用历史中已确定的公司、产品、地点等具体名称替换代词或省略；
+7. 即使最新问题没有代词，只要历史已经确定对象，也要补全对象名。
+   示例：历史讨论“星云笔记”，最新问题“团队版怎么收费？” →
+   “星云笔记团队版怎么收费？”；
+   历史讨论“Nebula Note 说明书”，最新问题“充电呢？” →
+   “Nebula Note 充电需要多久？”。
+
+对话历史：
+{history}
+
+最新问题：{query}
+
+请输出 standalone_query 和 reason。"""
     )
 
     VERIFY_PROMPT = ChatPromptTemplate.from_template(

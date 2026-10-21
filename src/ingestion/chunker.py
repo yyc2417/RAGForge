@@ -51,9 +51,15 @@ class TextChunker:
         """
         chunks: list[Document] = []
         for doc in documents:
+            # HTML/DOCX 解析器把标题放在 doc.metadata；Markdown 则由 header splitter
+            # 逐节提取。两者合并后再生成标题前缀，保证非 Markdown 格式也能命中标题词。
+            base_headers = {k: doc.metadata[k] for k in _HEADER_KEYS if k in doc.metadata}
             sections = self._header_splitter.split_text(doc.page_content)
             for section in sections:
-                headers = {k: section.metadata[k] for k in _HEADER_KEYS if k in section.metadata}
+                section_headers = {
+                    k: section.metadata[k] for k in _HEADER_KEYS if k in section.metadata
+                }
+                headers = {**base_headers, **section_headers}
                 header_path = " > ".join(headers[k] for k in _HEADER_KEYS if k in headers)
                 for piece in self._splitter.split_text(section.page_content):
                     # 标题路径拼入正文前缀：同时进入向量与 BM25，检索可命中标题词

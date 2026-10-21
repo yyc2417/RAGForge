@@ -3,7 +3,7 @@
 每个区块返回**单个** HTML 字符串，界面侧一次 st.markdown 写入 placeholder。
 这是 Streamlit 的硬约束：placeholder 只有「一次写入」才是原地替换——多次写入
 会互相顶掉（历史版本里「回答」「来源文档」两个 subheader 就是这样消失的），
-而在 placeholder 之外调用 st.columns 会往页面追加元素（历史版本因此把 8 节点
+而在 placeholder 之外调用 st.columns 会往页面追加元素（历史版本因此把节点
 流程条重复渲染了 2665 次，页面高 25 万像素）。
 
 配色刻意使用中性 rgba 与语义色，不假设亮/暗主题。所有动态文本一律 escape，
@@ -18,18 +18,18 @@ from src.ui.event_view import DONE, NODES, PENDING, RUNNING, EventView, Round
 
 # ── 节点元信息：中文职责名 + 悬浮释义（与 graph.py 的节点一一对应）────
 NODE_META: dict[str, tuple[str, str]] = {
-    "analyze": ("意图分析", "LLM 判断查询类型与是否需要检索"),
-    "decide": ("策略决策", "规则路由：chitchat→none / factual→vector / reasoning→bm25 / complex→hybrid"),
-    "retrieve": ("执行检索", "按策略调用检索器；检索次数的唯一递增点"),
-    "evaluate": ("质量诊断", "LLM 诊断式评估：区分召回不足与结果无关，给出建议动作"),
+    "analyze": ("意图分析", "LLM 判断查询类型、是否需要检索、是否需要澄清"),
+    "clarify": ("澄清追问", "需要澄清时终止本轮，向用户提一个问题"),
+    "decide": ("检索决策", "规则路由：chitchat / 不需要检索→none，其余→hybrid"),
+    "retrieve": ("执行检索", "固定 hybrid：向量 + BM25 + RRF；检索次数的唯一递增点"),
+    "evaluate": ("质量诊断", "LLM 诊断式评估：区分召回不足与结果无关，给出 proceed / reformulate"),
     "reformulate": ("查询改写", "按 failure_mode 选择改写策略（specify / synonym_replace / generalize）"),
-    "switch_strategy": ("策略升级", "规则单向升级：vector → bm25 → hybrid"),
     "generate": ("生成答案", "基于检索上下文生成回答；LLM 失败时降级兜底"),
     "verify": ("幻觉检测", "LLM 判断答案是否忠实于检索上下文"),
 }
 
 # 自愈动作节点（流程条上独立配色，便于一眼看出系统自我修正过）
-_SELF_HEAL_NODES = {"reformulate", "switch_strategy"}
+_SELF_HEAL_NODES = {"reformulate"}
 
 # ── 诊断字段：中文标签 + 释义 + 值映射 ─────────────────────────────
 # 分组顺序即阅读顺序；iteration_count / verify_failures 归运行摘要，此处不重复展示
@@ -40,6 +40,9 @@ DIAGNOSIS_GROUPS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] 
         (
             ("query_type", "查询意图", "LLM 判定的问题类型"),
             ("needs_retrieval", "需要检索", "是否进入检索分支"),
+            ("needs_clarification", "需要澄清", "是否需要先向用户确认"),
+            ("ambiguity_type", "歧义类型", "缺槽位 / 多解释 / 约束冲突"),
+            ("clarification_question", "澄清问题", "本轮向用户提出的问题"),
             ("retrieval_strategy", "检索策略", "本轮实际使用的检索器"),
         ),
     ),
@@ -70,20 +73,25 @@ _VALUE_LABELS: dict[str, dict[Any, str]] = {
         "chitchat": "寒暄", "complex": "复杂多跳",
     },
     "retrieval_strategy": {
-        "vector": "向量", "bm25": "关键词", "hybrid": "混合 RRF", "none": "不检索",
+        "hybrid": "混合 RRF", "none": "不检索",
+    },
+    "ambiguity_type": {
+        "missing_slot": "缺槽位",
+        "multiple_interpretations": "多解释",
+        "conflicting_constraints": "约束冲突",
     },
     "failure_mode": {
         "low_recall": "召回不足", "irrelevant": "结果无关", "sufficient": "信息充足",
     },
     "suggested_action": {
-        "reformulate": "改写查询", "switch_strategy": "切换策略", "proceed": "直接生成",
+        "reformulate": "改写查询", "proceed": "直接生成",
     },
 }
 
 # 诊断结论/动作的语义色（与流程条共用一套色板）
 _MODE_CLASS = {
     "low_recall": "is-warn", "irrelevant": "is-warn", "sufficient": "is-ok",
-    "reformulate": "is-heal", "switch_strategy": "is-heal", "proceed": "is-ok",
+    "reformulate": "is-heal", "proceed": "is-ok",
 }
 
 
@@ -103,7 +111,7 @@ def render_section_title(num: str, title: str, hint: str) -> str:
 
 
 def render_track(view: EventView) -> str:
-    """① 流程轨道：8 节点状态卡片（4 列 × 2 行），带轮次徽章与自愈高亮。"""
+    """① 流程轨道：7 节点状态卡片，带轮次徽章与自愈高亮。"""
     cells = []
     for name in NODES:
         cn, help_text = NODE_META[name]
@@ -237,7 +245,7 @@ def render_summary(view: EventView) -> str:
         _metric("检索轮次", str(summary["iteration_count"]), "is-plain",
                 "retrieve 节点执行次数；上限由 max_iterations 控制"),
         _metric("自愈动作", heal_text, "is-heal" if heal_names else "is-plain",
-                "reformulate / switch_strategy 的实际触发情况", text=True),
+                "reformulate 的实际触发情况", text=True),
         _metric("幻觉检测", verify_text, verify_cls, "verify 节点对答案忠实性的判定", text=True),
     )
     reason = summary["verification_reason"]

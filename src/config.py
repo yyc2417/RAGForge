@@ -32,16 +32,39 @@ class Settings(BaseSettings):
     context_token_budget: int = Field(3000, gt=0)
 
     # ── Embedding ──────────────────────────────────────────────────
+    # 默认 all-MiniLM 供单测 / CI 离线基线；本地推荐 bge-m3（见 README）
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_device: str = "cpu"  # cpu / cuda
     embedding_batch_size: int = Field(32, gt=0)
+    # 换型预留：BGE 系列通常建议 normalize + 查询指令；默认关闭以保持现有索引口径
+    embedding_normalize: bool = False
+    embedding_query_instruction: str = ""
+    embedding_trust_remote_code: bool = False
 
     # ── 向量存储（ChromaDB）─────────────────────────────────────────
     chroma_persist_dir: str = "./chroma_db"
     chroma_collection_name: str = "knowledge_base"
+    # 评测索引隔离：避免 eval 按 count 不匹配重建 app 的运行时索引
+    eval_chroma_persist_dir: str = "./chroma_db_eval"
+    eval_chroma_collection_name: str = "knowledge_base_eval"
 
     # ── 数据路径 ────────────────────────────────────────────────────
-    data_dir: str = "data/sample"
+    data_dir: str = "data/sample"          # 旧评测/测试语料
+    demo_dir: str = "data/demo"            # UI 演示语料
+    library_dir: str = "data/library"      # 运行时上传与优质库
+    eval_data_dir: str = "data/sample"     # 评测语料（v2 后续切到 data/eval）
+    session_dir: str = "data/sessions"
+    feedback_dir: str = "data/feedback"
+    max_import_files: int = Field(50, gt=0)
+    max_upload_mb: int = Field(20, gt=0)
+
+    # ── 会话与澄清 ──────────────────────────────────────────────────
+    # 多轮改写注入的历史轮数（一轮 = user + assistant）
+    conversation_history_turns: int = Field(6, gt=0)
+    # 注入历史文本的 token 预算（cl100k 口径）
+    conversation_token_budget: int = Field(1200, gt=0)
+    # clarify 终止分支开关；用于开启/关闭对照
+    clarify_enabled: bool = True
 
     # ── 检索参数（chunk 单位为 token，cl100k 估算；需小于 embedding 窗口）──
     chunk_size: int = Field(220, gt=0)
@@ -53,10 +76,22 @@ class Settings(BaseSettings):
     reranker_model: str = "BAAI/bge-reranker-v2-m3"  # CrossEncoder 重排序模型
     reranker_top_n: int = Field(5, gt=0)  # 重排序后保留的文档数
 
+    # ── 优质库加权通道 ─────────────────────────────────────────────
+    quality_weight: float = Field(1.3, gt=0)
+    quality_top_k: int = Field(3, gt=0)
+    quality_min_relevance: float = Field(0.3, ge=0, le=1)
+    quality_max_per_source: int = Field(2, gt=0)
+
     # ── API 服务（Task 7）────────────────────────────────────────────
     api_host: str = "127.0.0.1"  # 默认仅监听本机；对外部署时显式改为 0.0.0.0 并配合鉴权
     api_port: int = Field(8000, ge=1, le=65535)  # FastAPI 监听端口
     api_cors_origins: list[str] = Field(default_factory=lambda: ["*"])  # 浏览器跨域白名单
+    # 可选鉴权：为空表示本地演示不启用；设置后 /chat 需要 X-API-Key
+    api_auth_token: SecretStr = SecretStr("")
+    # 每客户端每分钟请求上限；0 表示关闭
+    api_rate_limit_per_minute: int = Field(120, ge=0)
+    # 单次 /chat 请求总超时（秒）
+    api_request_timeout: int = Field(120, gt=0)
 
     # ── LangSmith 追踪（Task 7，可选）──────────────────────────────
     # 零代码改动即可自动记录 trace；填入 key 并置 tracing=true 即启用
@@ -80,6 +115,10 @@ class Settings(BaseSettings):
     def langsmith_key_value(self) -> str:
         """解包 LangSmith API key（SecretStr → str）。"""
         return self.langsmith_api_key.get_secret_value()
+
+    def api_auth_token_value(self) -> str:
+        """解包 API 鉴权 token（空字符串表示不启用）。"""
+        return self.api_auth_token.get_secret_value()
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

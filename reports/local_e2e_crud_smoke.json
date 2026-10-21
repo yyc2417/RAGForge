@@ -1,0 +1,98 @@
+{
+  "modes": [
+    {
+      "mode": "agent",
+      "samples": 2,
+      "errors": 0,
+      "unverified": 0,
+      "answerable_count": 2,
+      "unanswerable_count": 0,
+      "recall_top5": 1.0,
+      "mrr_at5": 1.0,
+      "hallucination_rate": 0.0,
+      "faithfulness_rate": 1.0,
+      "answer_f1": 0.8189,
+      "answer_f1_samples": 2,
+      "refusal_accuracy": 0.0,
+      "fabrication_rate": 0.0,
+      "latency_p50_ms": 143806.79,
+      "latency_max_ms": 188393.86,
+      "latency_p95_ms": 183935.15,
+      "latency_p99_ms": 187502.12,
+      "avg_token": 1981,
+      "total_token": 23767,
+      "details": [
+        {
+          "query": "根据北京市人力资源和社会保障局、北京市医疗保障局、国家税务总局北京市税务局联合发布的通告，从2023年7月起，北京市参保企业职工的社会保险月缴费基数上限和下限分别是多少？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "crud_6ca64a9b767e.txt",
+          "expected_sources": [
+            "crud_6ca64a9b767e.txt"
+          ],
+          "retrieved_sources": [
+            "crud_6ca64a9b767e.txt",
+            "crud_6ca64a9b767e.txt",
+            "crud_6ca64a9b767e.txt",
+            "crud_6ca64a9b767e.txt",
+            "crud_6ca64a9b767e.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据联合发布的通告，自2023年7月起，北京市参保企业职工各项社会保险的月缴费基数上限为33891元，下限为6326元。",
+          "reference_answer": "从2023年7月起，北京市参保企业职工的社会保险月缴费基数上限为33891元，下限为6326元。",
+          "answer_f1": 0.8461538461538461,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 188393.85709999988
+        },
+        {
+          "query": "新疆木卡姆艺术团在印尼巡回演出的开幕式及首场演出是在哪个城市和场馆举行的？",
+          "query_type": "factual",
+          "answerable": true,
+          "expected_source": "crud_9e6360cc8f1c.txt",
+          "expected_sources": [
+            "crud_9e6360cc8f1c.txt"
+          ],
+          "retrieved_sources": [
+            "crud_9e6360cc8f1c.txt",
+            "crud_9e6360cc8f1c.txt",
+            "crud_9e6360cc8f1c.txt",
+            "crud_9e6360cc8f1c.txt",
+            "crud_699768e8e7a7.txt"
+          ],
+          "chunk_rank": 1,
+          "hit": true,
+          "answer": "根据检索到的文档内容，新疆木卡姆艺术团赴印尼巡回演出的开幕式暨首场演出是在**雅加达**的**伊斯梅尔玛祖基艺术中心**举行的。",
+          "reference_answer": "新疆木卡姆艺术团在印尼巡回演出的开幕式及首场演出是在雅加达的伊斯梅尔玛祖基艺术中心举行的。",
+          "answer_f1": 0.7916666666666667,
+          "is_faithful": true,
+          "faithfulness_source": "llm_verify",
+          "refusal_verdict": null,
+          "error": null,
+          "e2e_ms": 99219.71330000088
+        }
+      ]
+    }
+  ],
+  "targets": {
+    "recall_top5": 0.9,
+    "mrr_at5": 0.7,
+    "hallucination_rate": 0.05,
+    "refusal_accuracy": 0.8,
+    "latency_p99_ms": 2000,
+    "avg_token": 800
+  },
+  "index": {
+    "chunks": 911,
+    "collection_count": 911,
+    "embedding_model": "D:/ai-test/RAGForge/data/models/bge-m3",
+    "chunk_size": 220,
+    "chunk_overlap": 30,
+    "retrieval_k": 5,
+    "rrf_k": 60,
+    "reranker_top_n": 5
+  }
+}

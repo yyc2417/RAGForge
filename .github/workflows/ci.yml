@@ -37,3 +37,13 @@ jobs:
       - name: Run offline tests
         # 离线单元套件（集成测试需 RUN_INTEGRATION=1 与 API key，默认跳过）
         run: uv run pytest -q
+
+      - name: Retrieval regression gate
+        # 多格式集 + hybrid 粗排；跳过 reranker，避免 CI 下载 560MB 模型
+        run: |
+          uv run python scripts/eval_v2.py \
+            --dataset tests/eval_dataset_multiformat.json \
+            --corpus-dir data/demo \
+            --rebuild --skip-reranker \
+            --report reports/ci_retrieval_report.json \
+            --gate-mode hybrid --min-hit-any 0.85 --min-mrr 0.60

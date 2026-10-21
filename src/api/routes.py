@@ -15,6 +15,7 @@ LangGraph 在 executor 线程中以 copy_context 执行同步节点，
 节点内 get_current_collector() 取到的即本请求实例，并发请求互不污染。
 """
 
+import asyncio
 import json
 import time
 import uuid
@@ -25,22 +26,43 @@ from sse_starlette.sse import EventSourceResponse
 from src import __version__
 from src.agent.state import initial_state
 from src.api.dependencies import get_graph
-from src.api.schemas import ChatRequest, ChatResponse, HealthResponse, ResponseMetrics, SourceDoc
+from src.api.request_context import get_request_id
+from src.api.schemas import (
+    ChatRequest,
+    ChatResponse,
+    Clarification,
+    HealthResponse,
+    ResponseMetrics,
+    SourceDoc,
+)
+from src.config import settings
 from src.utils.logger import logger
 from src.utils.metrics import MetricsCollector, reset_current_collector, set_current_collector
 
 router = APIRouter()
 
-# 8 个 Agent 节点名（用于过滤 on_chain_end 事件，只推送业务节点）
-_AGENT_NODES = {"analyze", "decide", "retrieve", "evaluate",
-                "reformulate", "switch_strategy", "generate", "verify"}
+# 7 个 Agent 主链路节点名（用于过滤 on_chain_end 事件，只推送业务节点）
+_AGENT_NODES = {"analyze", "clarify", "decide", "retrieve", "evaluate",
+                "reformulate", "generate", "verify"}
 
 
 @router.get("/health", response_model=HealthResponse)
 def health(request: Request) -> HealthResponse:
-    """健康检查端点：status=ok 表示管道已就绪，starting 表示仍在构建。"""
+    """健康检查：整体状态 + 分组件（graph / 鉴权 / 限流 / 模型）。"""
     ready = getattr(request.app.state, "ready", False)
-    return HealthResponse(status="ok" if ready else "starting", version=__version__)
+    components = {
+        "graph": "ready" if ready else "starting",
+        "auth": "enabled" if settings.api_auth_token_value() else "disabled",
+        "rate_limit_per_minute": settings.api_rate_limit_per_minute,
+        "llm_model": settings.deepseek_model,
+        "embedding_model": settings.embedding_model,
+        "collection": settings.chroma_collection_name,
+    }
+    return HealthResponse(
+        status="ok" if ready else "starting",
+        version=__version__,
+        components=components,
+    )
 
 
 def _extract_sources(state: dict) -> list[SourceDoc]:
@@ -57,6 +79,17 @@ def _extract_sources(state: dict) -> list[SourceDoc]:
             score=float(score) if score is not None else 0.0,
         ))
     return sources
+
+
+def _extract_clarification(state: dict) -> Clarification | None:
+    """从状态提取 clarify 结果；无澄清返回 None。"""
+    question = str(state.get("clarification_question") or "").strip()
+    if not question:
+        return None
+    return Clarification(
+        question=question,
+        ambiguity_type=state.get("ambiguity_type"),
+    )
 
 
 def _extract_metrics(metrics: MetricsCollector, e2e_ms: float) -> ResponseMetrics:
@@ -94,12 +127,27 @@ async def chat(request: ChatRequest, graph=Depends(get_graph)) -> ChatResponse:
     try:
         t0 = time.perf_counter()
         try:
-            final_state = await graph.ainvoke(
-                initial_state(request.query),
-                config={"recursion_limit": 50},
+            final_state = await asyncio.wait_for(
+                graph.ainvoke(
+                    initial_state(request.query),
+                    config={"recursion_limit": 50},
+                ),
+                timeout=settings.api_request_timeout,
             )
+        except TimeoutError as e:
+            logger.error(
+                f"[chat] Agent 执行超时 request_id={get_request_id()} "
+                f"timeout={settings.api_request_timeout}s"
+            )
+            raise HTTPException(
+                status_code=504,
+                detail=f"Agent 执行超时（>{settings.api_request_timeout}s）",
+            ) from e
         except Exception as e:  # noqa: BLE001 - 转换为结构化 502，与流式端点错误契约对齐
-            logger.error(f"[chat] Agent 执行失败 query='{request.query[:100]}': {e}")
+            logger.error(
+                f"[chat] Agent 执行失败 request_id={get_request_id()} "
+                f"query='{request.query[:100]}': {e}"
+            )
             raise HTTPException(
                 status_code=502,
                 detail=f"Agent 执行失败：{type(e).__name__}: {e}",
@@ -112,15 +160,18 @@ async def chat(request: ChatRequest, graph=Depends(get_graph)) -> ChatResponse:
     sources = _extract_sources(final_state)
     resp_metrics = _extract_metrics(metrics, e2e_ms)
 
-    logger.info(f"[chat] query='{request.query[:100]}' | e2e={e2e_ms:.0f}ms | "
-                f"sources={len(sources)} | trace={len(final_state.get('messages', []))}")
+    logger.info(f"[chat] request_id={get_request_id()} query='{request.query[:100]}' | "
+                f"e2e={e2e_ms:.0f}ms | sources={len(sources)} | "
+                f"trace={len(final_state.get('messages', []))}")
 
     return ChatResponse(
         answer=answer_text,
+        clarification=_extract_clarification(final_state),
         sources=sources,
         agent_trace=final_state.get("messages", []),
         metrics=resp_metrics,
         session_id=session_id,
+        request_id=get_request_id(),
     )
 
 
@@ -155,6 +206,16 @@ async def chat_stream(request: ChatRequest, graph=Depends(get_graph)):
                     config={"recursion_limit": 50},
                     version="v2",
                 ):
+                    if time.perf_counter() - t0 > settings.api_request_timeout:
+                        yield {
+                            "event": "error",
+                            "data": json.dumps(
+                                {"message": f"流式执行超时（>{settings.api_request_timeout}s）"},
+                                ensure_ascii=False,
+                            ),
+                        }
+                        return
+
                     kind = event.get("event")
                     name = event.get("name", "")
 
@@ -215,7 +276,10 @@ async def chat_stream(request: ChatRequest, graph=Depends(get_graph)):
                 "event": "done",
                 "data": json.dumps({
                     "session_id": session_id,
+                    "request_id": get_request_id(),
                     "e2e_latency_ms": round(e2e_ms, 2),
+                    "clarification_question": final_state.get("clarification_question"),
+                    "ambiguity_type": final_state.get("ambiguity_type"),
                 }, ensure_ascii=False),
             }
         except Exception as e:  # noqa: BLE001 - 流中断以 error 事件收尾

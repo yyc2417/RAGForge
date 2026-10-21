@@ -17,6 +17,7 @@
 
 import asyncio
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,11 @@ from src.knowledge import HardCaseStore  # noqa: E402
 from src.pipeline import build_agent_runtime  # noqa: E402
 from src.ui.event_view import LEVEL_ANSWER, LEVEL_FULL, EventView  # noqa: E402
 from src.ui.html_view import CSS  # noqa: E402
+from src.utils.metrics import (  # noqa: E402
+    MetricsCollector,
+    reset_current_collector,
+    set_current_collector,
+)
 
 # ── 页面配置 ───────────────────────────────────────────────────────
 st.set_page_config(page_title="RAGForge", page_icon="⚒️", layout="wide")
@@ -95,6 +101,9 @@ def _new_session() -> None:
 
 
 with st.sidebar:
+    st.markdown("### RAGForge")
+    st.caption(f"{settings.deepseek_model} · {settings.embedding_model}")
+    st.divider()
     st.header("会话")
     if st.button("＋ 新建会话", use_container_width=True):
         _new_session()
@@ -126,6 +135,7 @@ with st.sidebar:
         else:
             st.success(result.summary)
         st.rerun()
+    st.caption(f"单文件 ≤ {settings.max_upload_mb}MB，单次 ≤ {settings.max_import_files} 个")
 
     folder_path = st.text_input(
         "导入文件夹（项目 data/ 下）",
@@ -265,6 +275,24 @@ def _render_message(session_id: str, message: SessionMessage) -> None:
             return
         if message.resolved_query:
             st.caption(f"检索改写：{message.resolved_query}")
+        metrics = message.metrics or {}
+        meta = []
+        model = str(metrics.get("model") or "")
+        if model:
+            meta.append(_basename(model))
+        latency = metrics.get("latency_ms")
+        if latency:
+            meta.append(f"{float(latency) / 1000:.1f}s")
+        tokens = metrics.get("total_tokens")
+        if tokens:
+            meta.append(f"{int(tokens)} tokens")
+        iterations = metrics.get("iteration_count")
+        if iterations:
+            meta.append(f"检索 {int(iterations)} 轮")
+        if metrics.get("is_faithful") is False:
+            meta.append("未通过忠实度校验")
+        if meta:
+            st.caption(" · ".join(meta))
         _render_sources(message.sources)
         _render_trace(message.trace)
         _render_feedback(session_id, message)
@@ -288,6 +316,9 @@ def _run_turn(session_id: str, query: str) -> None:
     with st.chat_message("assistant"):
         placeholder = st.empty()
         view = EventView()
+        collector = MetricsCollector()
+        collector_token = set_current_collector(collector)
+        started = time.perf_counter()
 
         async def _consume() -> None:
             async for event in runtime.graph.astream_events(
@@ -299,19 +330,27 @@ def _run_turn(session_id: str, query: str) -> None:
                 if level in (LEVEL_ANSWER, LEVEL_FULL):
                     placeholder.markdown(view.answer or "_（处理中…）_")
 
-        with st.spinner("状态机执行中…"):
-            try:
+        try:
+            with st.spinner("状态机执行中…"):
                 asyncio.run(_consume())
-            except Exception as e:  # noqa: BLE001 - UI 层给出可读错误
-                st.error(f"执行失败：{type(e).__name__}: {e}")
-                service.record_assistant_state(
-                    session_id,
-                    {"answer": f"执行失败：{type(e).__name__}: {e}"},
-                    original_query=query,
-                    resolved_query=standalone,
-                )
-                st.rerun()
+        except Exception as e:  # noqa: BLE001 - UI 层给出可读错误
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            st.error(f"执行失败：{type(e).__name__}: {e}")
+            service.record_assistant_state(
+                session_id,
+                {"answer": f"执行失败：{type(e).__name__}: {e}"},
+                original_query=query,
+                resolved_query=standalone,
+                latency_ms=elapsed_ms,
+                model=settings.deepseek_model,
+            )
+            st.rerun()
+        finally:
+            reset_current_collector(collector_token)
 
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    token_usage = collector.get_summary().get("token_usage", {})
+    total_tokens = int(token_usage.get("total") or 0)
     final_state = view.final_state
     if not final_state:
         final_state = {
@@ -325,6 +364,9 @@ def _run_turn(session_id: str, query: str) -> None:
         final_state,
         original_query=query,
         resolved_query=standalone if standalone != query else None,
+        latency_ms=elapsed_ms,
+        total_tokens=total_tokens,
+        model=settings.deepseek_model,
     )
     st.rerun()
 

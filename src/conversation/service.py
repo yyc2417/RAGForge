@@ -48,11 +48,24 @@ class ConversationService:
         *,
         original_query: str | None = None,
         resolved_query: str | None = None,
+        latency_ms: float | None = None,
+        total_tokens: int | None = None,
+        model: str | None = None,
     ) -> SessionMessage:
         """把图最终状态写入 assistant 消息（回答 / 澄清）。"""
         clarification = str(final_state.get("clarification_question") or "").strip()
         message_type = "clarify" if clarification else "answer"
         content = clarification or str(final_state.get("answer") or "").strip() or "（无回答）"
+        metrics: dict[str, Any] = {
+            "iteration_count": int(final_state.get("iteration_count") or 0),
+            "verify_failures": int(final_state.get("verify_failures") or 0),
+            "is_faithful": final_state.get("is_faithful"),
+            "model": model or settings.deepseek_model,
+        }
+        if latency_ms is not None:
+            metrics["latency_ms"] = round(float(latency_ms), 1)
+        if total_tokens is not None:
+            metrics["total_tokens"] = int(total_tokens)
         message = SessionMessage(
             id=new_id(),
             role="assistant",
@@ -62,11 +75,7 @@ class ConversationService:
             resolved_query=resolved_query,
             sources=self.extract_sources(final_state),
             trace=list(final_state.get("messages") or []),
-            metrics={
-                "iteration_count": int(final_state.get("iteration_count") or 0),
-                "verify_failures": int(final_state.get("verify_failures") or 0),
-                "is_faithful": final_state.get("is_faithful"),
-            },
+            metrics=metrics,
         )
         self.store.append_message(session_id, message)
         return message

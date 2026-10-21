@@ -128,9 +128,15 @@ def test_record_assistant_state_and_sources(tmp_path):
             "is_faithful": True,
         },
         resolved_query="Docker 多阶段构建怎么写？",
+        latency_ms=1234.5,
+        total_tokens=567,
+        model="test-model",
     )
     assert message.message_type == "answer"
     assert message.resolved_query == "Docker 多阶段构建怎么写？"
+    assert message.metrics["latency_ms"] == 1234.5
+    assert message.metrics["total_tokens"] == 567
+    assert message.metrics["model"] == "test-model"
     assert message.sources[0]["source"] == "docker.md"
     assert message.sources[0]["page_number"] == 3
     assert len(message.sources[0]["content"]) == 500

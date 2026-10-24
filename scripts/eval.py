@@ -11,10 +11,13 @@
 数据集分层（对齐业界惯例：RAGAS 题型分布 / SQuAD 式 is_impossible）：
 - 可答题（answerable=true 且有 expected_source(s)）：chunk 级召回判定
   （来源匹配；配置了 gold_keywords 时再叠加关键词条件）→ Recall@5 + MRR@5；
-  生成层判忠实度；有 reference_answer 时附加词面 token F1（v2）
+  生成层判忠实度；有 reference_answer 时附加词面 token F1；
+  可选 --semantic-judge 做「正确 / 部分正确 / 错误 / 未回答」语义判分
 - 不可答题（answerable=false，语料外问题）：LLM 裁决「诚实拒答 / 编造 /
   其他」→ 拒答准确率 + 编造率——幻觉率在这里才有真实含义
 - chitchat：不计召回与忠实度统计
+- clarify：终止分支返回空 answer，不进入召回/忠实度分母，单列 clarify_rate
+- generation_failed / 空回答：不进入忠实度/F1/语义判分分母，分别单列计数
 
 数据集支持 v1 列表与 v2 schema（`expected_sources` / `reference_answer` /
 `expected_behavior`），可用 `--dataset` / `--corpus-dir` 指向 CRUD-RAG 或多格式集。
@@ -34,6 +37,7 @@
 """
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -55,7 +59,11 @@ from src.config import PROJECT_ROOT as CFG_ROOT  # noqa: E402
 from src.config import settings  # noqa: E402
 from src.generation.llm_client import LLMClient  # noqa: E402
 from src.generation.prompts import PromptManager  # noqa: E402
-from src.generation.schemas import RefusalJudgeResult, VerifyResult  # noqa: E402
+from src.generation.schemas import (  # noqa: E402
+    AnswerJudgeResult,
+    RefusalJudgeResult,
+    VerifyResult,
+)
 from src.ingestion import DocumentParser, EmbeddingService, TextChunker  # noqa: E402
 from src.retrieval import BM25Retriever, HybridRetriever, Reranker, VectorStore  # noqa: E402
 from src.utils.logger import logger  # noqa: E402
@@ -171,6 +179,11 @@ def _chunk_hit_rank(docs: list, expected_sources: list[str] | str, gold_keywords
     return 0
 
 
+def _dataset_fingerprint(path: Path | str) -> str:
+    """数据集文件指纹：标注或题面调整后，报告能与具体数据集版本对应。"""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
+
+
 def _run_metadata() -> dict:
     """报告元数据：区分本地 / 云端模型与 embedding 配置。"""
     return {
@@ -184,6 +197,189 @@ def _run_metadata() -> dict:
             "device": settings.embedding_device,
         },
         "judge": {"model": settings.deepseek_model},
+    }
+
+
+def _summarize_results(results: list[dict]) -> dict:
+    """按题型与作答状态分层汇总，避免 clarify/降级污染召回与忠实度分母。
+
+    - 检索指标分母：可答题中实际发生检索的样本（排除 clarify）；
+    - 生成指标分母：实际作答样本（排除 clarify / 生成降级 / 空回答）；
+    - clarify、降级、空回答单独计数，不进入召回/忠实度/F1/语义判分。
+    """
+    valid = [r for r in results if not r.get("error")]
+    expected_clarify = [
+        r for r in valid if r.get("expected_behavior") == "clarify"
+    ]
+    # v1 数据集没有 expected_behavior：有 expected_sources 即视为 answer
+    expected_answer = [
+        r
+        for r in valid
+        if r.get("expected_behavior") != "clarify"
+        and r.get("expected_sources")
+        and r.get("expected_behavior") not in ("refuse", "chitchat")
+    ]
+    retrieval_subset = [
+        r for r in expected_answer if not r.get("clarified")
+    ]
+    answered = [
+        r
+        for r in retrieval_subset
+        if not r.get("generation_failed") and not r.get("empty_answer")
+    ]
+    unanswerable = [
+        r
+        for r in valid
+        if not r.get("expected_sources")
+        and r.get("query_type") != "chitchat"
+        and r.get("expected_behavior") not in ("clarify", "chitchat")
+        and not r.get("clarified")
+        and not r.get("generation_failed")
+    ]
+
+    hits = sum(1 for r in retrieval_subset if r.get("chunk_rank", 0) > 0)
+    recall = hits / len(retrieval_subset) if retrieval_subset else None
+    mrr = (
+        sum(
+            1.0 / r["chunk_rank"]
+            for r in retrieval_subset
+            if r.get("chunk_rank", 0) > 0
+        )
+        / len(retrieval_subset)
+        if retrieval_subset
+        else None
+    )
+
+    verified = [r for r in answered if r.get("is_faithful") is not None]
+    faithful = sum(1 for r in verified if r["is_faithful"] is True)
+    faith_rate = faithful / len(verified) if verified else None
+
+    refusals = sum(1 for r in unanswerable if r.get("refusal_verdict") == "refused")
+    fabrications = sum(
+        1 for r in unanswerable if r.get("refusal_verdict") == "fabricated"
+    )
+    refusal_accuracy = refusals / len(unanswerable) if unanswerable else None
+    fabrication_rate = fabrications / len(unanswerable) if unanswerable else None
+
+    f1_values = [r["answer_f1"] for r in answered if r.get("answer_f1") is not None]
+    verdict_counts = Counter(
+        str(r["answer_verdict"]) for r in answered if r.get("answer_verdict")
+    )
+    judged = sum(verdict_counts.values())
+    clarified_count = sum(1 for r in valid if r.get("clarified"))
+    expected_clarify_count = len(expected_clarify)
+    clarify_true_positive = sum(
+        1
+        for r in expected_clarify
+        if r.get("clarified")
+        and r.get("clarification_keyword_ok") is not False
+    )
+    over_clarification_count = sum(
+        1 for r in expected_answer if r.get("clarified")
+    )
+    keyword_checked = [
+        r
+        for r in expected_clarify
+        if r.get("clarified")
+        and r.get("clarification_keyword_ok") is not None
+    ]
+
+    return {
+        "samples": len(results),
+        "errors": sum(1 for r in results if r.get("error")),
+        "unverified": sum(1 for r in answered if r.get("is_faithful") is None),
+        "answerable_count": len(expected_answer),
+        "unanswerable_count": len(unanswerable),
+        "retrieval_evaluable_count": len(retrieval_subset),
+        "answered_count": len(answered),
+        "answer_rate": (
+            round(len(answered) / len(expected_answer), 4)
+            if expected_answer
+            else None
+        ),
+        "clarified_count": clarified_count,
+        "clarify_rate": (
+            round(clarified_count / len(valid), 4) if valid else None
+        ),
+        "expected_clarify_count": expected_clarify_count,
+        "clarify_accuracy": (
+            round(clarify_true_positive / expected_clarify_count, 4)
+            if expected_clarify_count
+            else None
+        ),
+        "over_clarification_count": over_clarification_count,
+        "over_clarification_rate": (
+            round(over_clarification_count / len(expected_answer), 4)
+            if expected_answer
+            else None
+        ),
+        "under_clarification_count": (
+            expected_clarify_count - clarify_true_positive
+        ),
+        "under_clarification_rate": (
+            round(
+                (expected_clarify_count - clarify_true_positive)
+                / expected_clarify_count,
+                4,
+            )
+            if expected_clarify_count
+            else None
+        ),
+        "clarification_keyword_hit_rate": (
+            round(
+                sum(
+                    1
+                    for r in keyword_checked
+                    if r.get("clarification_keyword_ok") is True
+                )
+                / len(keyword_checked),
+                4,
+            )
+            if keyword_checked
+            else None
+        ),
+        "degraded_count": sum(1 for r in valid if r.get("generation_failed")),
+        # clarify 的空回答归 clarify，降级归 degraded，这里只统计真正的空作答
+        "empty_answer_count": sum(
+            1
+            for r in valid
+            if r.get("empty_answer")
+            and not r.get("clarified")
+            and not r.get("generation_failed")
+        ),
+        "recall_top5": round(recall, 4) if recall is not None else None,
+        "mrr_at5": round(mrr, 4) if mrr is not None else None,
+        "hallucination_rate": (
+            round(1.0 - faith_rate, 4) if faith_rate is not None else None
+        ),
+        "faithfulness_rate": (
+            round(faith_rate, 4) if faith_rate is not None else None
+        ),
+        "answer_f1": (
+            round(sum(f1_values) / len(f1_values), 4) if f1_values else None
+        ),
+        "answer_f1_samples": len(f1_values),
+        "semantic_accuracy": (
+            round(verdict_counts["correct"] / judged, 4) if judged else None
+        ),
+        "semantic_partial_rate": (
+            round(verdict_counts["partial"] / judged, 4) if judged else None
+        ),
+        "semantic_wrong_rate": (
+            round(verdict_counts["wrong"] / judged, 4) if judged else None
+        ),
+        "semantic_unanswered_rate": (
+            round(verdict_counts["unanswered"] / judged, 4) if judged else None
+        ),
+        "semantic_judged": judged,
+        "semantic_counts": dict(verdict_counts),
+        "refusal_accuracy": (
+            round(refusal_accuracy, 4) if refusal_accuracy is not None else None
+        ),
+        "fabrication_rate": (
+            round(fabrication_rate, 4) if fabrication_rate is not None else None
+        ),
+        "details": results,
     }
 
 
@@ -216,6 +412,9 @@ class Evaluator:
         dataset_path: Path | str = DATASET_PATH,
         rebuild: bool = False,
         corpus_dir: Path | str | None = None,
+        *,
+        semantic_judge: bool = False,
+        judge_limit: int | None = None,
     ) -> None:
         self.dataset = self._load_dataset(dataset_path)
         self._chunks, self._vector_store, self._bm25 = _build_base_artifacts(
@@ -223,6 +422,10 @@ class Evaluator:
         )
         self._llm: LLMClient | None = None
         self._reranker = Reranker()  # 单例，不可用时自动降级
+        # 语义判分默认关闭：本地 35B / 云端 20rpm 下逐题判分代价明显
+        self.semantic_judge = semantic_judge
+        self.judge_limit = judge_limit
+        self._judge_calls = 0
         # 缓存各模式的执行管道
         self._pipelines: dict[str, object] = {}
 
@@ -278,11 +481,14 @@ class Evaluator:
         """统一忠实度裁决（所有模式共用同一口径）。
 
         优先 LLM 判定（与 verify 节点同款 prompt）；失败回退关键词粗判并标记
-        来源，不再默认 True（避免幻觉被系统性美化）。
+        来源，不再默认 True（避免幻觉被系统性美化）。空回答不送判，避免
+        “没有事实声明”被误判为忠实。
 
         Returns:
-            (is_faithful, source)：source ∈ {"llm_judge", "keyword"}
+            (is_faithful, source)：source ∈ {"llm_judge", "keyword", "empty_answer"}
         """
+        if not str(answer).strip():
+            return None, "empty_answer"
         try:
             llm = self._ensure_llm()
             context = (
@@ -297,14 +503,43 @@ class Evaluator:
             logger.warning(f"[eval] LLM 忠实度裁决失败，回退关键词粗判：{e}")
             return self._keyword_check(answer, keywords), "keyword"
 
+    def _judge_answer(
+        self,
+        query: str,
+        answer: str,
+        reference_answer: str | None,
+        gold_keywords: list[str],
+    ) -> tuple[str | None, str | None, str]:
+        """LLM 语义判分：正确 / 部分正确 / 错误 / 未回答。
+
+        Returns:
+            (verdict, reason, source)：source ∈ {"llm_judge", "failed"}
+        """
+        try:
+            llm = self._ensure_llm()
+            result: AnswerJudgeResult = llm.invoke_structured(
+                PromptManager.ANSWER_JUDGE_PROMPT,
+                AnswerJudgeResult,
+                query=query,
+                reference=reference_answer or "（无参考答案）",
+                keywords="、".join(gold_keywords) if gold_keywords else "（无）",
+                answer=answer,
+            )
+            return result.verdict, result.reason, "llm_judge"
+        except Exception as e:  # noqa: BLE001 - 判分失败不臆断，保留为 None
+            logger.warning(f"[eval] LLM 语义判分失败，跳过该样本：{e}")
+            return None, None, "failed"
+
     def _run_single(self, mode: str, item: dict) -> dict:
         """对单个 QA 项执行指定模式，返回结果字典（按题型分层判定）。"""
         query = item["query"]
         expected_sources = _expected_sources(item)
+        expected_behavior = item.get("expected_behavior")
         answerable = item.get("answerable", bool(expected_sources))
-        is_chitchat = item.get("query_type") == "chitchat"
+        is_chitchat = item.get("query_type") == "chitchat" or expected_behavior == "chitchat"
         gold_keywords = item.get("gold_keywords", item.get("expected_answer_keywords", []))
         reference_answer = item.get("reference_answer")
+        clarification_keywords = item.get("clarification_keywords", [])
 
         t0 = time.perf_counter()
         retrieved_sources: list[str] = []
@@ -314,6 +549,11 @@ class Evaluator:
         refusal_verdict: str | None = None
         chunk_rank = 0
         error: str | None = None
+        clarified = False
+        clarification_question: str | None = None
+        clarification_keyword_ok: bool | None = None
+        generation_failed = False
+        generation_error: str | None = None
 
         try:
             if mode in ("baseline", "linear_hybrid"):
@@ -323,7 +563,7 @@ class Evaluator:
                     _source_filename(getattr(d, "metadata", {}).get("source", ""))
                     for d in docs
                 ]
-                answer_text = llm.generate(query, docs)
+                answer_text = str(llm.generate(query, docs) or "")
                 verify_result: bool | None = None
             else:
                 graph = self._get_pipeline(mode)
@@ -332,15 +572,47 @@ class Evaluator:
                     config={"recursion_limit": 50},
                 )
                 retrieved_sources = _doc_sources(final_state)
-                answer_text = final_state.get("answer", "")
+                raw_answer = final_state.get("answer", "")
+                answer_text = str(raw_answer or "")
                 docs = final_state.get("documents", []) or []
                 verify_result = final_state.get("is_faithful")
+                clarification_question = (
+                    str(final_state.get("clarification_question") or "").strip() or None
+                )
+                clarified = bool(clarification_question)
+                generation_failed = bool(final_state.get("generation_failed", False))
+                raw_error = final_state.get("generation_error")
+                generation_error = str(raw_error) if raw_error else None
+
+            if clarified and clarification_keywords:
+                clarification_keyword_ok = any(
+                    keyword in (clarification_question or "")
+                    for keyword in clarification_keywords
+                )
+
+            empty_answer = not answer_text.strip()
+            answered = bool(
+                expected_sources
+                and expected_behavior != "clarify"
+                and not clarified
+                and not generation_failed
+                and not empty_answer
+            )
 
             # ── 按题型分层判定 ──
-            if expected_sources:
+            if expected_behavior == "clarify":
+                # 期望澄清：不计算召回/忠实度；实际澄清时检查问题关键词
+                faith_source = "clarify_expected"
+            elif expected_sources:
                 # 可答题：chunk 级召回 + 忠实度
                 chunk_rank = _chunk_hit_rank(docs, expected_sources, gold_keywords)
-                if mode != "baseline" and verify_result is not None:
+                if clarified:
+                    faith_source = "clarified"
+                elif generation_failed:
+                    faith_source = "generation_failed"
+                elif empty_answer:
+                    faith_source = "empty_answer"
+                elif mode != "baseline" and verify_result is not None:
                     is_faithful, faith_source = verify_result, "llm_verify"
                 else:
                     # baseline 无 verify 节点 / agent verify 失败：统一裁决器兜底
@@ -349,36 +621,78 @@ class Evaluator:
                     )
             elif is_chitchat:
                 faith_source = "n/a"  # 寒暄不计忠实度统计
+            elif clarified or generation_failed or expected_behavior == "clarify":
+                refusal_verdict = None
+            elif not answer_text.strip():
+                refusal_verdict = "other"
             else:
                 # 不可答题（语料外问题）：拒答行为裁决
                 refusal_verdict = self._judge_refusal(query, answer_text)
+
+            answer_f1_score = (
+                _answer_f1(answer_text, reference_answer)
+                if answered and reference_answer
+                else None
+            )
+
+            answer_verdict: str | None = None
+            answer_judge_reason: str | None = None
+            answer_judge_source = "not_applicable"
+            if answered:
+                if not self.semantic_judge:
+                    answer_judge_source = "disabled"
+                elif not (reference_answer or gold_keywords):
+                    answer_judge_source = "no_reference"
+                elif self.judge_limit and self._judge_calls >= self.judge_limit:
+                    answer_judge_source = "limit"
+                else:
+                    self._judge_calls += 1
+                    (
+                        answer_verdict,
+                        answer_judge_reason,
+                        answer_judge_source,
+                    ) = self._judge_answer(
+                        query, answer_text, reference_answer, gold_keywords
+                    )
         except Exception as e:  # noqa: BLE001 - 失败样本单独归类，不污染指标
             logger.error(f"[eval] {mode} 执行失败 query='{query}': {e}")
             error = str(e)
             answer_text = f"[ERROR] {e}"
+            empty_answer = False
+            answered = False
+            answer_f1_score = None
+            answer_verdict = None
+            answer_judge_reason = None
+            answer_judge_source = "not_applicable"
 
         e2e_ms = (time.perf_counter() - t0) * 1000
         # 统一记录 e2e 延迟（仅成功样本，失败样本不污染分位统计）
         if error is None:
             get_current_collector().record_e2e_latency(e2e_ms)
 
-        answer_f1_score = (
-            _answer_f1(answer_text, reference_answer)
-            if expected_sources and reference_answer
-            else None
-        )
         return {
             "query": query,
             "query_type": item.get("query_type", "factual"),
+            "expected_behavior": expected_behavior,
             "answerable": answerable,
             "expected_source": expected_sources[0] if expected_sources else None,
             "expected_sources": expected_sources,
             "retrieved_sources": retrieved_sources,
             "chunk_rank": chunk_rank,
             "hit": chunk_rank > 0,
+            "clarified": clarified,
+            "clarification_question": clarification_question,
+            "clarification_keyword_ok": clarification_keyword_ok,
+            "generation_failed": generation_failed,
+            "generation_error": generation_error,
+            "empty_answer": empty_answer,
+            "answered": answered,
             "answer": answer_text,
             "reference_answer": reference_answer,
             "answer_f1": answer_f1_score,
+            "answer_verdict": answer_verdict,
+            "answer_judge_reason": answer_judge_reason,
+            "answer_judge_source": answer_judge_source,
             "is_faithful": is_faithful,
             "faithfulness_source": faith_source,
             "refusal_verdict": refusal_verdict,
@@ -389,6 +703,8 @@ class Evaluator:
     @staticmethod
     def _keyword_check(answer: str, keywords: list[str]) -> bool:
         """关键词命中检查（LLM 裁决失败时的粗判 fallback，口径宽松）。"""
+        if not str(answer).strip():
+            return False
         if not keywords:
             return True
         return any(kw in answer for kw in keywords)
@@ -398,6 +714,8 @@ class Evaluator:
 
         幻觉率的真战场：语料外问题若被强行作答（编造具体事实）即计为编造。
         """
+        if not str(answer).strip():
+            return "other"
         try:
             llm = self._ensure_llm()
             result: RefusalJudgeResult = llm.invoke_structured(
@@ -415,6 +733,7 @@ class Evaluator:
         # 评估为单线程进程，直接使用进程级默认收集器
         metrics = get_current_collector()
         metrics.reset()
+        self._judge_calls = 0
 
         results = []
         for i, item in enumerate(self.dataset, 1):
@@ -423,58 +742,27 @@ class Evaluator:
             results.append(r)
             if r["error"]:
                 status = "E"
+            elif r["clarified"]:
+                status = "C"
+            elif r["generation_failed"]:
+                status = "D"
+            elif r["empty_answer"]:
+                status = "_"
             elif r["hit"] or not r["expected_sources"]:
                 status = "+"
             else:
                 status = "-"
             console.print(f"{status} {r['e2e_ms']:.0f}ms")
 
-        # ── 汇总：按题型分层统计，失败/未验证样本单独归类不进分母 ──
-        valid = [r for r in results if not r.get("error")]
-        answerable = [r for r in valid if r["expected_sources"]]
-        unanswerable = [
-            r for r in valid
-            if not r["expected_sources"] and r["query_type"] != "chitchat"
-        ]
-        # 检索层：chunk 级召回 + MRR（排名质量，能区分检索策略的价值）
-        hits = sum(1 for r in answerable if r["chunk_rank"] > 0)
-        recall = hits / len(answerable) if answerable else 0.0
-        mrr = (
-            sum(1.0 / r["chunk_rank"] for r in answerable if r["chunk_rank"] > 0)
-            / len(answerable)
-        ) if answerable else 0.0
-        # 生成层：可答题忠实度
-        verified = [r for r in answerable if r["is_faithful"] is not None]
-        faithful = sum(1 for r in verified if r["is_faithful"] is True)
-        faith_rate = faithful / len(verified) if verified else 0.0
-        # 不可答题：拒答行为
-        refusals = sum(1 for r in unanswerable if r.get("refusal_verdict") == "refused")
-        fabrications = sum(
-            1 for r in unanswerable if r.get("refusal_verdict") == "fabricated"
-        )
-        refusal_accuracy = refusals / len(unanswerable) if unanswerable else 0.0
-        fabrication_rate = fabrications / len(unanswerable) if unanswerable else 0.0
-        f1_values = [r["answer_f1"] for r in answerable if r["answer_f1"] is not None]
+        result_summary = _summarize_results(results)
 
-        summary = metrics.get_summary()
-        e2e = summary.get("e2e_latency_ms", {})
-        token = summary.get("token_usage", {})
+        collector_summary = metrics.get_summary()
+        e2e = collector_summary.get("e2e_latency_ms", {})
+        token = collector_summary.get("token_usage", {})
 
         return {
             "mode": mode,
-            "samples": len(results),
-            "errors": sum(1 for r in results if r.get("error")),
-            "unverified": sum(1 for r in answerable if r["is_faithful"] is None),
-            "answerable_count": len(answerable),
-            "unanswerable_count": len(unanswerable),
-            "recall_top5": round(recall, 4),
-            "mrr_at5": round(mrr, 4),
-            "hallucination_rate": round(1.0 - faith_rate, 4),
-            "faithfulness_rate": round(faith_rate, 4),
-            "answer_f1": round(sum(f1_values) / len(f1_values), 4) if f1_values else None,
-            "answer_f1_samples": len(f1_values),
-            "refusal_accuracy": round(refusal_accuracy, 4),
-            "fabrication_rate": round(fabrication_rate, 4),
+            **result_summary,
             "latency_p50_ms": e2e.get("p50", 0.0),
             "latency_max_ms": e2e.get("max", 0.0),
             # P95/P99 保留在 JSON 中；45 题规模下 P99 近似最大值，主表改用 P50 + max
@@ -482,7 +770,6 @@ class Evaluator:
             "latency_p99_ms": e2e.get("p99", 0.0),
             "avg_token": round(token.get("avg_per_call", 0.0)) if token else 0,
             "total_token": token.get("total", 0) if token else 0,
-            "details": results,
         }
 
     def run_all(self) -> dict:
@@ -520,51 +807,86 @@ class Evaluator:
         table.add_column("Recall@5", justify="right")
         table.add_column("MRR@5", justify="right")
         table.add_column("Ans F1", justify="right")
+        table.add_column("语义正确率", justify="right")
         table.add_column("幻觉率(可答)", justify="right")
         table.add_column("拒答准确率", justify="right")
         table.add_column("P50 延迟(ms)", justify="right")
         table.add_column("Max 延迟(ms)", justify="right")
         table.add_column("平均 Token", justify="right")
-        table.add_column("错误/未验证", justify="right")
+        table.add_column("错误/未验/澄清/降级", justify="right")
         table.add_column("达标", justify="center")
 
         for m in report["modes"]:
-            recall_ok = m["recall_top5"] >= targets["recall_top5"]
-            mrr_ok = m["mrr_at5"] >= targets["mrr_at5"]
-            halluc_ok = m["hallucination_rate"] <= targets["hallucination_rate"]
-            refusal_ok = m["refusal_accuracy"] >= targets["refusal_accuracy"]
-            token_ok = 0 < m["avg_token"] <= targets["avg_token"]
+            recall_ok = (
+                m.get("recall_top5") is None
+                or m["recall_top5"] >= targets["recall_top5"]
+            )
+            mrr_ok = (
+                m.get("mrr_at5") is None or m["mrr_at5"] >= targets["mrr_at5"]
+            )
+            halluc_ok = (
+                m.get("hallucination_rate") is None
+                or m["hallucination_rate"] <= targets["hallucination_rate"]
+            )
+            refusal_ok = (
+                m.get("refusal_accuracy") is None
+                or m["refusal_accuracy"] >= targets["refusal_accuracy"]
+            )
+            avg_token = m.get("avg_token")
+            token_ok = (
+                avg_token is None or 0 < avg_token <= targets["avg_token"]
+            )
             all_ok = recall_ok and mrr_ok and halluc_ok and refusal_ok and token_ok
+            semantic = m.get("semantic_accuracy")
 
             table.add_row(
                 m["mode"],
-                self._fmt(m["recall_top5"], recall_ok, percent=True),
-                self._fmt(m["mrr_at5"], mrr_ok, percent=True),
+                self._fmt(m.get("recall_top5"), recall_ok, percent=True),
+                self._fmt(m.get("mrr_at5"), mrr_ok, percent=True),
                 (
                     f'{m["answer_f1"] * 100:.1f}%'
                     if m.get("answer_f1") is not None
                     else "—"
                 ),
-                self._fmt(m["hallucination_rate"], halluc_ok, percent=True),
-                self._fmt(m["refusal_accuracy"], refusal_ok, percent=True),
+                f"{semantic * 100:.1f}%" if semantic is not None else "—",
+                self._fmt(m.get("hallucination_rate"), halluc_ok, percent=True),
+                self._fmt(m.get("refusal_accuracy"), refusal_ok, percent=True),
                 f'{m.get("latency_p50_ms", 0.0):.0f}',
                 f'{m.get("latency_max_ms", 0.0):.0f}',
-                self._fmt(m["avg_token"], token_ok),
-                f"{m.get('errors', 0)}/{m.get('unverified', 0)}",
+                self._fmt(avg_token, token_ok),
+                f"{m.get('errors', 0)}/{m.get('unverified', 0)}/"
+                f"{m.get('clarified_count', 0)}/{m.get('degraded_count', 0)}",
                 "[green]V[/green]" if all_ok else "[yellow]~[/yellow]",
             )
 
         console.print(table)
+        clarify_modes = [
+            m for m in report["modes"] if m.get("expected_clarify_count")
+        ]
+        if clarify_modes:
+            parts = [
+                (
+                    f"{m['mode']}：准确率 {self._pct(m.get('clarify_accuracy'))}，"
+                    f"过度 {self._pct(m.get('over_clarification_rate'))}，"
+                    f"未澄清 {self._pct(m.get('under_clarification_rate'))}，"
+                    f"关键词 {self._pct(m.get('clarification_keyword_hit_rate'))}"
+                )
+                for m in clarify_modes
+            ]
+            console.print("[dim]clarify 行为：" + " | ".join(parts) + "[/dim]")
         console.print(
             "[dim]图例：V 质量指标全达标 | ~ 部分达标；延迟为 P50 + max 观测值，"
-            "样本小不参与达标判定；幻觉率=可答题不忠实占比，"
-            "拒答准确率=不可答题诚实拒答占比，编造率见 JSON 报告[/dim]"
+            "样本小不参与达标判定；召回只在发生检索的可答题上统计，"
+            "忠实度/F1/语义判分只在实际作答样本上统计；"
+            "错误/未验/澄清/降级四栏单列，编造率与语义分布见 JSON 报告；"
+            "clarify 准确率=期望澄清且实际澄清（含关键词命中）/期望澄清，"
+            "过度澄清率=期望答题却澄清/期望答题[/dim]"
         )
 
     @staticmethod
-    def _fmt(value: float, ok: bool, percent: bool = False) -> str:
+    def _fmt(value: float | None, ok: bool, percent: bool = False) -> str:
         """格式化数值，达标绿色、未达标蓝色；无数据显示 —。"""
-        if value == 0:
+        if value is None:
             text = "—"
         elif percent:
             text = f"{value * 100:.1f}%"
@@ -572,6 +894,11 @@ class Evaluator:
             text = f"{value:.0f}"
         color = "green" if ok else "blue"
         return f"[{color}]{text}[/{color}]"
+
+    @staticmethod
+    def _pct(value: float | None) -> str:
+        """百分比展示；无期望样本时显示 —。"""
+        return f"{value * 100:.1f}%" if value is not None else "—"
 
     def save_report(self, report: dict, path: Path | str = REPORT_PATH) -> Path:
         """保存完整报告为 JSON。"""
@@ -673,6 +1000,8 @@ def main() -> None:
         uv run python scripts/eval.py --resume           # 增量补跑
         uv run python scripts/eval.py --rebuild          # 清库重建后评估
         uv run python scripts/eval.py --retrieval-only   # 离线检索评估（免 API）
+        uv run python scripts/eval.py --clarify off      # 关闭 clarify 的对照跑
+        uv run python scripts/eval.py --semantic-judge --judge-limit 20
         uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
             --corpus-dir data/demo --retrieval-only --skip-reranker
     """
@@ -698,9 +1027,27 @@ def main() -> None:
                         help="只评估各检索策略的召回率，不调用 LLM（免 API key）")
     parser.add_argument("--skip-reranker", action="store_true",
                         help="检索层评估跳过 CrossEncoder 重排")
+    parser.add_argument(
+        "--clarify", choices=["on", "off"], default=None,
+        help="覆盖 clarify_enabled，用于开启/关闭 clarify 的对照评测",
+    )
+    parser.add_argument(
+        "--semantic-judge", action="store_true",
+        help="对实际作答样本调用 LLM 做语义判分（正确/部分/错误/未答）",
+    )
+    parser.add_argument(
+        "--judge-limit", type=int, default=0,
+        help="每个模式最多判分多少条（0=不限；与 --semantic-judge 联用）",
+    )
     args = parser.parse_args()
     if args.force and not args.mode:
         parser.error("--force 需要同时指定 --mode")
+    if args.judge_limit and not args.semantic_judge:
+        parser.error("--judge-limit 需要同时指定 --semantic-judge")
+    if args.retrieval_only and (args.semantic_judge or args.judge_limit):
+        parser.error("--semantic-judge / --judge-limit 仅用于完整评估")
+    if args.clarify is not None:
+        settings.clarify_enabled = args.clarify == "on"
 
     # 统一评估口径：检索数量对齐 recall_top5 指标
     if settings.retrieval_k < EVAL_K:
@@ -711,6 +1058,15 @@ def main() -> None:
 
     console.rule("[bold]RAGForge 自动化评估[/bold]")
     console.print(f"数据集：{args.dataset}")
+    console.print(
+        f"clarify：{'开启' if settings.clarify_enabled else '关闭'} · "
+        f"语义判分：{'开启' if args.semantic_judge else '关闭'}"
+        + (
+            f"（每模式上限 {args.judge_limit} 条）"
+            if args.semantic_judge and args.judge_limit
+            else ""
+        )
+    )
     if args.corpus_dir:
         console.print(f"语料：{args.corpus_dir}")
 
@@ -728,6 +1084,8 @@ def main() -> None:
         dataset_path=args.dataset,
         rebuild=args.rebuild,
         corpus_dir=args.corpus_dir,
+        semantic_judge=args.semantic_judge,
+        judge_limit=args.judge_limit or None,
     )
     if args.limit:
         evaluator.dataset = evaluator.dataset[: args.limit]
@@ -770,6 +1128,12 @@ def main() -> None:
     for mode in modes_to_run:
         new_results.append(evaluator.evaluate_mode(mode))
 
+    run_config = {
+        "clarify_enabled": settings.clarify_enabled,
+        "semantic_judge": args.semantic_judge,
+        "judge_limit": args.judge_limit or None,
+    }
+
     # 合并报告（增量模式下保留已有结果）
     if existing_report:
         # 按 MODES 顺序合并：已有的 + 新跑的
@@ -784,14 +1148,22 @@ def main() -> None:
         report = {
             "modes": merged_modes,
             "targets": Evaluator._targets(),
+            "dataset": str(args.dataset),
+            "dataset_hash": _dataset_fingerprint(args.dataset),
+            "corpus_dir": str(args.corpus_dir) if args.corpus_dir else None,
             "index": _index_fingerprint(evaluator._chunks, evaluator._vector_store),
+            "run_config": run_config,
             **_run_metadata(),
         }
     else:
         report = {
             "modes": new_results,
             "targets": Evaluator._targets(),
+            "dataset": str(args.dataset),
+            "dataset_hash": _dataset_fingerprint(args.dataset),
+            "corpus_dir": str(args.corpus_dir) if args.corpus_dir else None,
             "index": _index_fingerprint(evaluator._chunks, evaluator._vector_store),
+            "run_config": run_config,
             **_run_metadata(),
         }
 
@@ -799,10 +1171,15 @@ def main() -> None:
     evaluator.save_report(report, args.report)
 
     # 摘要
-    best_recall = max(report["modes"], key=lambda m: m["recall_top5"])
+    best_recall = max(
+        report["modes"], key=lambda m: m.get("recall_top5") or 0
+    )
+    recall_value = best_recall.get("recall_top5")
     console.print(
         f"\n[bold]最佳召回率：{best_recall['mode']} "
-        f"({best_recall['recall_top5'] * 100:.1f}%)[/bold]"
+        f"({recall_value * 100:.1f}%)[/bold]"
+        if recall_value is not None
+        else "\n[bold]无可评估的召回样本[/bold]"
     )
 
 

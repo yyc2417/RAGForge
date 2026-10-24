@@ -57,11 +57,15 @@ def route_after_decide(state: AgentState) -> str:
 
 
 def route_after_generate(state: AgentState) -> str:
-    """generate 后：strategy=none（chitchat）跳过 verify 直接结束。
+    """generate 后：chitchat 或生成降级跳过 verify 直接结束。
 
-    chitchat 无检索文档，verify 会因为“无文档支撑”误判为幻觉，
-    因此 strategy=none 时直接结束，不走 verify。
+    chitchat 无检索文档，verify 会因为“无文档支撑”误判为幻觉；
+    生成降级时答案只是兜底文案，送 verify 只会产生误导性的忠实度结论。
+    两种情况都直接结束，不走 verify。
     """
+    if state.get("generation_failed"):
+        logger.warning("[route] generate 降级，跳过 verify 直接结束")
+        return "end"
     if state.get("retrieval_strategy") == "none":
         logger.info("[route] strategy=none，跳过 verify 直接结束")
         return "end"

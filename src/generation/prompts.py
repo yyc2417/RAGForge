@@ -144,6 +144,30 @@ proceed 或 reformulate。
 请输出 is_faithful 和 reason。"""
     )
 
+    # 评估脚本专用：可答题答案语义判分
+    ANSWER_JUDGE_PROMPT = ChatPromptTemplate.from_template(
+        """你是一个 RAG 系统评估员。请判断系统回答相对于参考答案/关键事实是否正确。
+
+用户查询：{query}
+
+参考答案：{reference}
+关键事实：{keywords}
+
+系统回答：
+{answer}
+
+判定标准（四选一）：
+- correct：核心事实与参考答案/关键事实一致；表达方式不同、信息更详细不扣分
+- partial：部分正确，但缺少关键事实，或包含不影响核心结论的小错误
+- wrong：与参考答案矛盾、答非所问，或包含会改变结论的错误事实
+- unanswered：回答为空、明确拒答，或仅复述问题而没有给出答案
+
+注意：
+- 不要根据回答长度或文风评分，只看事实是否正确；
+- 回答中包含正确答案但同时有明显编造内容时，判 partial 或 wrong；
+- 只输出 verdict 和 reason。"""
+    )
+
     # 评估脚本专用：不可答题（语料外问题）行为裁决
     UNANSWERABLE_JUDGE_PROMPT = ChatPromptTemplate.from_template(
         """你是一个 RAG 系统评估员。知识库中没有足以回答下面这个问题的内容，

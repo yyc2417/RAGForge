@@ -160,6 +160,26 @@ def test_answer_falls_back_to_final_state():
     assert view.answer == "最终答案"
 
 
+def test_generation_failure_is_visible_in_summary():
+    view = EventView()
+    view.consume(chain_end("generate", {
+        "answer": "抱歉，回答生成过程中出现问题。",
+        "generation_failed": True,
+        "generation_error": "RuntimeError: LLM 宕机",
+    }))
+    assert view.diagnostic["generation_failed"] is True
+    assert "LLM 宕机" in view.diagnostic["generation_error"]
+    view.consume(chain_end("LangGraph", {
+        "answer": "抱歉，回答生成过程中出现问题。",
+        "generation_failed": True,
+        "generation_error": "RuntimeError: LLM 宕机",
+    }))
+    summary = view.summary()
+    assert summary["generation_failed"] is True
+    assert summary["generation_error"] == "RuntimeError: LLM 宕机"
+    assert "生成降级" in html_view.render_summary(view)
+
+
 # ── 来源表格 ──────────────────────────────────────────────────────
 
 

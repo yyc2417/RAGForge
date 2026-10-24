@@ -30,6 +30,8 @@ class EvalItem(BaseModel):
     expected_sources: list[str] = Field(default_factory=list)
     evidence: list[dict] = Field(default_factory=list)
     gold_keywords: list[str] = Field(default_factory=list)
+    # clarify 样本的澄清问题应包含的实体/槽位关键词
+    clarification_keywords: list[str] = Field(default_factory=list)
     reference_answer: str | None = None
     split: Literal["dev", "test"] = "dev"
     tags: list[str] = Field(default_factory=list)
@@ -49,6 +51,9 @@ class EvalItem(BaseModel):
 
         if self.expected_behavior == "answer":
             self.answerable = True
+        elif self.expected_behavior == "clarify":
+            # clarify 不期望生成答案；expected_sources 可保留为澄清后的参考答案
+            self.answerable = False
         elif self.expected_behavior in ("refuse", "chitchat"):
             self.answerable = False
             # 不在这里清空 sources：保留原始输入，交给 validate_dataset 报错
@@ -97,7 +102,12 @@ def validate_dataset(items: list[EvalItem], corpus_dir: Path | str | None = None
                 errors.append(f"{label}: 可答题缺少 expected_sources")
             if not item.gold_keywords and not item.reference_answer:
                 errors.append(f"{label}: 可答题缺少 gold_keywords 或 reference_answer")
-        if item.expected_behavior in ("refuse", "chitchat") and item.expected_sources:
+        elif item.expected_behavior == "clarify":
+            if not item.clarification_keywords:
+                errors.append(f"{label}: clarify 样本缺少 clarification_keywords")
+            # clarify 的 expected_sources / gold_keywords 可作为澄清后的参考答案，
+            # 不参与当前召回与忠实度统计，因此允许保留。
+        elif item.expected_behavior in ("refuse", "chitchat") and item.expected_sources:
             errors.append(f"{label}: {item.expected_behavior} 样本不应带 expected_sources")
 
         if corpus_dir is not None and item.expected_sources:

@@ -137,6 +137,8 @@ def test_record_assistant_state_and_sources(tmp_path):
     assert message.metrics["latency_ms"] == 1234.5
     assert message.metrics["total_tokens"] == 567
     assert message.metrics["model"] == "test-model"
+    assert message.metrics["generation_failed"] is False
+    assert message.metrics["generation_error"] is None
     assert message.sources[0]["source"] == "docker.md"
     assert message.sources[0]["page_number"] == 3
     assert len(message.sources[0]["content"]) == 500
@@ -159,3 +161,24 @@ def test_record_clarify_message(tmp_path):
     assert message.message_type == "clarify"
     assert "GIL" in message.content
     assert message.sources == []
+    assert message.metrics["generation_failed"] is False
+
+
+def test_record_generation_failure_metrics(tmp_path):
+    store = ConversationStore(tmp_path)
+    session = store.create_session()
+    service = ConversationService(store=store, llm=FakeLLM({}))
+    message = service.record_assistant_state(
+        session.session_id,
+        {
+            "answer": "抱歉，回答生成过程中出现问题，请稍后重试。",
+            "generation_failed": True,
+            "generation_error": "RuntimeError: LLM 宕机",
+        },
+    )
+    assert message.message_type == "answer"
+    assert message.metrics["generation_failed"] is True
+    assert message.metrics["generation_error"] == "RuntimeError: LLM 宕机"
+    loaded = store.load_session(session.session_id)
+    assert loaded is not None
+    assert loaded.messages[-1].metrics["generation_failed"] is True

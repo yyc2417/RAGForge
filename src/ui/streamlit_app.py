@@ -226,7 +226,12 @@ def _render_trace(trace: list[str]) -> None:
 
 def _render_feedback(session_id: str, message: SessionMessage) -> None:
     cols = st.columns([1, 1, 6])
-    can_archive = message.message_type == "answer" and bool(message.content.strip())
+    metrics = message.metrics or {}
+    can_archive = (
+        message.message_type == "answer"
+        and bool(message.content.strip())
+        and not metrics.get("generation_failed")
+    )
     up_disabled = message.feedback == "up" or not can_archive
     down_disabled = message.feedback == "down"
     if cols[0].button("👍 有用", key=f"up-{message.id}", disabled=up_disabled):
@@ -267,15 +272,17 @@ def _render_feedback(session_id: str, message: SessionMessage) -> None:
 
 
 def _render_message(session_id: str, message: SessionMessage) -> None:
+    metrics = message.metrics or {}
     with st.chat_message(message.role):
         if message.role == "assistant" and message.message_type == "clarify":
             st.warning("需要澄清")
+        if message.role == "assistant" and metrics.get("generation_failed"):
+            st.warning("生成失败：本轮为降级提示，请稍后重试。")
         st.markdown(message.content)
         if message.role != "assistant":
             return
         if message.resolved_query:
             st.caption(f"检索改写：{message.resolved_query}")
-        metrics = message.metrics or {}
         meta = []
         model = str(metrics.get("model") or "")
         if model:
@@ -291,6 +298,8 @@ def _render_message(session_id: str, message: SessionMessage) -> None:
             meta.append(f"检索 {int(iterations)} 轮")
         if metrics.get("is_faithful") is False:
             meta.append("未通过忠实度校验")
+        if metrics.get("generation_failed"):
+            meta.append("生成降级")
         if meta:
             st.caption(" · ".join(meta))
         _render_sources(message.sources)
@@ -338,7 +347,11 @@ def _run_turn(session_id: str, query: str) -> None:
             st.error(f"执行失败：{type(e).__name__}: {e}")
             service.record_assistant_state(
                 session_id,
-                {"answer": f"执行失败：{type(e).__name__}: {e}"},
+                {
+                    "answer": f"执行失败：{type(e).__name__}: {e}",
+                    "generation_failed": True,
+                    "generation_error": f"{type(e).__name__}: {e}"[:500],
+                },
                 original_query=query,
                 resolved_query=standalone,
                 latency_ms=elapsed_ms,
@@ -357,6 +370,8 @@ def _run_turn(session_id: str, query: str) -> None:
             "answer": view.answer,
             "clarification_question": view.diagnostic.get("clarification_question"),
             "ambiguity_type": view.diagnostic.get("ambiguity_type"),
+            "generation_failed": bool(view.diagnostic.get("generation_failed", False)),
+            "generation_error": view.diagnostic.get("generation_error"),
             "messages": [],
         }
     service.record_assistant_state(

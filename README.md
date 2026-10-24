@@ -177,6 +177,10 @@ uv run python scripts/eval.py                  # 完整评估（4 套模式，�
 uv run python scripts/eval.py --retrieval-only # 离线检索评估（不调 LLM，免 API）
 uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
   --corpus-dir data/demo --rebuild --report reports/eval_e2e_multiformat.json  # v2 端到端（需 LLM）
+uv run python scripts/eval.py --dataset tests/eval_dataset_multiformat.json \
+  --corpus-dir data/demo --clarify off --report reports/eval_e2e_multiformat_noclarify.json  # clarify 对照
+uv run python scripts/eval.py --semantic-judge --judge-limit 20 \
+  --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo  # 可选语义判分
 bash scripts/run_local_full_eval.sh all   # 本地模型全量 4 模式（长任务，使用 127.0.0.1 本地服务）
 bash scripts/run_cloud_full_eval.sh all   # 云端全量（需 .env.cloud，本地报告完成后）
 bash scripts/repair_eval_errors.sh        # 补跑报告中 errors>0 的模式（云端）
@@ -203,6 +207,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 - **主区**：消息流 + `st.chat_input`；
 - **多轮**：会话层把追问 condense 成独立问题，再交给图；
 - **clarify**：需要澄清时显示“需要澄清”消息，下一轮带历史继续；
+- **生成降级**：LLM 生成失败时显示警告并标记“生成降级”，该回答不可归档到优质库；
 - **来源**：每条 assistant 消息可展开来源（文件名 / 页码 / chunk / 分数 / 摘要）；
 - **执行细节**：可展开状态机 trace 文本；
 - **反馈**：每条 assistant 消息支持赞 / 踩，点击只更新会话文件，不重跑查询。
@@ -461,6 +466,11 @@ RAGForge/
 
 换 bge-m3 后多格式集 vector/hybrid hit_any 均到 100%，此前的跨语言失败消失；reranker 把 MRR 拉到 97.8%。明细见 `reports/eval_v2_multiformat_report.json`。
 
+> 2026-10-21 行为标注：45 题拆成 37 道 `answer` + 8 道 `clarify`（缺少产品/设备/
+> 说明书主体的题目）。检索基线不受行为标签影响；端到端报告新增 clarify 准确率、
+> 过度澄清率和未澄清率。数据集文件 hash：`e2010df3c478d180`（旧报告为
+> `5846bc120a9cce7c`，不可混用）。
+
 ### Embedding 选型对照
 
 三个候选均为 1024 维、CUDA、normalize、相同 chunk 与语料；只替换 embedding 后重跑：
@@ -482,6 +492,11 @@ bge-m3 保留为默认：多格式 hybrid 最稳、跨语言均衡；Qwen3 在 C
 三组都是小样本链路验证，不作为模型效果结论；全量 120 题 × 4 模式与 30 轮多轮待跑。
 
 ### 本地全量矩阵（Qwen3.6-35B-A3B-NVFP4 + bge-m3）
+
+> **口径提醒**：以下本地 / 云端全量报告生成于 2026-10-20 / 10-21 的旧口径，
+> Agent 的 Recall 分母包含 clarify 空回答；新代码已把 clarify / 降级 / 空回答
+> 单列，并把多格式集标成 37 answer + 8 clarify。旧报告没有这些行为标签，
+> 保留作对照；复跑后再替换主表。
 
 CRUD-RAG 120 题、4 模式：
 
@@ -538,9 +553,12 @@ CRUD-RAG 120 题、4 模式（补跑后 0 errors）：
   冻结 test 后跑本地与 API 双基线。
 - **多格式集与跨语言检索**：45 题多格式集已建；切 bge-m3 后 reranker hit_any
   100%、NDCG@5 97.5%，跨语言失败已消除。
-- **多轮 / clarify 跑分**：clarify 16 例本地模型跑分已完成（准确率 93.8%、
-  过度澄清 20.0%）；多轮 2×3 smoke 通过，10×3 全量待跑。`--with-followup`
-  可统计补充后解决率。
+- **多轮 / clarify 跑分**：clarify 16 例本地模型跑分已完成（带 follow-up 准确率
+  87.5%、补充后解决率 83.3%）；多轮 10 会话 × 3 轮全量已完成（轮级命中 100%、
+  会话成功率 100%）。多格式集已补 8 个 clarify 行为标签，复跑后输出
+  clarify 准确率 / 过度澄清率 / 未澄清率。
+- **评测口径复跑**：新口径已实现 clarify / 降级 / 空回答分层与可选语义判分；
+  需用该口径复跑本地 + 云端矩阵，并抽 20 条人工复核语义判分。
 - **GPU embedding**：已安装 `torch 2.12.0+cu130`，bge-m3 在 RTX 5070 上实测
   显存约 2.2GB、加载约 4s；本地 `.env` 使用 `EMBEDDING_DEVICE=cuda`，CPU 可回退。
   裸 `uv run` 会按 lockfile 恢复 CPU torch，GPU 任务需用 `.venv/Scripts/python.exe`。

@@ -109,6 +109,30 @@ _ENUM_ALIASES: dict[str, str] = {
     "其他": "other",
 }
 
+# 答案语义判分专用别名，避免影响 analyze/evaluate/refusal 等既有枚举
+_ANSWER_VERDICT_ALIASES: dict[str, str] = {
+    "正确": "correct",
+    "完全正确": "correct",
+    "accurate": "correct",
+    "right": "correct",
+    "部分正确": "partial",
+    "部分": "partial",
+    "partially_correct": "partial",
+    "partial_correct": "partial",
+    "partly_correct": "partial",
+    "错误": "wrong",
+    "不正确": "wrong",
+    "incorrect": "wrong",
+    "wrong_answer": "wrong",
+    "未答": "unanswered",
+    "未回答": "unanswered",
+    "空回答": "unanswered",
+    "无回答": "unanswered",
+    "empty": "unanswered",
+    "empty_answer": "unanswered",
+    "no_answer": "unanswered",
+}
+
 
 def _normalize_enum(value: object) -> object:
     """归一化 LLM 输出的枚举值：strip + lower + 中文变体映射。"""
@@ -127,6 +151,8 @@ def _normalize_enum(value: object) -> object:
     return value
 
 
+AnswerVerdict = Literal["correct", "partial", "wrong", "unanswered"]
+
 NormalizedQueryType = Annotated[QueryType, BeforeValidator(_normalize_enum)]
 NormalizedAmbiguityType = Annotated[AmbiguityType, BeforeValidator(_normalize_enum)]
 OptionalAmbiguityType = Annotated[
@@ -135,6 +161,22 @@ OptionalAmbiguityType = Annotated[
 NormalizedFailureMode = Annotated[FailureMode, BeforeValidator(_normalize_enum)]
 NormalizedSuggestedAction = Annotated[SuggestedAction, BeforeValidator(_normalize_enum)]
 NormalizedRewriteStrategy = Annotated[RewriteStrategy, BeforeValidator(_normalize_enum)]
+
+
+def _normalize_answer_verdict(value: object) -> object:
+    """答案判分别名：拒答类输出统一归入 unanswered（不影响 RefusalJudgeResult）。"""
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"refused", "refusal"}:
+            return "unanswered"
+        if normalized in _ANSWER_VERDICT_ALIASES:
+            return _ANSWER_VERDICT_ALIASES[normalized]
+    return _normalize_enum(value)
+
+
+NormalizedAnswerVerdict = Annotated[
+    AnswerVerdict, BeforeValidator(_normalize_answer_verdict)
+]
 
 
 class AnalyzeResult(BaseModel):
@@ -220,6 +262,19 @@ class VerifyResult(BaseModel):
         ..., description="回答是否忠实于检索文档（True=无幻觉，False=存在幻觉）"
     )
     reason: str = Field(default="", description="检测原因说明")
+
+
+class AnswerJudgeResult(BaseModel):
+    """可答题答案判分输出：语义正确性（评估脚本专用）。"""
+
+    verdict: NormalizedAnswerVerdict = Field(
+        ...,
+        description=(
+            "correct(正确) / partial(部分正确) / "
+            "wrong(错误) / unanswered(未回答或拒答)"
+        ),
+    )
+    reason: str = Field(default="", description="判定理由")
 
 
 class RefusalJudgeResult(BaseModel):

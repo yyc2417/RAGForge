@@ -39,6 +39,8 @@ POST /chat/stream  (async + SSE)     → EventSourceResponse
 
 **clarify 响应**：当状态机走 clarify 终止分支时，`answer` 为空，`clarification` 字段返回 `{question, ambiguity_type}`；SSE `done` 事件也携带 `clarification_question` 与 `ambiguity_type`。多轮会话续接目前只在 Streamlit UI 中实现，API 仍是无状态单轮接口。
 
+**生成降级响应**：`generate` 节点 LLM 调用彻底失败时，`/chat` 仍返回 200，`answer` 为兜底文案，同时 `generation_failed=true`、`generation_error` 给出失败原因；SSE `done` 事件同样携带这两个字段。调用方应把这种响应当作失败处理，不能计入正常答案。
+
 **横切能力**：
 
 - `X-Request-ID`：请求头透传或服务端生成，响应头与 `/chat`/`done` 响应体回传；
@@ -78,7 +80,7 @@ LangGraph 在 executor 线程中以 `copy_context()` 执行同步节点，因此
 
 ```python
 class ChatRequest(BaseModel):       # query(1~4000 字符, strip) + session_id
-class ChatResponse(BaseModel):      # answer + sources + agent_trace + metrics + session_id
+class ChatResponse(BaseModel):      # answer + clarification + generation_failed/error + sources + agent_trace + metrics + session_id
 class SourceDoc(BaseModel):         # content + source + score
 class ResponseMetrics(BaseModel):   # retrieval_latency_ms + e2e_latency_ms + token_usage
 class HealthResponse(BaseModel):    # status(ok|starting) + version
@@ -95,7 +97,7 @@ class HealthResponse(BaseModel):    # status(ok|starting) + version
 | `node` | `on_chain_end` 且 name ∈ 8 个业务节点 | `{"node": "analyze"}` | Agent 节点执行完成 |
 | `sources` | `retrieve` 节点完成后、生成开始前（推送一次） | `[SourceDoc...]` | 检索来源文档（含相关性分数） |
 | `token` | `on_chat_model_stream` | `{"text": "<token>"}` | LLM 逐 token 生成（仅 generate 节点） |
-| `done` | 流结束 | `{"session_id": "...", "e2e_latency_ms": ...}` | 流终止信号 |
+| `done` | 流结束 | `{"session_id": "...", "e2e_latency_ms": ..., "generation_failed": false, ...}` | 流终止信号（含 clarify / 生成降级字段） |
 | `error` | 生成器内部异常 | `{"message": "..."}` | 执行失败（流中断时） |
 
 **时序契约**：`node(retrieve)` → `sources` → `node(evaluate)` → `token*` → `done`。来源文档在生成开始前推送，前端可先渲染引用来源。
@@ -149,7 +151,7 @@ get_graph ──────── lifespan 未完成 → 503 服务尚未就绪
 lifespan ────────── key 缺失 / 管道构建失败 → 启动进程直接失败（fail-fast）
 ```
 
-`/chat` 的执行异常被捕获后转为结构化 502（detail 含异常类型与信息），不再返回裸 500。SSE 端点的异常被 `except Exception` 捕获后转化为 `error` 事件推送给客户端，生成器自然终止，连接正常关闭——不会导致连接挂起。
+`/chat` 的执行异常被捕获后转为结构化 502（detail 含异常类型与信息），不再返回裸 500。SSE 端点的异常被 `except Exception` 捕获后转化为 `error` 事件推送给客户端，生成器自然终止，连接正常关闭——不会导致连接挂起。注意：`generate` 节点内部已兜底的 LLM 失败不会触发 502，而是通过 `generation_failed` 标记返回 200；只有图本身抛异常（超时、初始化失败等）才走 502 / `error` 事件。
 
 ---
 

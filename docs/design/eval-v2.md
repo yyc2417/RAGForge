@@ -1,6 +1,6 @@
 # 评测 v2 · 设计
 
-> 状态：统一 schema、校验器、CRUD-RAG Read 120 题、多格式 45 题、bge-m3/CUDA 检索基线、CI 回归门禁已实现；多轮（10×3）与 clarify（16 例）数据集已建；RGB 适配与全量 LLM 双跑待执行。
+> 状态：统一 schema、校验器、CRUD-RAG Read 120 题、多格式 45 题、bge-m3/CUDA 检索基线、CI 回归门禁已实现；多轮（10×3）与 clarify（16 例）数据集已建；本地/云端 4 模式全量已完成。2026-10-21 起端到端评测把 clarify / 生成降级 / 空回答单列，并支持可选 LLM 语义判分；RGB 适配待执行。
 
 ## 1. 目标
 
@@ -27,6 +27,10 @@
   "tags": ["single-hop"]
 }
 ```
+
+clarify 样本额外使用 `clarification_keywords`（如 `["星云笔记", "哪个产品"]`），
+用于检查澄清问题是否点到了缺失实体；`expected_sources` 可保留为澄清后的参考来源，
+但不参与当前召回/忠实度统计。
 
 - `expected_behavior`：answer / refuse / clarify / chitchat；
 - `expected_sources`：支持多跳（列表）；
@@ -60,10 +64,18 @@
 - 旧 v1 仍保留 chunk 级 Recall@5 / MRR@5；
 - CI 用多格式集 + hybrid 粗排跑回归门禁（`--skip-reranker --min-hit-any --min-mrr`）。
 
-端到端（全量 LLM，后置）：
+端到端（全量 LLM）：
 
 - baseline / linear_hybrid / agent / agent_reranker；
-- 忠实度、拒答、编造率、答案正确性；
+- **分层口径**：clarify 只计入 `clarify_rate`，不进入召回分母；`generation_failed` /
+  空回答只单列，不进入忠实度、F1、语义判分分母；
+- 检索层：`recall_top5` / `mrr_at5` 只在“实际发生检索的可答题”上计算；
+- 生成层：忠实度、词面 F1、语义判分只在“实际作答样本”上计算；
+- 行为层：`clarify_rate`、`expected_clarify_count`、`clarify_accuracy`、
+  `over_clarification_rate`、`under_clarification_rate`、
+  `clarification_keyword_hit_rate`、`degraded_count`、`empty_answer_count`、
+  拒答准确率、编造率；
+- 语义判分默认关闭，`--semantic-judge` 开启，`--judge-limit N` 控制每模式判分条数；
 - P50 + max 延迟、token、错误/未验证。
 
 交互层：
@@ -84,7 +96,9 @@
 检索层报告额外记录 `dataset_name / dataset_version / dataset_license /
 dataset_hash / k`，用于复现与许可追溯。
 
-判官固定（DeepSeek 或另一固定 judge），抽 20 样本人工复核；本地模型不自判。
+判官固定（DeepSeek 或另一固定 judge），抽 20 样本人工复核；本地模型自判只用于
+链路 smoke，不作为模型结论。当前 `--semantic-judge` 复用本次运行的 LLM 配置，
+正式对比时应显式固定外部 judge；词面 F1 仅作辅助指标。
 
 ## 6. 命令
 
@@ -116,6 +130,16 @@ uv run python scripts/eval.py \
   --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo \
   --rebuild --report reports/eval_e2e_multiformat.json
 
+# 可选：LLM 语义判分（每模式最多 20 条，控制本地/云端成本）
+uv run python scripts/eval.py \
+  --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo \
+  --semantic-judge --judge-limit 20 --report reports/eval_e2e_multiformat_judged.json
+
+# 对照：关闭 clarify 跑同一数据集（回答质量才可比）
+uv run python scripts/eval.py \
+  --dataset tests/eval_dataset_multiformat.json --corpus-dir data/demo \
+  --clarify off --report reports/eval_e2e_multiformat_noclarify.json
+
 # clarify 判定 + 多轮会话（需真实 LLM）
 uv run python scripts/eval_interaction.py --mode both --limit 5
 uv run python scripts/eval_interaction.py --mode clarify --with-followup
@@ -139,6 +163,10 @@ uv run python scripts/eval.py --rebuild
 ```
 
 ## 7. 离线检索基线（2026-10-18）
+
+> **口径提醒**：以下 2026-10-20 / 10-21 的端到端报告生成于旧口径——clarify 的空
+> `answer` 被计入召回分母，空回答还可能被忠实度判官判为 `True`。新代码已修正
+> （见本节末），旧报告保留用于历史对照；主表复跑后再替换。
 
 ### CRUD-RAG Read
 
@@ -219,10 +247,27 @@ USTC `deepseek-flash`，云端生成 + 本地 bge-m3 检索。补跑后两份报
 - 云端总 token 约 2.19M；服务端拥堵导致 51 条超时/降级日志，延迟不作为性能结论。
   报告：`reports/cloud_e2e_crud_full.json`、`reports/cloud_e2e_multiformat_full.json`。
 
+### 评测口径修正（2026-10-21）
+
+- `clarify` 节点返回空 `answer`；旧版 `eval.py` 仍把它计入召回分母，导致多格式
+  Agent 的 80.0%（本地 9/45）与 68.9%（云端 14/45）被误读为检索退化；
+- 旧版空回答会被 LLM 忠实度判官判为 `True`，出现“14 条空回答但忠实度 100%”；
+- 新口径：`clarified` 单列并输出 `clarify_rate`；召回只在“实际检索”的可答题上
+  统计；忠实度 / F1 / 语义判分只在“实际作答”样本上统计；空回答与
+  `generation_failed` 单独计数；
+- `generate` 节点 LLM 失败现在写入 `generation_failed` / `generation_error`，
+  跳过 verify，并在 UI / API / 会话 metrics / 评测报告中透传；
+- `--clarify off` 提供关闭 clarify 的对照跑；`--semantic-judge` 提供可选的
+  LLM 语义判分（默认关闭，避免本地 35B 与云端 20rpm 下成本失控）；
+- 多格式 45 题人工复核：37 题 `answer`，8 题缺少产品/设备/说明书主体、标为
+  `clarify`（mf-025/027/029/030/031/032/036/037）。数据集文件 hash
+  `e2010df3c478d180`；旧端到端报告 hash 为 `5846bc120a9cce7c`，两者不可混用。
+  检索基线不受行为标签影响，但 clarify 准确率 / 过度澄清率需在新报告中重算。
+
 ## 8. 待办
 
+- 用 2026-10-21 新口径复跑本地 / 云端 4 模式矩阵，旧报告保留对照；
+- 语义判分抽 20 条人工复核，并固定外部 judge（避免本地模型自判）；
+- 多格式 clarify 标注已落地（8 clarify / 37 answer），待复跑验证过度/未澄清率；
 - RGB 噪声/拒答/反事实子集适配；
-- CRUD-RAG / 多格式集端到端生成评测（`eval.py` 已支持 v2 字段与 answer F1，跑分待执行）；
-- 多轮 / clarify 真实 LLM 跑分（数据与 `eval_interaction.py` 已就绪）；
-- 评测 v2 端到端矩阵与 README 报表；
-- 本地 + API 双跑。
+- 云端 runner 级限速/重试与重复跑方差。

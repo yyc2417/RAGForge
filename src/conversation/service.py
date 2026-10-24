@@ -60,6 +60,10 @@ class ConversationService:
             "iteration_count": int(final_state.get("iteration_count") or 0),
             "verify_failures": int(final_state.get("verify_failures") or 0),
             "is_faithful": final_state.get("is_faithful"),
+            "generation_failed": bool(final_state.get("generation_failed", False)),
+            "generation_error": (
+                str(final_state.get("generation_error") or "")[:500] or None
+            ),
             "model": model or settings.deepseek_model,
         }
         if latency_ms is not None:

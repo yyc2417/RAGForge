@@ -29,6 +29,8 @@ class AgentState(TypedDict, total=False):
     reformulated_query: str                       # 改写后的查询
     rewrite_effective: bool                       # 改写是否有效（False → 路由直接生成）
     answer: str                                   # 生成的回答
+    generation_failed: bool                       # LLM 生成失败，answer 为降级文案
+    generation_error: str | None                  # 生成失败原因（截断）
     is_faithful: bool | None                      # 幻觉检测结果（None = 校验失败未验证）
     verification_reason: str                      # 校验原因
     iteration_count: int                          # 检索总次数（retrieve 唯一递增）
@@ -41,6 +43,7 @@ class AgentState(TypedDict, total=False):
 - `failure_mode` + `suggested_action`：诊断式评估核心，驱动查询改写
 - `iteration_count` / `verify_failures`：双预算防死循环（见「安全机制」）
 - `is_faithful: None`：LLM 校验失败的「未验证」状态，路由层视为通过（不因验证器故障误触发重检索），评估层单独归类
+- `generation_failed` / `generation_error`：生成节点内部兜底标记；降级答案不再送 verify，UI / API / 评测可据此区分正常答案
 - `messages: Annotated[list, add]`：LangGraph 自动追加，记录完整决策轨迹
 
 ### 初始状态工厂
@@ -65,7 +68,7 @@ graph TD
     Evaluate -->|reformulate| Reformulate[reformulate]
     Reformulate -->|改写有效| Retrieve
     Reformulate -->|改写无效| Generate
-    Generate -->|strategy=none| END
+    Generate -->|strategy=none 或 generation_failed| END
     Generate -->|strategy=hybrid| Verify[verify]
     Verify -->|is_faithful / 未验证| END
     Verify -->|幻觉 & 双预算未达上限| Reformulate
@@ -81,7 +84,7 @@ graph TD
 | `retrieve` | 否 | 固定 hybrid（向量 + BM25 + RRF，可选重排），优先使用 `reformulated_query`；`iteration_count` 唯一递增点（每轮真实检索 +1） |
 | `evaluate` | 是 | 诊断检索质量：空结果硬规则 + LLM 语义判断（不注入 RRF 分数），输出 `failure_mode` + `suggested_action`（proceed / reformulate） |
 | `reformulate` | 是 | 根据 `failure_mode` 改写查询；输出 `rewrite_effective`（LLM 失败或改写 == 原查询时为 False） |
-| `generate` | 是 | 基于检索上下文调用 LLM 生成回答；LLM 失败时返回降级文案（状态机总能产出答案） |
+| `generate` | 是 | 基于检索上下文调用 LLM 生成回答；LLM 失败时返回降级文案并置 `generation_failed=True`，路由跳过 verify 直接结束 |
 | `verify` | 是 | 幻觉检测；确认幻觉时 `verify_failures += 1`（唯一递增点），校验失败标记 `is_faithful=None` |
 
 ## 条件边（路由函数）
@@ -114,7 +117,9 @@ def route_after_evaluate(state: AgentState) -> str:
 
 ```python
 def route_after_generate(state: AgentState) -> str:
-    """strategy=none（chitchat）→ END（跳过 verify），其他 → verify。"""
+    """generation_failed 或 strategy=none（chitchat）→ END（跳过 verify），其他 → verify。
+
+    降级文案没有真实事实内容，送 verify 只会产生误导性的忠实度结论。"""
 ```
 
 ### route_after_reformulate

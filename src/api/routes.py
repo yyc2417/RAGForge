@@ -167,6 +167,8 @@ async def chat(request: ChatRequest, graph=Depends(get_graph)) -> ChatResponse:
     return ChatResponse(
         answer=answer_text,
         clarification=_extract_clarification(final_state),
+        generation_failed=bool(final_state.get("generation_failed", False)),
+        generation_error=final_state.get("generation_error"),
         sources=sources,
         agent_trace=final_state.get("messages", []),
         metrics=resp_metrics,
@@ -280,6 +282,10 @@ async def chat_stream(request: ChatRequest, graph=Depends(get_graph)):
                     "e2e_latency_ms": round(e2e_ms, 2),
                     "clarification_question": final_state.get("clarification_question"),
                     "ambiguity_type": final_state.get("ambiguity_type"),
+                    "generation_failed": bool(
+                        final_state.get("generation_failed", False)
+                    ),
+                    "generation_error": final_state.get("generation_error"),
                 }, ensure_ascii=False),
             }
         except Exception as e:  # noqa: BLE001 - 流中断以 error 事件收尾

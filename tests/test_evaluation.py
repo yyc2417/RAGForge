@@ -23,6 +23,15 @@ def test_eval_item_normalizes_behavior_and_sources():
     assert chitchat.expected_behavior == "chitchat"
     assert chitchat.answerable is False
 
+    clarify = EvalItem(
+        query="它怎么配置？",
+        expected_behavior="clarify",
+        clarification_keywords=["哪个", "产品"],
+    )
+    assert clarify.answerable is False
+    assert clarify.expected_behavior == "clarify"
+    assert clarify.clarification_keywords == ["哪个", "产品"]
+
 
 def test_validate_dataset_catches_duplicates_and_missing_labels(tmp_path):
     items = [
@@ -37,6 +46,20 @@ def test_validate_dataset_catches_duplicates_and_missing_labels(tmp_path):
     assert "缺少 expected_sources" in text
     assert "缺少 gold_keywords" in text
     assert "不应带 expected_sources" in text
+
+
+def test_validate_dataset_requires_clarification_keywords():
+    bad = EvalItem(query="它怎么用？", expected_behavior="clarify")
+    errors = validate_dataset([bad])
+    assert any("clarification_keywords" in error for error in errors)
+
+    good = EvalItem(
+        query="它怎么用？",
+        expected_behavior="clarify",
+        expected_source="a.md",
+        clarification_keywords=["哪个产品"],
+    )
+    assert validate_dataset([good]) == []
 
 
 def test_validate_dataset_allows_reference_answer_without_keywords():
@@ -161,6 +184,10 @@ def test_multiformat_fixture_covers_demo_sources():
     }
     assert sum("multi-hop" in item.tags for item in items) >= 4
     assert sum("cross-lingual" in item.tags for item in items) >= 8
+    clarify = [item for item in items if item.expected_behavior == "clarify"]
+    assert len(clarify) == 8
+    assert all(item.answerable is False for item in clarify)
+    assert all(item.clarification_keywords for item in clarify)
 
 
 def test_ndcg_at_k_uses_unique_documents():
@@ -221,6 +248,241 @@ def test_answer_f1_lexical_metric():
     assert _answer_f1("foo bar", "foo baz") == 0.5
     assert _answer_f1("", "参考回答") == 0.0
     assert _answer_f1("回答", None) is None
+
+
+def _eval_result(**overrides) -> dict:
+    """构造 _summarize_results 的最小结果行。"""
+    base = {
+        "query": "q",
+        "query_type": "factual",
+        "expected_behavior": "answer",
+        "expected_sources": ["a.md"],
+        "chunk_rank": 1,
+        "hit": True,
+        "clarified": False,
+        "generation_failed": False,
+        "empty_answer": False,
+        "answered": True,
+        "is_faithful": True,
+        "answer_f1": 1.0,
+        "answer_verdict": "correct",
+        "clarification_keyword_ok": None,
+        "refusal_verdict": None,
+        "error": None,
+        "e2e_ms": 100.0,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_eval_summary_separates_clarify_degraded_and_empty():
+    from scripts.eval import _summarize_results
+
+    results = [
+        _eval_result(),
+        _eval_result(
+            chunk_rank=0, hit=False, clarified=True, empty_answer=True,
+            answered=False, is_faithful=None, answer_f1=None, answer_verdict=None,
+        ),
+        _eval_result(
+            generation_failed=True, answered=False, is_faithful=None,
+            answer_f1=None, answer_verdict=None, answer="降级文案",
+        ),
+        _eval_result(
+            chunk_rank=3, is_faithful=False, answer_f1=0.0, answer_verdict="wrong",
+        ),
+        _eval_result(
+            expected_sources=[], expected_behavior="refuse", query_type="factual",
+            chunk_rank=0, hit=False, answered=False, is_faithful=None,
+            answer_f1=None, answer_verdict=None, refusal_verdict="refused",
+        ),
+        _eval_result(error="boom", answered=False, is_faithful=None,
+                     answer_f1=None, answer_verdict=None),
+    ]
+    summary = _summarize_results(results)
+    assert summary["samples"] == 6
+    assert summary["errors"] == 1
+    assert summary["answerable_count"] == 4
+    assert summary["retrieval_evaluable_count"] == 3
+    assert summary["answered_count"] == 2
+    assert summary["answer_rate"] == 0.5
+    assert summary["clarified_count"] == 1
+    assert summary["clarify_rate"] == 0.2
+    assert summary["expected_clarify_count"] == 0
+    assert summary["clarify_accuracy"] is None
+    assert summary["over_clarification_count"] == 1
+    assert summary["over_clarification_rate"] == 0.25
+    assert summary["degraded_count"] == 1
+    # clarify 的空回答归 clarified_count，不重复计入 empty_answer_count
+    assert summary["empty_answer_count"] == 0
+    assert summary["recall_top5"] == 1.0
+    assert summary["mrr_at5"] == round((1 + 1 + 1 / 3) / 3, 4)
+    assert summary["faithfulness_rate"] == 0.5
+    assert summary["hallucination_rate"] == 0.5
+    assert summary["answer_f1"] == 0.5
+    assert summary["semantic_accuracy"] == 0.5
+    assert summary["semantic_counts"] == {"correct": 1, "wrong": 1}
+    assert summary["refusal_accuracy"] == 1.0
+
+
+def test_evaluate_mode_integrates_layered_summary():
+    from scripts.eval import Evaluator
+
+    evaluator = Evaluator.__new__(Evaluator)
+    evaluator.dataset = [{"query": "q1"}, {"query": "q2"}, {"query": "q3"}]
+    evaluator.semantic_judge = False
+    evaluator.judge_limit = None
+    results = {
+        "q1": _eval_result(query="q1"),
+        "q2": _eval_result(
+            query="q2", chunk_rank=0, hit=False, clarified=True,
+            empty_answer=True, answered=False, is_faithful=None,
+            answer_f1=None, answer_verdict=None,
+        ),
+        "q3": _eval_result(
+            query="q3", generation_failed=True, answered=False,
+            is_faithful=None, answer_f1=None, answer_verdict=None,
+        ),
+    }
+    evaluator._run_single = lambda mode, item: results[item["query"]]
+    out = evaluator.evaluate_mode("agent")
+    assert out["samples"] == 3
+    assert out["answerable_count"] == 3
+    assert out["retrieval_evaluable_count"] == 2
+    assert out["answered_count"] == 1
+    assert out["clarified_count"] == 1
+    assert out["degraded_count"] == 1
+    assert out["recall_top5"] == 1.0
+    assert out["faithfulness_rate"] == 1.0
+    assert out["over_clarification_rate"] == round(1 / 3, 4)
+
+
+def test_eval_summary_scores_expected_clarify():
+    from scripts.eval import _summarize_results
+
+    summary = _summarize_results([
+        _eval_result(
+            expected_behavior="clarify", expected_sources=[],
+            clarified=True, clarification_keyword_ok=True, empty_answer=True,
+            answered=False, is_faithful=None, answer_f1=None,
+            answer_verdict=None, chunk_rank=0, hit=False,
+        ),
+        _eval_result(
+            expected_behavior="clarify", expected_sources=[],
+            answered=False, is_faithful=None, answer_f1=None,
+            answer_verdict=None, chunk_rank=0, hit=False,
+        ),
+        _eval_result(
+            expected_behavior="clarify", expected_sources=[],
+            clarified=True, clarification_keyword_ok=False, empty_answer=True,
+            answered=False, is_faithful=None, answer_f1=None,
+            answer_verdict=None, chunk_rank=0, hit=False,
+        ),
+    ])
+    assert summary["expected_clarify_count"] == 3
+    assert summary["clarified_count"] == 2
+    assert summary["clarify_accuracy"] == round(1 / 3, 4)
+    assert summary["under_clarification_count"] == 2
+    assert summary["under_clarification_rate"] == round(2 / 3, 4)
+    assert summary["clarification_keyword_hit_rate"] == 0.5
+    assert summary["answerable_count"] == 0
+    assert summary["over_clarification_rate"] is None
+    assert summary["recall_top5"] is None
+    assert summary["faithfulness_rate"] is None
+
+
+def test_eval_summary_all_clarify_has_no_hallucination_rate():
+    from scripts.eval import _summarize_results
+
+    summary = _summarize_results([
+        _eval_result(
+            chunk_rank=0, hit=False, clarified=True, empty_answer=True,
+            answered=False, is_faithful=None, answer_f1=None, answer_verdict=None,
+        )
+    ])
+    assert summary["recall_top5"] is None
+    assert summary["faithfulness_rate"] is None
+    assert summary["hallucination_rate"] is None
+    assert summary["clarify_rate"] == 1.0
+    assert summary["over_clarification_rate"] == 1.0
+
+
+def test_answer_judge_schema_aliases_do_not_break_refusal_judge():
+    from src.generation.schemas import AnswerJudgeResult, RefusalJudgeResult
+
+    assert AnswerJudgeResult(verdict="部分正确").verdict == "partial"
+    assert AnswerJudgeResult(verdict="refused").verdict == "unanswered"
+    assert AnswerJudgeResult(verdict="未回答").verdict == "unanswered"
+    # RefusalJudgeResult 仍必须接受 refused（不能被答案判分别名劫持）
+    assert RefusalJudgeResult(verdict="refused").verdict == "refused"
+
+
+def test_eval_run_single_marks_expected_clarify():
+    from scripts.eval import Evaluator
+
+    class ClarifyGraph:
+        def invoke(self, state, config=None):
+            return {
+                "answer": "",
+                "clarification_question": "你指的是星云笔记还是 Nebula Note？",
+                "documents": [],
+                "retrieval_scores": [],
+                "messages": ["clarify: ok"],
+                "is_faithful": None,
+                "generation_failed": False,
+            }
+
+    evaluator = Evaluator.__new__(Evaluator)
+    evaluator._pipelines = {}
+    evaluator.semantic_judge = False
+    evaluator.judge_limit = None
+    evaluator._judge_calls = 0
+    evaluator._get_pipeline = lambda mode: ClarifyGraph()
+    result = evaluator._run_single("agent", {
+        "query": "忘记密码后如何重置？",
+        "expected_behavior": "clarify",
+        "expected_sources": ["faq.jsonl"],
+        "clarification_keywords": ["星云笔记", "Nebula Note"],
+    })
+    assert result["clarified"] is True
+    assert result["clarification_keyword_ok"] is True
+    assert result["chunk_rank"] == 0
+    assert result["answered"] is False
+    assert result["answer_f1"] is None
+    assert result["faithfulness_source"] == "clarify_expected"
+
+
+def test_eval_semantic_judge_uses_reference_and_keywords():
+    from scripts.eval import Evaluator
+    from src.generation.schemas import AnswerJudgeResult
+    from tests.fakes import FakeLLM
+
+    llm = FakeLLM({
+        "AnswerJudgeResult": AnswerJudgeResult(verdict="correct", reason="一致")
+    })
+    evaluator = Evaluator.__new__(Evaluator)
+    evaluator._llm = llm
+    verdict, reason, source = evaluator._judge_answer(
+        "q", "回答", "参考答案", ["关键事实"]
+    )
+    assert (verdict, reason, source) == ("correct", "一致", "llm_judge")
+    assert llm.structured_kwargs[0]["reference"] == "参考答案"
+    assert "关键事实" in llm.structured_kwargs[0]["keywords"]
+
+
+def test_eval_empty_answer_is_not_judged_faithful():
+    from scripts.eval import Evaluator
+    from tests.fakes import FakeLLM
+
+    llm = FakeLLM({})
+    evaluator = Evaluator.__new__(Evaluator)
+    evaluator._llm = llm
+    assert evaluator._judge_faithfulness("q", "", [], ["kw"]) == (
+        None,
+        "empty_answer",
+    )
+    assert evaluator._keyword_check("", ["kw"]) is False
+    assert llm.structured_calls == []
 
 
 def test_dataset_hash_stable():

@@ -35,6 +35,8 @@ def generate_node(
     documents = state.get("documents", [])
 
     t0 = time.perf_counter()
+    generation_failed = False
+    generation_error: str | None = None
     try:
         answer_text = llm.generate(
             query, documents, scores=state.get("retrieval_scores")
@@ -42,12 +44,19 @@ def generate_node(
     except Exception as e:  # noqa: BLE001 - 降级兜底，保证状态机总能产出答案
         logger.warning(f"[generate] LLM 生成失败，返回降级文案：{e}")
         answer_text = _FALLBACK_ANSWER
+        generation_failed = True
+        generation_error = f"{type(e).__name__}: {e}"[:500]
     latency_ms = (time.perf_counter() - t0) * 1000
 
     # 端到端延迟在最终汇总处记录，这里只记录生成耗时（不入指标，避免与 e2e 重复）
-    msg = f"generate: answer_len={len(answer_text)}, latency={latency_ms:.0f}ms"
+    msg = (
+        f"generate: answer_len={len(answer_text)}, latency={latency_ms:.0f}ms, "
+        f"failed={generation_failed}"
+    )
     logger.info(f"[generate] {msg}")
     return {
         "answer": answer_text,
+        "generation_failed": generation_failed,
+        "generation_error": generation_error,
         "messages": [msg],
     }

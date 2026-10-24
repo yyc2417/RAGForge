@@ -59,6 +59,9 @@ class AgentState(TypedDict, total=False):
 
     # ── generate 节点输出 ──
     answer: str
+    # LLM 生成异常时的降级标记；UI / 评测据此区分正常答案与兜底文案
+    generation_failed: bool
+    generation_error: str | None
 
     # ── verify 节点输出 ──
     # is_faithful: True/False 为判定结果；None 表示 LLM 校验失败未验证

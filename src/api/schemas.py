@@ -53,6 +53,10 @@ class ChatResponse(BaseModel):
 
     answer: str = Field("", description="生成的回答；clarify 时为空")
     clarification: Clarification | None = Field(None, description="需要澄清时的问题")
+    generation_failed: bool = Field(
+        False, description="回答是否为生成失败后的降级文案"
+    )
+    generation_error: str | None = Field(None, description="生成失败原因（截断）")
     sources: list[SourceDoc] = Field(default_factory=list, description="检索到的来源文档")
     agent_trace: list[str] = Field(default_factory=list, description="Agent 决策轨迹")
     metrics: ResponseMetrics = Field(default_factory=ResponseMetrics, description="性能指标")

@@ -19,6 +19,7 @@ from src.agent.graph import (
     build_agent_graph,
     route_after_analyze,
     route_after_evaluate,
+    route_after_generate,
     route_after_reformulate,
     route_after_verify,
 )
@@ -162,6 +163,16 @@ def test_route_after_evaluate():
     assert route_after_evaluate({"suggested_action": "switch_strategy"}) == "reformulate"
 
 
+def test_route_after_generate_skips_verify_on_generation_failure():
+    assert route_after_generate(
+        {"retrieval_strategy": "hybrid", "generation_failed": True}
+    ) == "end"
+    assert route_after_generate(
+        {"retrieval_strategy": "hybrid", "generation_failed": False}
+    ) == "verify"
+    assert route_after_generate({"retrieval_strategy": "none"}) == "end"
+
+
 def test_route_after_reformulate():
     assert route_after_reformulate({"rewrite_effective": True}) == "retrieve"
     assert route_after_reformulate({"rewrite_effective": False}) == "generate"
@@ -252,6 +263,8 @@ def test_graph_normal_single_round(make_graph):
     state = make_graph().invoke(initial_state("测试问题"), config={"recursion_limit": 50})
     assert state["answer"] == "测试回答"
     assert state["iteration_count"] == 1, f"正常单轮应只检索 1 次: {state['iteration_count']}"
+    assert state["generation_failed"] is False
+    assert state["generation_error"] is None
 
 
 def test_graph_legacy_switch_action_is_reformulated(make_graph):
@@ -307,7 +320,7 @@ def test_graph_generate_fallback(make_graph):
     script = make_script()
 
     class BrokenGenerateLLM(FakeLLM):
-        def generate(self, query, context):
+        def generate(self, query, context, scores=None):
             raise RuntimeError("LLM 宕机")
 
     # 直接替换图中 generate 节点不可行，改为构造带故障 generate 的图
@@ -321,6 +334,11 @@ def test_graph_generate_fallback(make_graph):
     )
     state = broken.invoke(initial_state("测试问题"), config={"recursion_limit": 50})
     assert state["answer"], "降级兜底应产出非空回答"
+    assert state["generation_failed"] is True
+    assert "LLM 宕机" in state["generation_error"]
+    # 降级答案没有被送进 verify，不应产生误导性的忠实度结论
+    assert state.get("is_faithful") is None
+    assert any("failed=True" in msg for msg in state.get("messages", []))
 
 
 def test_graph_mermaid_visualization(make_graph):

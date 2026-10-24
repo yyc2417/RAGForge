@@ -238,6 +238,13 @@ def render_summary(view: EventView) -> str:
     heal_text = "、".join(sorted(heal_names)) if heal_names else "未触发"
     if summary["error"]:
         end_card = _metric("端到端状态", "异常中止", "is-bad", str(summary["error"]))
+    elif summary.get("generation_failed"):
+        end_card = _metric(
+            "端到端状态",
+            "生成降级",
+            "is-warn",
+            str(summary.get("generation_error") or "LLM 生成失败，返回兜底文案"),
+        )
     else:
         end_card = _metric("端到端状态", "完成", "is-ok", "状态机走到 END，未触发递归上限")
     cards = (

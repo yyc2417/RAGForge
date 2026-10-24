@@ -28,11 +28,13 @@ uv run --extra ui streamlit run src/ui/streamlit_app.py
   历史消息（user / assistant）
     assistant:
       - 澄清消息标记
+      - 生成降级警告（generation_failed）
       - 回答内容
       - 检索改写（如发生）
+      - 模型 / 耗时 / token / 检索轮次 / 忠实度
       - 来源 expander
       - 状态机细节 expander
-      - 赞 / 踩
+      - 赞 / 踩（降级回答不可归档）
   st.chat_input
 ```
 
@@ -68,6 +70,13 @@ down-<message_id>
 - 内容为 `clarification_question`；
 - 用户下一轮输入会进入 condense 历史，重新进图。
 
+## 生成降级展示
+
+- `generate` 节点 LLM 失败时，消息 metrics 持久化 `generation_failed` / `generation_error`；
+- 历史回放仍显示“生成失败：本轮为降级提示”警告，并在元信息中标记“生成降级”；
+- 降级回答的“有用”按钮禁用，避免把兜底文案归档进优质库；
+- “没用”仍可点，降级回答会进入难例池供后续排查。
+
 ## 当前边界
 
 - 侧栏已接入知识库上传 / 文件夹导入 / 来源列表 / 优质库移除；
@@ -91,5 +100,5 @@ down-<message_id>
 
 - `tests/test_conversation.py`：会话/反馈/来源落盘；
 - `tests/test_knowledge.py` / `test_quality.py`：入库、优质库与来源管理；
-- `tests/test_ui.py`：EventView 事件蒸馏、8 节点（含 clarify）状态、来源/诊断渲染；
+- `tests/test_ui.py`：EventView 事件蒸馏、8 节点（含 clarify）状态、来源/诊断渲染、生成降级摘要；
 - UI 入口本身需要手动 smoke test（需要真实 API key 或本地 LLM endpoint）。

@@ -47,6 +47,7 @@ class PromptManager:
     EVALUATE_PROMPT: ChatPromptTemplate     # {query, retrieved_docs}；不注入分数（见 ADR-006）
     REFORMULATE_PROMPT: ChatPromptTemplate  # {query, failure_mode, rewrite_hint, context}
     VERIFY_PROMPT: ChatPromptTemplate       # {query, answer, context}；<doc> 定界符防注入
+    ANSWER_JUDGE_PROMPT: ChatPromptTemplate # {query, reference, keywords, answer}；可答题语义判分
     UNANSWERABLE_JUDGE_PROMPT: ChatPromptTemplate  # {query, answer}；评估脚本拒答裁决（refused/fabricated/other），不在状态机内
 ```
 
@@ -54,15 +55,15 @@ class PromptManager:
 
 ### 2.4 Schemas — Agent 状态机的类型合约
 
-五个 schema 类定义了 LLM 输出与 AgentState 之间的**类型边界**：
+schema 类定义了 LLM 输出与 AgentState / 评估层之间的**类型边界**：
 
 ```python
 class AnalyzeResult(BaseModel):    # → query_type + needs_retrieval + clarify 三字段
 class CondenseResult(BaseModel):   # → standalone_query（多轮追问改写）
 class EvaluateResult(BaseModel):   # → failure_mode + suggested_action（reformulate/proceed）
-class EvaluateResult(BaseModel):   # → failure_mode: Literal["low_recall","irrelevant","sufficient"]
 class ReformulateResult(BaseModel):# → rewrite_strategy: Literal["specify","generalize","synonym_replace"]
 class VerifyResult(BaseModel):     # → is_faithful: bool
+class AnswerJudgeResult(BaseModel):# → correct/partial/wrong/unanswered（评估脚本语义判分）
 class RefusalJudgeResult(BaseModel):# → verdict: refused/fabricated/other（评估脚本拒答裁决，不在状态机内）
 ```
 

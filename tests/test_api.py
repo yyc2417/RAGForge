@@ -12,9 +12,15 @@ from src.config import settings
 
 
 class FakeGraph:
-    def __init__(self, delay: float = 0.0, clarification: str | None = None) -> None:
+    def __init__(
+        self,
+        delay: float = 0.0,
+        clarification: str | None = None,
+        generation_failed: bool = False,
+    ) -> None:
         self.delay = delay
         self.clarification = clarification
+        self.generation_failed = generation_failed
 
     async def ainvoke(self, state, config=None):
         if self.delay:
@@ -23,6 +29,10 @@ class FakeGraph:
             "answer": "" if self.clarification else "测试回答",
             "clarification_question": self.clarification,
             "ambiguity_type": "missing_slot" if self.clarification else None,
+            "generation_failed": self.generation_failed,
+            "generation_error": (
+                "RuntimeError: LLM 宕机" if self.generation_failed else None
+            ),
             "documents": [],
             "retrieval_scores": [],
             "messages": ["analyze: ok"],
@@ -57,8 +67,19 @@ def test_chat_response_includes_request_id():
     assert response.status_code == 200
     body = response.json()
     assert body["answer"] == "测试回答"
+    assert body["generation_failed"] is False
+    assert body["generation_error"] is None
     assert body["request_id"]
     assert response.headers.get("X-Request-ID") == body["request_id"]
+
+
+def test_chat_reports_generation_failure():
+    client = _make_client(FakeGraph(generation_failed=True))
+    response = client.post("/chat", json={"query": "你好"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generation_failed"] is True
+    assert "LLM 宕机" in body["generation_error"]
 
 
 def test_chat_clarification_response():

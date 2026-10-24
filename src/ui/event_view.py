@@ -46,6 +46,8 @@ _DIAGNOSTIC_FIELDS = (
     "verify_failures",
     "is_faithful",
     "verification_reason",
+    "generation_failed",
+    "generation_error",
 )
 
 # 自愈动作节点（界面上高亮提示）
@@ -191,6 +193,8 @@ class EventView:
             "verification_reason": self.final_state.get("verification_reason", ""),
             "iteration_count": self.final_state.get("iteration_count", len(self.rounds)),
             "verify_failures": self.final_state.get("verify_failures", 0),
+            "generation_failed": bool(self.final_state.get("generation_failed", False)),
+            "generation_error": self.final_state.get("generation_error"),
             "self_heal_triggered": self.self_heal_triggered,
             "round_count": len(self.rounds),
             "max_iterations": self.final_state.get("max_iterations"),

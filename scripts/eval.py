@@ -37,7 +37,6 @@
 """
 
 import argparse
-import hashlib
 import json
 import re
 import sys
@@ -57,6 +56,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.agent import build_agent_graph_from_pipeline, initial_state  # noqa: E402
 from src.config import PROJECT_ROOT as CFG_ROOT  # noqa: E402
 from src.config import settings  # noqa: E402
+from src.evaluation import dataset_hash as eval_dataset_hash  # noqa: E402
+from src.evaluation import load_dataset as load_eval_dataset  # noqa: E402
 from src.generation.llm_client import LLMClient  # noqa: E402
 from src.generation.prompts import PromptManager  # noqa: E402
 from src.generation.schemas import (  # noqa: E402
@@ -180,8 +181,8 @@ def _chunk_hit_rank(docs: list, expected_sources: list[str] | str, gold_keywords
 
 
 def _dataset_fingerprint(path: Path | str) -> str:
-    """数据集文件指纹：标注或题面调整后，报告能与具体数据集版本对应。"""
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
+    """数据集 schema 指纹：与 eval_v2 报告使用同一口径，便于跨报告对照。"""
+    return eval_dataset_hash(load_eval_dataset(path))
 
 
 def _run_metadata() -> dict:

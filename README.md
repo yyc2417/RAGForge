@@ -223,7 +223,7 @@ Streamlit 聊天式界面，进程内直调 LangGraph（不依赖 FastAPI）：
 ### 7. 运行测试
 
 ```bash
-uv run pytest -q    # 离线单元套件（139 用例：135 passed / 4 skipped，强制 HF 离线、零网络）
+uv run pytest -q    # 离线单元套件（154 用例：150 passed / 4 skipped，强制 HF 离线、零网络）
 ```
 
 测试零网络：LLM 全部 stub，embedding 模型走本地缓存。**首次在新环境运行前**，
@@ -468,7 +468,7 @@ RAGForge/
 
 > 2026-10-21 行为标注：45 题拆成 37 道 `answer` + 8 道 `clarify`（缺少产品/设备/
 > 说明书主体的题目）。检索基线不受行为标签影响；端到端报告新增 clarify 准确率、
-> 过度澄清率和未澄清率。数据集文件 hash：`e2010df3c478d180`（旧报告为
+> 过度澄清率和未澄清率。schema dataset_hash：`d59643ccfb6943a2`（旧报告为
 > `5846bc120a9cce7c`，不可混用）。
 
 ### Embedding 选型对照

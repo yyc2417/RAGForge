@@ -47,7 +47,7 @@ clarify 样本额外使用 `clarification_keywords`（如 `["星云笔记", "哪
 | 数据集 | 用途 | 规模 |
 |---|---|---|
 | `tests/eval_dataset.json` | v1 冻结回归（旧 45 题） | 45 |
-| `tests/eval_dataset_hard.json` | 用户点踩晋升的难例 | 动态 |
+| `tests/eval_dataset_hard.json` | 用户点踩晋升的难例；当前尚未生成，由 `promote_hard_cases.py` 动态写入 | 动态 |
 | CRUD-RAG Read | 中文公开泛化 | 100–200 |
 | RGB 子集 | 噪声/拒答/反事实 | 可选 100 |
 | 自定义多格式 | PDF/HTML/DOCX/CSV/JSONL、多跳、来源 | 40–60 |
@@ -260,8 +260,8 @@ USTC `deepseek-flash`，云端生成 + 本地 bge-m3 检索。补跑后两份报
 - `--clarify off` 提供关闭 clarify 的对照跑；`--semantic-judge` 提供可选的
   LLM 语义判分（默认关闭，避免本地 35B 与云端 20rpm 下成本失控）；
 - 多格式 45 题人工复核：37 题 `answer`，8 题缺少产品/设备/说明书主体、标为
-  `clarify`（mf-025/027/029/030/031/032/036/037）。数据集文件 hash
-  `e2010df3c478d180`；旧端到端报告 hash 为 `5846bc120a9cce7c`，两者不可混用。
+  `clarify`（mf-025/027/029/030/031/032/036/037）。schema dataset_hash 为
+  `d59643ccfb6943a2`；旧端到端报告 hash 为 `5846bc120a9cce7c`，两者不可混用。
   检索基线不受行为标签影响，但 clarify 准确率 / 过度澄清率需在新报告中重算。
 
 ## 8. 待办

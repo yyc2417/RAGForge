@@ -119,10 +119,17 @@ def validate_dataset(items: list[EvalItem], corpus_dir: Path | str | None = None
 
 
 def dataset_hash(items: list[EvalItem]) -> str:
-    """稳定的数据集指纹（用于报告元数据）。"""
-    payload = json.dumps(
-        [item.model_dump(mode="json") for item in items],
-        ensure_ascii=False,
-        sort_keys=True,
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    """稳定的数据集指纹（用于报告元数据）。
+
+    新增的可选字段为空时从 payload 中省略，避免仅升级 schema 就改变旧数据集
+    的 hash（例如 clarification_keywords 全为空时不应影响 CRUD/v1 报告）。
+    """
+    payload: list[dict] = []
+    for item in items:
+        data = item.model_dump(mode="json")
+        if not data.get("clarification_keywords"):
+            data.pop("clarification_keywords", None)
+        payload.append(data)
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]

@@ -166,6 +166,25 @@ def test_crud_rag_read_import(tmp_path):
     assert validate_dataset(items, corpus_dir=tmp_path) == []
 
 
+def test_frozen_dataset_hashes_are_stable():
+    root = Path(__file__).parent.parent
+    assert dataset_hash(load_dataset(root / "tests" / "eval_dataset.json")) == (
+        "a07fba4c991ad03d"
+    )
+    assert dataset_hash(
+        load_dataset(root / "tests" / "eval_dataset_multiformat.json")
+    ) == "d59643ccfb6943a2"
+
+
+def test_dataset_hash_ignores_empty_clarification_keywords():
+    base = EvalItem(query="q", expected_source="a.md", gold_keywords=["a"])
+    h1 = dataset_hash([base])
+    assert dataset_hash([base.model_copy(update={"clarification_keywords": []})]) == h1
+    assert dataset_hash(
+        [base.model_copy(update={"clarification_keywords": ["哪个产品"]})]
+    ) != h1
+
+
 def test_multiformat_fixture_covers_demo_sources():
     root = Path(__file__).parent.parent
     items = load_dataset(root / "tests" / "eval_dataset_multiformat.json")
